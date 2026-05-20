@@ -1,0 +1,818 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>台灣股票量化選股系統</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #22263a;
+    --border: #2e3350;
+    --accent: #4f8ef7;
+    --accent2: #7c5af0;
+    --green: #2ecc71;
+    --red: #e74c3c;
+    --yellow: #f1c40f;
+    --text: #e8eaf0;
+    --muted: #8891aa;
+    --radius: 10px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Segoe UI', 'PingFang TC', 'Microsoft JhengHei', sans-serif;
+    font-size: 15px;
+    line-height: 1.7;
+  }
+
+  /* ── HEADER ── */
+  header {
+    background: linear-gradient(135deg, #1a1d27 0%, #12152a 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 32px 48px 28px;
+  }
+  header h1 {
+    font-size: 26px;
+    font-weight: 700;
+    letter-spacing: .5px;
+    color: #fff;
+  }
+  header p { color: var(--muted); margin-top: 6px; font-size: 14px; }
+
+  /* ── NAV ── */
+  nav {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 48px;
+    display: flex;
+    gap: 4px;
+    overflow-x: auto;
+  }
+  nav a {
+    color: var(--muted);
+    text-decoration: none;
+    padding: 14px 18px;
+    font-size: 14px;
+    white-space: nowrap;
+    border-bottom: 2px solid transparent;
+    transition: color .2s, border-color .2s;
+  }
+  nav a:hover { color: var(--text); }
+  nav a.active { color: var(--accent); border-color: var(--accent); }
+
+  /* ── LAYOUT ── */
+  main { max-width: 1100px; margin: 0 auto; padding: 40px 32px 80px; }
+  section { margin-bottom: 60px; }
+  h2 {
+    font-size: 20px;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  h2 .icon { font-size: 22px; }
+  h3 {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--accent);
+    margin: 28px 0 12px;
+  }
+
+  /* ── FLOW ── */
+  .flow {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    flex-wrap: wrap;
+    margin: 20px 0;
+  }
+  .flow-box {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 22px;
+    font-size: 14px;
+    white-space: nowrap;
+  }
+  .flow-arrow {
+    color: var(--accent);
+    font-size: 20px;
+    padding: 0 8px;
+  }
+
+  /* ── CARDS (4 methods) ── */
+  .method-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 18px;
+    margin-top: 20px;
+  }
+  .method-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 22px;
+    position: relative;
+    transition: border-color .2s, transform .2s;
+    cursor: default;
+  }
+  .method-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+  }
+  .method-card .badge {
+    display: inline-block;
+    background: var(--accent2);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 9px;
+    border-radius: 20px;
+    margin-bottom: 10px;
+    letter-spacing: .5px;
+    text-transform: uppercase;
+  }
+  .method-card .badge.daily { background: #1a7a4a; }
+  .method-card .badge.monthly { background: #7a4a1a; }
+  .method-card h4 {
+    font-size: 17px;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 8px;
+  }
+  .method-card p { color: var(--muted); font-size: 13.5px; line-height: 1.6; }
+  .method-card .meta {
+    margin-top: 14px;
+    border-top: 1px solid var(--border);
+    padding-top: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+  .method-card .meta span {
+    font-size: 12.5px;
+    color: var(--muted);
+    display: flex;
+    gap: 6px;
+  }
+  .method-card .meta span b { color: var(--text); }
+
+  /* ── CODE ── */
+  code {
+    background: #12152a;
+    color: #a8d8ea;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-family: 'Consolas', 'Menlo', monospace;
+    font-size: 13px;
+  }
+  pre {
+    background: #12152a;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px 22px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Menlo', monospace;
+    font-size: 13px;
+    line-height: 1.8;
+    color: #c9d1d9;
+    margin: 12px 0;
+  }
+  pre .kw  { color: #ff7b72; }
+  pre .fn  { color: #d2a8ff; }
+  pre .cm  { color: #8b949e; }
+  pre .num { color: #79c0ff; }
+  pre .str { color: #a5d6ff; }
+
+  /* ── FILTER PILLS ── */
+  .filter-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 14px;
+  }
+  .filter-pill {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 7px 14px;
+    font-size: 13.5px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .filter-pill .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); flex-shrink: 0; }
+  .filter-pill .dot.red { background: var(--red); }
+  .filter-pill small { color: var(--muted); }
+
+  /* ── SCORE CARDS ── */
+  .score-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 16px;
+    margin-top: 16px;
+  }
+  .score-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+  }
+  .score-card .score-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 12px;
+  }
+  .score-card .score-name {
+    font-weight: 600;
+    color: #fff;
+    font-size: 15px;
+  }
+  .score-card .score-range {
+    font-size: 13px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 20px;
+    background: rgba(79,142,247,.15);
+    color: var(--accent);
+    white-space: nowrap;
+  }
+  .score-card .score-range.high {
+    background: rgba(124,90,240,.15);
+    color: #a78bfa;
+  }
+  .score-card .desc { color: var(--muted); font-size: 13px; margin-bottom: 12px; }
+
+  /* ── SCORE BAR ── */
+  .score-bar-wrap { margin: 8px 0; }
+  .score-bar-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+  .score-bar-track {
+    height: 8px;
+    background: var(--surface2);
+    border-radius: 4px;
+    position: relative;
+    overflow: hidden;
+  }
+  .score-bar-fill {
+    height: 100%;
+    border-radius: 4px;
+    background: linear-gradient(90deg, var(--red), var(--yellow), var(--green));
+  }
+
+  /* ── TABLE ── */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+    margin-top: 14px;
+  }
+  th {
+    background: var(--surface2);
+    color: var(--muted);
+    font-weight: 600;
+    font-size: 13px;
+    text-align: left;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  td {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(255,255,255,.02); }
+
+  /* ── PHILOSOPHY ── */
+  .layer-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 14px;
+    margin-top: 18px;
+  }
+  .layer-card {
+    border-radius: var(--radius);
+    padding: 20px;
+    border: 1px solid;
+  }
+  .layer-card.val  { border-color: #4f8ef766; background: rgba(79,142,247,.07); }
+  .layer-card.qual { border-color: #2ecc7166; background: rgba(46,204,113,.07); }
+  .layer-card.mom  { border-color: #f1c40f66; background: rgba(241,196,15,.07); }
+  .layer-card .layer-title {
+    font-weight: 700;
+    font-size: 14px;
+    margin-bottom: 6px;
+  }
+  .layer-card.val  .layer-title { color: var(--accent); }
+  .layer-card.qual .layer-title { color: var(--green); }
+  .layer-card.mom  .layer-title { color: var(--yellow); }
+  .layer-card .layer-range { font-size: 12px; color: var(--muted); margin-bottom: 10px; }
+  .layer-card ul { list-style: none; padding: 0; }
+  .layer-card ul li { font-size: 13px; color: var(--muted); padding: 2px 0; }
+  .layer-card ul li::before { content: '· '; color: inherit; }
+
+  /* ── IDEAL STOCK ── */
+  .ideal-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 10px;
+    margin-top: 16px;
+  }
+  .ideal-item {
+    background: var(--surface2);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    font-size: 13.5px;
+    border-left: 3px solid var(--green);
+  }
+  .ideal-item b { color: #fff; display: block; margin-bottom: 3px; }
+  .ideal-item span { color: var(--muted); }
+
+  /* ── OUTPUT ── */
+  .output-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 12px;
+    margin-top: 16px;
+  }
+  .output-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px 18px;
+  }
+  .output-item .fname { font-family: monospace; font-size: 13px; color: var(--accent); margin-bottom: 6px; }
+  .output-item p { font-size: 13px; color: var(--muted); }
+
+  /* ── TAG ── */
+  .tag {
+    display: inline-block;
+    background: rgba(79,142,247,.15);
+    color: var(--accent);
+    border-radius: 4px;
+    padding: 1px 7px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .tag.g { background: rgba(46,204,113,.15); color: var(--green); }
+  .tag.y { background: rgba(241,196,15,.15); color: var(--yellow); }
+  .tag.r { background: rgba(231,76,60,.15); color: var(--red); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>📊 台灣股票量化選股系統</h1>
+  <p>TSE / OTC 全市場 · 四種選股方法 · 九項評分指標</p>
+</header>
+
+<nav>
+  <a href="#overview" class="active">系統概覽</a>
+  <a href="#filter">前置過濾</a>
+  <a href="#methods">選股方法</a>
+  <a href="#scoring">評分系統</a>
+  <a href="#philosophy">設計哲學</a>
+  <a href="#output">輸出格式</a>
+</nav>
+
+<main>
+
+  <!-- OVERVIEW -->
+  <section id="overview">
+    <h2><span class="icon">🗺</span> 系統概覽</h2>
+    <p style="color:var(--muted);margin-bottom:24px;">
+      本系統針對台灣上市（TSE）與上櫃（OTC）股票，透過四種選股方法產生候選清單，
+      再以九項財務指標評分排序，最終輸出 HTML 報告。
+    </p>
+    <div class="flow">
+      <div class="flow-box">四種選股方法<br><small style="color:var(--muted)">產生候選清單</small></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box">前置過濾<br><small style="color:var(--muted)">市值、股票類型</small></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box">gen_stock_info()<br><small style="color:var(--muted)">抓取完整財務資料</small></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box">九項評分系統<br><small style="color:var(--muted)">總分排序</small></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box" style="border-color:var(--accent);color:var(--accent)">HTML 報告輸出</div>
+    </div>
+  </section>
+
+  <!-- FILTER -->
+  <section id="filter">
+    <h2><span class="icon">🔍</span> 共同前置過濾條件</h2>
+    <p style="color:var(--muted);margin-bottom:16px;">所有選股方法在進入評分前均需通過以下過濾：</p>
+    <div class="filter-list">
+      <div class="filter-pill"><span class="dot"></span>股票代號 4 碼<small>排除指數、特殊商品</small></div>
+      <div class="filter-pill"><span class="dot red"></span>非 <code>00</code> 開頭<small>排除 ETF</small></div>
+      <div class="filter-pill"><span class="dot red"></span>非 <code>25</code> <code>28</code> <code>55</code> <code>58</code><small>排除金融股、特殊產業</small></div>
+      <div class="filter-pill"><span class="dot"></span>市值 ≥ 30 億<small>排除微型股</small></div>
+      <div class="filter-pill"><span class="dot"></span>市值 ≤ 150 億（fund 除外）<small>聚焦中小型成長股</small></div>
+    </div>
+  </section>
+
+  <!-- METHODS -->
+  <section id="methods">
+    <h2><span class="icon">🎯</span> 四種選股方法</h2>
+
+    <div class="method-grid">
+
+      <!-- revenue -->
+      <div class="method-card">
+        <div class="badge monthly">月頻</div>
+        <h4>📈 revenue — 營收爆發</h4>
+        <p>找出本月營收年增率突破 +20%，且相較上月加速的公司，確保動能是在加速而非減速。</p>
+        <div class="meta">
+          <span>🎯 <b>核心條件</b></span>
+          <span style="margin-left:14px;flex-direction:column;gap:3px">
+            <span>本月年增率 ≥ 20%</span>
+            <span>本月年增率 ≥ 上月年增率（加速）</span>
+          </span>
+          <span>📦 <b>資料來源</b> MOPS 月報 → sql/income.db</span>
+          <span>⏰ <b>觸發</b> 每月 10 日後</span>
+          <span>📊 <b>排序</b> 總分（由高到低）</span>
+        </div>
+      </div>
+
+      <!-- pointK -->
+      <div class="method-card">
+        <div class="badge daily">日頻</div>
+        <h4>🕯 pointK — K棒強度</h4>
+        <p>當日紅K棒強度位於近 122 交易日（半年）前10強，捕捉主力異常買盤訊號。</p>
+        <div class="meta">
+          <span>🎯 <b>核心條件</b></span>
+          <span style="margin-left:14px;flex-direction:column;gap:3px">
+            <span>red_K_ratio ≥ 近122日第10名門檻</span>
+            <span>有效資料 ≥ 90 天</span>
+          </span>
+          <span>📦 <b>資料來源</b> sql/stock_data.db</span>
+          <span>⏰ <b>觸發</b> 每個交易日收盤後</span>
+          <span>📊 <b>排序</b> 總分（由高到低）</span>
+        </div>
+      </div>
+
+      <!-- director -->
+      <div class="method-card">
+        <div class="badge monthly">月頻</div>
+        <h4>🏦 director — 董監增持</h4>
+        <p>找出近一個月全體董監事淨買進超過 10 萬張的公司，追蹤內部人的真實行動。</p>
+        <div class="meta">
+          <span>🎯 <b>核心條件</b></span>
+          <span style="margin-left:14px">本月 − 上月持股 &gt; 100,000 張</span>
+          <span>📦 <b>資料來源</b> MOPS / GoodInfo</span>
+          <span>⏰ <b>觸發</b> 每月持股公告後</span>
+          <span>📊 <b>排序</b> 總分（由高到低）</span>
+        </div>
+      </div>
+
+      <!-- fund -->
+      <div class="method-card">
+        <div class="badge daily">日頻</div>
+        <h4>💼 fund — 投信買超</h4>
+        <p>找出當日投信淨買超，以「投本比」衡量相對買力，突破大股本的干擾。市值無上限。</p>
+        <div class="meta">
+          <span>🎯 <b>核心條件</b></span>
+          <span style="margin-left:14px">投信買賣超股數 &gt; 0</span>
+          <span>📐 <b>投本比</b> 買超股數 / (股本 × 100,000)</span>
+          <span>📦 <b>資料來源</b> 三大法人日報</span>
+          <span>⏰ <b>觸發</b> 每個交易日收盤後</span>
+          <span>📊 <b>排序</b> 投本比（由高到低）</span>
+        </div>
+      </div>
+
+    </div>
+
+    <h3>四種方法比較</h3>
+    <table>
+      <tr>
+        <th>維度</th>
+        <th>revenue</th>
+        <th>pointK</th>
+        <th>director</th>
+        <th>fund</th>
+      </tr>
+      <tr>
+        <td>訊號週期</td>
+        <td><span class="tag y">月</span></td>
+        <td><span class="tag g">日</span></td>
+        <td><span class="tag y">月</span></td>
+        <td><span class="tag g">日</span></td>
+      </tr>
+      <tr>
+        <td>核心概念</td>
+        <td>基本面動能</td>
+        <td>技術面強度</td>
+        <td>內部人行為</td>
+        <td>法人籌碼</td>
+      </tr>
+      <tr>
+        <td>資料來源</td>
+        <td>MOPS 月報</td>
+        <td>股價 DB</td>
+        <td>MOPS / GoodInfo</td>
+        <td>三大法人日報</td>
+      </tr>
+      <tr>
+        <td>市值上限</td>
+        <td>150 億</td>
+        <td>150 億</td>
+        <td>150 億</td>
+        <td><span class="tag g">無限制</span></td>
+      </tr>
+      <tr>
+        <td>排序依據</td>
+        <td>總分</td>
+        <td>總分</td>
+        <td>總分</td>
+        <td><span class="tag">投本比</span></td>
+      </tr>
+    </table>
+  </section>
+
+  <!-- SCORING -->
+  <section id="scoring">
+    <h2><span class="icon">⚖️</span> 九項評分系統</h2>
+    <p style="color:var(--muted);margin-bottom:20px;">每支股票由以下 9 項指標加總得到<b style="color:#fff">總分</b>，分數越高代表越值得買進。</p>
+
+    <div class="score-grid">
+
+      <!-- 1 psrs/psr3y -->
+      <div class="score-card">
+        <div class="score-header">
+          <div>
+            <div class="score-name">① psrS / PSR 三年最低</div>
+            <div class="desc">當前預估PSR相對歷史低點的偏離程度</div>
+          </div>
+          <div class="score-range">-2 ~ +2</div>
+        </div>
+        <pre><span class="cm"># x = psrS / psr三年最低 - 1</span>
+<span class="kw">y</span> = clamp((<span class="num">0.2</span> - x) * <span class="num">2</span>, <span class="num">-2</span>, <span class="num">+2</span>)</pre>
+        <div class="score-bar-wrap">
+          <div class="score-bar-label"><span>-2（比三年低貴120%）</span><span>+2（比三年低便宜20%）</span></div>
+          <div class="score-bar-track"><div class="score-bar-fill" style="width:100%"></div></div>
+        </div>
+      </div>
+
+      <!-- 2 networth -->
+      <div class="score-card">
+        <div class="score-header">
+          <div>
+            <div class="score-name">② 股價淨值比</div>
+            <div class="desc">股價相對帳面價值的溢價程度</div>
+          </div>
+          <div class="score-range">-2 ~ +2</div>
+        </div>
+        <pre><span class="kw">if</span> x >= <span class="num">3.3</span>:   y = <span class="num">-2</span>
+<span class="kw">elif</span> x >= <span class="num">1.3</span>: y = <span class="num">1.3</span> - x
+<span class="kw">else</span>:          y = (<span class="num">1.3</span> - x) * <span class="num">2</span>  <span class="cm"># 折價加倍</span></pre>
+        <table style="font-size:12.5px;margin-top:8px">
+          <tr><th>淨值比</th><th>分數</th></tr>
+          <tr><td>&lt; 1.0</td><td style="color:var(--green)">接近 +2</td></tr>
+          <tr><td>1.3</td><td>0（零分線）</td></tr>
+          <tr><td>≥ 3.3</td><td style="color:var(--red)">-2 封頂</td></tr>
+        </table>
+      </div>
+
+      <!-- 3 psrs -->
+      <div class="score-card" style="border-color:rgba(124,90,240,.4)">
+        <div class="score-header">
+          <div>
+            <div class="score-name">③ psrS 絕對值 ⭐</div>
+            <div class="desc">市值 / 預估今年營收，權重最高指標</div>
+          </div>
+          <div class="score-range high">-4 ~ +4</div>
+        </div>
+        <pre><span class="kw">if</span> psrs >= <span class="num">3</span>: y = <span class="num">-4</span>
+<span class="kw">else</span>: y = (<span class="num">1.5</span> - psrs) / <span class="num">0.375</span></pre>
+        <table style="font-size:12.5px;margin-top:8px">
+          <tr><th>PSR</th><th>分數</th></tr>
+          <tr><td>0.75 甜蜜點</td><td style="color:var(--green)">+2</td></tr>
+          <tr><td>1.5 零分線</td><td>0</td></tr>
+          <tr><td>≥ 3</td><td style="color:var(--red)">-4 封頂</td></tr>
+        </table>
+      </div>
+
+      <!-- 4 prr -->
+      <div class="score-card">
+        <div class="score-header">
+          <div>
+            <div class="score-name">④ PRR — 市值/研發費用</div>
+            <div class="desc">PRR 越小代表研發護城河越深</div>
+          </div>
+          <div class="score-range">-2 ~ +2</div>
+        </div>
+        <pre><span class="cm"># prr = 市值 / 近4季研發費用</span>
+<span class="kw">if</span> prr >= <span class="num">15</span> <span class="kw">or</span> prr <= <span class="num">0</span>: y = <span class="num">-2</span>
+<span class="kw">else</span>: y = (<span class="num">15</span> - prr) / <span class="num">7.5</span></pre>
+      </div>
+
+      <!-- 5 gross margin -->
+      <div class="score-card">
+        <div class="score-header">
+          <div>
+            <div class="score-name">⑤ 毛利率</div>
+            <div class="desc">產品競爭力與定價能力</div>
+          </div>
+          <div class="score-range">-2 ~ +2</div>
+        </div>
+        <pre><span class="kw">if</span> x &lt; <span class="num">10</span>:   y = <span class="num">-2</span>     <span class="cm"># 代工廠</span>
+<span class="kw">elif</span> x >= <span class="num">60</span>: y = <span class="num">+2</span>     <span class="cm"># 品牌/軟體</span>
+<span class="kw">else</span>: y = (x - <span class="num">30</span>) / <span class="num">15</span>  <span class="cm"># 30%為零分線</span></pre>
+      </div>
+
+      <!-- 6 op margin yoy -->
+      <div class="score-card">
+        <div class="score-header">
+          <div>
+            <div class="score-name">⑥ 營利率年增（YoY）</div>
+            <div class="desc">獲利能力是否在改善，看趨勢非絕對值</div>
+          </div>
+          <div class="score-range">-2 ~ +2</div>
+        </div>
+        <pre><span class="cm"># 本季營利率 - 前4季（同季YoY）</span>
+x = 本季營利率 - 前<span class="num">4</span>季營利率
+y = clamp(x / <span class="num">2.5</span>, <span class="num">-2</span>, <span class="num">+2</span>)</pre>
+        <div style="color:var(--muted);font-size:12.5px;margin-top:8px">年增 +5% → 滿分，年增 -5% → 最低分</div>
+      </div>
+
+      <!-- 7 rev yoy -->
+      <div class="score-card">
+        <div class="score-header">
+          <div>
+            <div class="score-name">⑦ 營收年增 20%</div>
+            <div class="desc">月營收年增動能 + 加速度</div>
+          </div>
+          <div class="score-range">-2 ~ +2</div>
+        </div>
+        <pre>x = 最新單月年增率 / <span class="num">100</span>
+w = 本年累計年增率 - 去年年增率  <span class="cm"># 加速度</span>
+y = (x*<span class="num">100</span>-<span class="num">10</span>)*<span class="num">0.025</span> + w*<span class="num">0.25</span></pre>
+        <div style="color:var(--muted);font-size:12.5px;margin-top:8px">前項：年增每超過10%基準40pp → +1分<br>後項：加速度每 +4% → +1分</div>
+      </div>
+
+      <!-- 8 rev mom -->
+      <div class="score-card">
+        <div class="score-header">
+          <div>
+            <div class="score-name">⑧ 營收月增 80%</div>
+            <div class="desc">短期動能，捕捉爆發月</div>
+          </div>
+          <div class="score-range">-2 ~ +2</div>
+        </div>
+        <pre>x = 最新單月月增率 / <span class="num">100</span>
+<span class="kw">if</span> x > <span class="num">0.8</span>:    y = <span class="num">+2</span>
+<span class="kw">elif</span> x &lt; <span class="num">-0.8</span>: y = <span class="num">-2</span>
+<span class="kw">else</span>:          y = x * <span class="num">2.5</span></pre>
+        <div style="color:var(--muted);font-size:12.5px;margin-top:8px">正常月份分數接近 0，主要抓極端爆發月</div>
+      </div>
+
+      <!-- 9 peg -->
+      <div class="score-card">
+        <div class="score-header">
+          <div>
+            <div class="score-name">⑨ PEG</div>
+            <div class="desc">成長股是否被合理定價</div>
+          </div>
+          <div class="score-range">-2 ~ +2</div>
+        </div>
+        <pre><span class="cm"># 今年EPS預估（最新季加權×2）</span>
+今年 = 本季×<span class="num">2</span> + 前<span class="num">1</span>季 + 前<span class="num">2</span>季
+去年 = 前<span class="num">4</span>季×<span class="num">2</span> + 前<span class="num">5</span>季 + 前<span class="num">6</span>季
+peg = 收盤 / 今年EPS / 成長率 / <span class="num">100</span></pre>
+        <table style="font-size:12.5px;margin-top:8px">
+          <tr><th>PEG</th><th>意義</th><th>分數</th></tr>
+          <tr><td>&lt; 0.66</td><td>便宜成長股</td><td style="color:var(--green)">+2</td></tr>
+          <tr><td>1.0</td><td>合理定價</td><td>0</td></tr>
+          <tr><td>&gt; 1.34</td><td>高估</td><td style="color:var(--red)">-2</td></tr>
+        </table>
+      </div>
+
+    </div>
+
+    <h3>各指標滿分範圍總覽</h3>
+    <table>
+      <tr><th>#</th><th>指標</th><th>範圍</th><th>分類</th><th>核心邏輯</th></tr>
+      <tr><td>①</td><td>psrS / PSR三年低</td><td>-2 ~ +2</td><td><span class="tag">估值</span></td><td>相對歷史估值水準</td></tr>
+      <tr><td>②</td><td>股價淨值比</td><td>-2 ~ +2</td><td><span class="tag">估值</span></td><td>零分線 1.3x</td></tr>
+      <tr><td>③</td><td>psrS 絕對值 ⭐</td><td>-4 ~ +4</td><td><span class="tag">估值</span></td><td>甜蜜點 0.75x，唯一雙倍指標</td></tr>
+      <tr><td>④</td><td>PRR 市值/研發</td><td>-2 ~ +2</td><td><span class="tag">估值</span></td><td>研發護城河深度</td></tr>
+      <tr><td>⑤</td><td>毛利率</td><td>-2 ~ +2</td><td><span class="tag g">獲利</span></td><td>零分線 30%</td></tr>
+      <tr><td>⑥</td><td>營利率年增(YoY)</td><td>-2 ~ +2</td><td><span class="tag g">獲利</span></td><td>改善趨勢</td></tr>
+      <tr><td>⑦</td><td>營收年增 20%</td><td>-2 ~ +2</td><td><span class="tag y">動能</span></td><td>年增率 + 加速度</td></tr>
+      <tr><td>⑧</td><td>營收月增 80%</td><td>-2 ~ +2</td><td><span class="tag y">動能</span></td><td>爆發月捕捉</td></tr>
+      <tr><td>⑨</td><td>PEG</td><td>-2 ~ +2</td><td><span class="tag g">獲利</span></td><td>成長定價合理性</td></tr>
+    </table>
+  </section>
+
+  <!-- PHILOSOPHY -->
+  <section id="philosophy">
+    <h2><span class="icon">💡</span> 評分系統設計哲學</h2>
+    <p style="color:var(--muted);margin-bottom:18px;">三層篩選確保每支入選股票同時具備「便宜」＋「品質」＋「動能」。</p>
+
+    <div class="layer-grid">
+      <div class="layer-card val">
+        <div class="layer-title">第一層：估值</div>
+        <div class="layer-range">-8 ~ +8 分</div>
+        <ul>
+          <li>psrS 絕對值（±4）</li>
+          <li>psrS / PSR三年低（±2）</li>
+          <li>股價淨值比（±2）</li>
+          <li>PRR 研發比（±2）</li>
+        </ul>
+        <div style="margin-top:10px;font-size:12.5px;color:var(--muted)">→ 確保安全邊際</div>
+      </div>
+      <div class="layer-card qual">
+        <div class="layer-title">第二層：獲利品質</div>
+        <div class="layer-range">-6 ~ +6 分</div>
+        <ul>
+          <li>毛利率（±2）</li>
+          <li>營利率年增（±2）</li>
+          <li>PEG（±2）</li>
+        </ul>
+        <div style="margin-top:10px;font-size:12.5px;color:var(--muted)">→ 排除低價陷阱</div>
+      </div>
+      <div class="layer-card mom">
+        <div class="layer-title">第三層：動能催化</div>
+        <div class="layer-range">-4 ~ +4 分</div>
+        <ul>
+          <li>營收年增（±2）</li>
+          <li>營收月增（±2）</li>
+        </ul>
+        <div style="margin-top:10px;font-size:12.5px;color:var(--muted)">→ 確認近期動能持續</div>
+      </div>
+    </div>
+
+    <h3>理想得高分的股票輪廓</h3>
+    <div class="ideal-list">
+      <div class="ideal-item"><b>估值安全邊際</b><span>PSR 低於歷史三年低點</span></div>
+      <div class="ideal-item"><b>獲利品質</b><span>毛利率 &gt; 30%，營利率持續改善</span></div>
+      <div class="ideal-item"><b>動能存在</b><span>最新月營收年增 &gt; 20% 且加速</span></div>
+      <div class="ideal-item"><b>成長被低估</b><span>PEG &lt; 1，市場尚未完全反映</span></div>
+      <div class="ideal-item"><b>籌碼配合</b><span>董監或投信同步增持</span></div>
+    </div>
+  </section>
+
+  <!-- OUTPUT -->
+  <section id="output">
+    <h2><span class="icon">📁</span> 輸出格式</h2>
+    <div class="output-list">
+      <div class="output-item">
+        <div class="fname">final/revenue_good.html</div>
+        <p>營收爆發選股結果<br>按總分排序</p>
+      </div>
+      <div class="output-item">
+        <div class="fname">final/pointK_good.html</div>
+        <p>K棒強度選股結果<br>按總分排序</p>
+      </div>
+      <div class="output-item">
+        <div class="fname">final/director_good.html</div>
+        <p>董監增持選股結果<br>按總分排序</p>
+      </div>
+      <div class="output-item">
+        <div class="fname">final/fund_good.html</div>
+        <p>投信買超選股結果<br>按投本比排序</p>
+      </div>
+    </div>
+    <h3>每筆記錄包含欄位</h3>
+    <div class="filter-list">
+      <div class="filter-pill"><span class="dot"></span>基本資料（股號、名稱、市場、市值）</div>
+      <div class="filter-pill"><span class="dot"></span>九項評分細項與總分</div>
+      <div class="filter-pill"><span class="dot"></span>近 8 季三率（毛利、營利、淨利）</div>
+      <div class="filter-pill"><span class="dot"></span>近 60 日 / 60 週 K 線資料</div>
+      <div class="filter-pill"><span class="dot"></span>三大法人近 10 日買賣超</div>
+      <div class="filter-pill"><span class="dot"></span>集保股權分散（大戶 / 散戶比例）</div>
+      <div class="filter-pill"><span class="dot"></span>董監持股近 6 個月歷史</div>
+    </div>
+  </section>
+
+</main>
+
+<script>
+  // Active nav on scroll
+  const sections = document.querySelectorAll('section[id]');
+  const navLinks = document.querySelectorAll('nav a');
+  window.addEventListener('scroll', () => {
+    let current = '';
+    sections.forEach(s => {
+      if (window.scrollY >= s.offsetTop - 100) current = s.id;
+    });
+    navLinks.forEach(a => {
+      a.classList.toggle('active', a.getAttribute('href') === '#' + current);
+    });
+  });
+</script>
+</body>
+</html>
