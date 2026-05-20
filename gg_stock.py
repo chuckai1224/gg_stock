@@ -1,56 +1,19 @@
 ﻿# -*- coding: utf-8 -*-
-#from __future__ import unicode_literals
-import io
-import csv
 import os
-import time
-import timeit
 import sys
-#import urllib2
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
-try:
-    import multiprocessing 
-    from pandarallel import pandarallel
-    #pandarallel.initialize()
-    #from multiprocessing import Pool
-    #from pathos.multiprocessing import ProcessingPool as Pool
-    #n_processes = 4  # My machine has 4 CPUs
-    #pool = Pool(processes=n_processes)
-    pass
-except:
-    pass    
-import stock_comm as comm 
-import stock_big3
-import tdcc_dist
-import requests
 import inspect
 from inspect import currentframe, getframeinfo
 import pandas as pd
 import numpy as np
-import op
-import math
 import kline
-from sqlalchemy import create_engine
-#from pyecharts import Kline
-#from pyecharts import Candlestick
-#import webbrowser
+import stock_comm as comm
+import stock_big3
 import revenue
 import director
-from selenium import webdriver
-from selenium.webdriver.common.keys import Keys
-from time import sleep
-from selenium.webdriver.support.ui import Select
-import shutil
-import talib
-from talib import abstract
-import scipy.signal as signal 
-#from stocktool import comm as cm1 
-import platform
-import all_stock
 import seaborn as sns
 import matplotlib as mpl
-import eps
 def lno():
     cf = currentframe()
     filename = getframeinfo(cf).filename
@@ -402,27 +365,20 @@ def get_networth_score(r,debug=0):
     if debug==1:    
         print(lno(),y)   
     return y
-def get_psrs_score(r):  
-    print(lno(),r['psrS'])
+def get_psrs_score(r):
     psrs=r['psrS']
     if psrs>=3:
         y=-4
     else:
-        y=(1.5-psrs)/0.375
-    print(lno(),y)   
+        y=max(-4, min(4, (1.5-psrs)/0.375))
     return y
 
-def get_prr_score(r):  
-    print(lno(),r['prr'])
+def get_prr_score(r):
     prr=r['prr']
-    if prr>=15:
+    if prr>=15 or prr<=0:
         y=-2
-    elif prr<=0:
-        y=-2    
-    else :
+    else:
         y=(15-prr)/7.5
-    print(lno(),y)  
-    #raise  
     return y
 def get_Gross_margin_score(r,debug=0):
     if debug==1:
@@ -460,11 +416,8 @@ def get_revenue_year_20_score(r,debug=0):
         print(lno(),'去年營收年增率',r['去年營收年增率'])
     x=r['最新單月營收年增率']/100
     w=r['本年累計營收年增率']/100-r['去年營收年增率']/100
-    if (x*100-10)*0.25/10+w*0.25>2:
-        y=2
-    else:
-        y=(x*100-10)*0.25/10+w*0.25
-    #raise  
+    y=(x*100-10)*0.025+w*0.25
+    y=max(-2, min(2, y))
     return y
 def get_revenue_month_80_score(r,debug=0):
     if debug==1:
@@ -769,44 +722,32 @@ def gen_gg_buy_list(date,rev_date,method):
     d1['date']=date
     d1[['收盤價','股本','市值']]=d1.apply(get_market_value,axis=1,result_type="expand")
     ##TODO 50億 check
+    d1=d1[d1['市值']>=3000].reset_index(drop=True)
     if 'fund'!=method:
         d1=d1[d1['市值']<=15000].reset_index(drop=True)
-    out=pd.DataFrame()
+    rows=[]
     for i in range(0,len(d1)):
-    #for i in range(0,10):
-        if d1.iloc[i]['stock_id'].startswith( '25' ):
+        if d1.iloc[i]['stock_id'].startswith(('25','28','55','58')):
             continue
-        if d1.iloc[i]['stock_id'].startswith( '28' ):
-            continue
-        if d1.iloc[i]['stock_id'].startswith( '55' ):
-            continue
-        if d1.iloc[i]['stock_id'].startswith( '58' ):
-            continue
-        ## TODO BYPASS TEST
-        #if d1.loc[i,'stock_id']!='4979':
-        #    continue
         d=gen_stock_info(d1.iloc[i])
         if len(d)==0:
             continue
-        if 'fund'==method: 
+        if 'fund'==method:
             d.at[0,'投本比']=d1.iloc[i]['投信買賣超股數']/(d1.iloc[i]['股本']*100000)
-            print(lno(),d1.iloc[i])
-            print(lno(),d.iloc[0])
-        if len(out)==0 :
-            out=d.copy()
-        else:
-            out=out.append(d,ignore_index=True)  
-    if 'fund'!=method:        
+        rows.append(d)
+    if not rows:
+        return
+    out=pd.concat(rows, ignore_index=True)
+    if 'fund'!=method:
         out=out.sort_values(by=['總分'], ascending=False).copy()
     else:
-        out=out.sort_values(by=['投本比'], ascending=False).copy()    
-        c = out.pop('投本比')             
-        out.insert(16,'投本比',c)  
-    old_width = pd.get_option('display.max_colwidth')
-    pd.set_option('display.max_colwidth', -1)
-    ##=IMPORThtml("https://raw.githubusercontent.com/chuckai1224/final/master/fut_day_report_fin.html","table",1)
-    out.to_html('final/{}_good.html'.format(method),escape=False,index=False,sparsify=True,border=2,index_names=False)
-    pd.set_option('display.max_colwidth', old_width)  
+        out=out.sort_values(by=['投本比'], ascending=False).copy()
+        c = out.pop('投本比')
+        out.insert(16,'投本比',c)
+    check_dst_folder('final')
+    pd.set_option('display.max_colwidth', None)
+    out.to_html('final/{}_good.html'.format(method),escape=False,index=False,border=2,index_names=False)
+    pd.reset_option('display.max_colwidth')
     out.to_csv('final/{}_good_{}.csv'.format(method,date.strftime('%Y%m%d')),encoding='utf-8', index=False)
     
     
