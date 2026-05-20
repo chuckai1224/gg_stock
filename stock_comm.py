@@ -602,12 +602,9 @@ def get_name_by_stock_id(stock_id):
     return 0   
 def datafolder():
     if platform.system().upper()=='LINUX':
-        #print(lno(),platform.system())
         return '/src/stock/data'
-    else :
-       # print(lno(),platform.system())
-        return 'h:\data'
-        #return 'd:\data'
+    else:
+        return 'data'
 
 def time64_Date_str(date):
     ts = pd.to_datetime(str(date)) 
