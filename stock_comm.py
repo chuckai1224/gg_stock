@@ -1187,6 +1187,8 @@ def get_stock_pe_networth_yield_df(r):
     """
 def get_stock_revenue_df(r):
     df=get_sql_stock_df(r.stock_id,"revenue")
+    if len(df)==0 or 'date' not in df.columns:
+        return pd.DataFrame()
     d=df.sort_values(by='date',ascending=False).reset_index(drop=True)
     return d
 def get_stock_industry_status_df(r):

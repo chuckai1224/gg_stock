@@ -357,86 +357,55 @@ class income:
         self.data_folder='data/revenue' 
         check_dst_folder(self.data_folder)
         
-    def download(self,date,dw=1,ver=2):
-        year=date.year
-        month=date.month
-        # 假如是西元，轉成民國
-        if year > 1990:
-            year -= 1911
-        headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.95 Safari/537.36'}
-        index_list=[0,1] 
-        markets=['sii','otc']
-        df_out=pd.DataFrame()
-        for market in markets:
-            for index in index_list:
-                #https://mops.twse.com.tw/nas/t21/sii/t21sc03_108_6_0.html    
-                url = 'https://mops.twse.com.tw/nas/t21/{}/t21sc03_{}_{}_{}.html'.format(market,year,month,index)
-                filename='%s/%s_%d-%02d_%d'%(self.data_folder,market,year, month,index)
-                out_file='%s/%s_%d-%02d_%d.csv'%(self.data_folder,market,year, month,index)
-                # 下載該年月的網站，並用pandas轉換成 dataframe
-                print(lno(),url)
-                if dw==1:
-                    r = requests.get(url, headers=headers)
-                    if not r.ok:
-                        print(lno(),"Can not get data at {}".format(url))
-                        return 
-                    with open(filename, 'wb') as file:
-                        # A chunk of 128 bytes
-                        for chunk in r:
-                            file.write(chunk)
-                try:                
-                    dfs = pd.read_html(filename, encoding='big5hkscs')
-                    #"""
-                    df = pd.concat([df for df in dfs if df.shape[1] <= 11 and df.shape[1] > 5])
-                
-                    #print(lno(),df.columns)
-                    print(lno(),df.shape)
-                    #print(lno(),df.head())
-                    if 'levels' in dir(df.columns):
-                        #print(lno(),df.columns.get_level_values(1))
-                        #print(lno(),df.columns.get_level_values(0))
-                        df.columns = df.columns.get_level_values(1)
-                    else:
-                        df = df[list(range(0,10))]
-                        print(lno(),df.tail())
-                        column_index = df.index[(df[0] == '公司代號')][0]
-                        df.columns = df.iloc[column_index]
-                    print(lno(),len(df))
-                    if ver==2:
-                        df['check']=df.apply(check,axis=1)
-                        #print(lno(),df.head())
-                        df = df[df['check'] == 1]
-                        df.drop('check', axis=1, inplace = True)
-                        df['當月營收'] = pd.to_numeric(df['當月營收'], 'coerce')
-                        df['去年同月增減(%)'] = pd.to_numeric(df['去年同月增減(%)'], 'coerce')
-                        
-                    else :    
-                        df['當月營收'] = pd.to_numeric(df['當月營收'], 'coerce')
-                        df = df[~df['當月營收'].isnull()]
-                        df = df[df['公司代號'] != '合計']
-                        
-                        if len(df.iloc[-1]['公司代號'])!=4:
-                            df=df[:-1]
-                    if len(df)!=0:    
-                        df_out = pd.concat([df_out,df])     
-                    print(lno(),len(df))
-                except:
-                    pass    
-                #out_file='{}{}.csv'.format(market,index)
-                #df.to_csv(out_file,encoding='utf-8', index=False)
-                #"""
-        #df_out.columns=['公司代號','公司名稱','當月營收','上月營收','去年當月營收','上月比較增減(%)','去年同月增減(%)','當月累計營收','去年累計營收','前期比較增減(%)','dummy']    
-        #df_out.drop_duplicates(subset=['公司名稱'],keep='last',inplace=True)    
-        #out_file='_ttt.csv'
-        #df_out.to_csv(out_file,encoding='utf-8', index=False)
-        print(lno(),len(df_out))  
-        table_name=date.strftime('%Y%m')
-        print(lno(),table_name)
-        
-        df_out.to_sql(name=table_name, con=self.con, if_exists='replace', index=False,chunksize=10) 
-        df_out['date']=datetime(year+1911,month,1)
-        for i in range(0,len(df_out)):
-            comm.stock_df_to_sql_append_querydate(df_out.iloc[i]['公司代號'],'revenue',df_out[i:i+1])
+    def download(self, date, dw=1, ver=2):
+        """改用 TWSE/TPEX 開放資料下載每月營收彙總(僅最新一期),
+        寫入 sql/income.db 與每檔 sql/stock/{id}.db 的 revenue 表。"""
+        headers = {'User-Agent': 'Mozilla/5.0'}
+        sources = ['https://openapi.twse.com.tw/v1/opendata/t187ap05_L',
+                   'https://www.tpex.org.tw/openapi/v1/mopsfin_t187ap05_O']
+        rows = []
+        for url in sources:
+            try:
+                rows.extend(requests.get(url, headers=headers, timeout=60).json())
+            except Exception as e:
+                print(lno(), 'revenue request fail', url, e)
+        if not rows:
+            print(lno(), 'no revenue data')
+            return
+        df = pd.DataFrame(rows).rename(columns={
+            '營業收入-當月營收': '當月營收',
+            '營業收入-上月營收': '上月營收',
+            '營業收入-去年當月營收': '去年當月營收',
+            '營業收入-上月比較增減(%)': '上月比較增減(%)',
+            '營業收入-去年同月增減(%)': '去年同月增減(%)',
+            '累計營業收入-當月累計營收': '當月累計營收',
+            '累計營業收入-去年累計營收': '去年累計營收',
+            '累計營業收入-前期比較增減(%)': '前期比較增減(%)'})
+        cols = ['公司代號', '公司名稱', '當月營收', '上月營收', '去年當月營收',
+                '上月比較增減(%)', '去年同月增減(%)', '當月累計營收', '去年累計營收',
+                '前期比較增減(%)', '備註']
+        for c in cols:
+            if c not in df.columns:
+                df[c] = np.nan
+        df['公司代號'] = df['公司代號'].astype(str).str.strip()
+        df = df[df['公司代號'].str.len() == 4].reset_index(drop=True)
+        if len(df) == 0:
+            print(lno(), 'no revenue rows')
+            return
+        # 資料年月:民國 YYYMM -> 西元
+        ym = str(df['資料年月'].dropna().iloc[0]).strip()
+        year = int(ym[:-2]) + 1911
+        month = int(ym[-2:])
+        df_out = df[cols].copy()
+        table_name = '%d%02d' % (year, month)
+        df_out.to_sql(name=table_name, con=self.con, if_exists='replace',
+                      index=False, chunksize=200)
+        df_out['date'] = datetime(year, month, 1)
+        for i in range(0, len(df_out)):
+            comm.stock_df_to_sql_append_querydate(df_out.iloc[i]['公司代號'],
+                                                  'revenue', df_out[i:i + 1])
+        print(lno(), 'revenue saved', table_name, len(df_out))
+
     def get_by_stockid_date(self,stock_id,date):
         table_name=date.strftime('%Y%m')
         cmd='SELECT * FROM "{}" WHERE "公司代號" == "{}" '.format(table_name,stock_id)
