@@ -635,20 +635,20 @@ def gen_buy_mode2(date):
         close=np.nan
         #print(lno(),r.stock_id)
         if len(r.stock_id)!=4 or r.stock_id[0] =='0' or r.vol==0:
-            return 0,np.NaN,np.NaN,np.NaN,np.NaN 
+            return 0,np.nan,np.nan,np.nan,np.nan 
         
         df=eps.get_eps_df(r.stock_id)
         if len(df)==0:
-            return 0,np.NaN,np.NaN,np.NaN,np.NaN
+            return 0,np.nan,np.nan,np.nan,np.nan
         try:
             df_year_eps=df[df['季']==4].reset_index(drop=True).head(5)
         except:
             print(lno(),r.stock_id,df) 
             raise   
         if len(df_year_eps)!=5:
-            return 0,np.NaN,np.NaN,np.NaN,np.NaN
+            return 0,np.nan,np.nan,np.nan,np.nan
         if len(df_year_eps[df_year_eps['本季eps']<=0])!=0:
-            return 0,np.NaN,np.NaN,np.NaN,np.NaN
+            return 0,np.nan,np.nan,np.nan,np.nan
         
         #0:近4季eps
         #2:合理值上限
@@ -656,10 +656,10 @@ def gen_buy_mode2(date):
         #4:買進價1
         _list=eps.gen_eps_river(r.stock_id,r.date,years=5)
         if _list[0]<=0 or _list[4]<=0 or _list[4]>=20 :
-            return 0,np.NaN,np.NaN,np.NaN,np.NaN
+            return 0,np.nan,np.nan,np.nan,np.nan
         buy_price=_list[0]*_list[4]*1.01
         if r.close>=buy_price :
-            return 0,np.NaN,np.NaN,np.NaN,np.NaN
+            return 0,np.nan,np.nan,np.nan,np.nan
         #print(lno(),_list)
         #print(lno(),r)
         #raise

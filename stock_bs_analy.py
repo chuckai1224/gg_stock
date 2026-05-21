@@ -118,8 +118,8 @@ def calc_stock_bs(date,debug=1):
     out_list.append(date.strftime("%Y-%m-%d"))    
     #out_list.append(np.datetime64(date))    
     df=df_tse_day
-    df=df.replace('--',np.NaN)
-    df=df.replace('---',np.NaN)
+    df=df.replace('--',np.nan)
+    df=df.replace('---',np.nan)
     df.dropna(inplace=True)    
     df['b_pwr'] = df.apply(calc_bpwr, axis=1)
     df['s_pwr'] = df.apply(calc_spwr, axis=1)
@@ -132,8 +132,8 @@ def calc_stock_bs(date,debug=1):
     if len(df_otc_day)==0:
         return []
     df=df_otc_day
-    df=df.replace('--',np.NaN)
-    df=df.replace('---',np.NaN)
+    df=df.replace('--',np.nan)
+    df=df.replace('---',np.nan)
     df.dropna(inplace=True)    
     df['b_pwr'] = df.apply(calc_bpwr, axis=1)
     df['s_pwr'] = df.apply(calc_spwr, axis=1)

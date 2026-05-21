@@ -82,7 +82,7 @@ def get_stock_psrS(r):
         #print(lno(),df.iloc[0])
         #print(lno(),income,market_value)
         return market_value/income1
-    return np.NaN 
+    return np.nan 
 #市值/研究發展比
 def get_stock_prr(r,debug=1):
     RD_fee=comm.get_stock_RD_fee(r.stock_id,dw=0)
@@ -90,13 +90,13 @@ def get_stock_prr(r,debug=1):
         print(lno(),RD_fee)
     if RD_fee==0:
         return 0
-    if RD_fee!=np.NaN:
+    if RD_fee!=np.nan:
         market_value=r['市值(百萬)']
         if debug==1:
             print(lno(),r.stock_id)
             print(lno(),RD_fee,market_value)
         return market_value/RD_fee
-    return np.NaN 
+    return np.nan 
   
 
 def get_stock_market(r):
@@ -112,15 +112,15 @@ def get_stock_pe_networth_yield(d):
             d.at[0,'本益比']=df.iloc[0]['本益比']
         except:
             print(lno(),d.iloc[0]['stock_id'],'本益比',df.iloc[0]['本益比'])
-            d.at[0,'本益比']=np.NaN    
+            d.at[0,'本益比']=np.nan    
         d.at[0,'股價淨值比']=df.iloc[0]['股價淨值比']
         d.at[0,'殖利率(%)']=df.iloc[0]['殖利率(%)']
         d.at[0,'股利年度']=df.iloc[0]['股利年度']
     else:
-        d.at[0,'本益比']=np.NaN
-        d.at[0,'股價淨值比']=np.NaN
-        d.at[0,'殖利率(%)']=np.NaN
-        d.at[0,'股利年度']=np.NaN
+        d.at[0,'本益比']=np.nan
+        d.at[0,'股價淨值比']=np.nan
+        d.at[0,'殖利率(%)']=np.nan
+        d.at[0,'股利年度']=np.nan
         return 'N'
     return 'Y'    
 def get_stock_director(d,ver=1):
@@ -130,7 +130,7 @@ def get_stock_director(d,ver=1):
             try:
                 d.at[0,'前{}月董監持股'.format(i)]=df.iloc[i]['全體董監持股合計']/1000 #股數轉張數
             except:    
-                d.at[0,'前{}月董監持股'.format(i)]=np.NaN
+                d.at[0,'前{}月董監持股'.format(i)]=np.nan
         d.at[0,'董監持股增減']= d.at[0,'前0月董監持股']- d.at[0,'前1月董監持股']    
         #print(lno(),df.head(6))
   
@@ -155,7 +155,7 @@ def get_stock_director(d,ver=1):
         try:
             d.at[0,'前{}月董監持股'.format(i)]=df.iloc[-1-i]['董監持股']
         except:    
-            d.at[0,'前{}月董監持股'.format(i)]=np.NaN
+            d.at[0,'前{}月董監持股'.format(i)]=np.nan
     d.at[0,'董監持股增減']= d.at[0,'前0月董監持股']- d.at[0,'前5月董監持股']         
 
 def get_stock_tdcc_dist(d,debug=0):
@@ -201,9 +201,9 @@ def get_stock_tdcc_dist(d,debug=0):
             print(lno(),d.iloc[0])
         #raise
     else:
-        d.at[0,'散戶近一月增加比']=np.NaN
-        d.at[0,'大戶近一月增加比']=np.NaN
-        d.at[0,'大戶近一周增加比']=np.NaN
+        d.at[0,'散戶近一月增加比']=np.nan
+        d.at[0,'大戶近一月增加比']=np.nan
+        d.at[0,'大戶近一周增加比']=np.nan
 def get_stock_industry_status(d):
     df=comm.get_stock_industry_status_df(d.iloc[0])  
     try:
@@ -231,7 +231,7 @@ def get_stock_revenue(d):
             print(lno(),df)
             #raise
     else:
-        d.at[0,'本益比']=np.NaN
+        d.at[0,'本益比']=np.nan
 def get_stock_season_composite_income_sheet(d,debug=0):
     df=comm.get_stock_season_df(d.iloc[0],debug=0) 
     if len(df)==0:
@@ -257,7 +257,7 @@ def get_stock_season_composite_income_sheet(d,debug=0):
     try:
         d.at[0,'去年營收年增率']=(float(d1.iloc[1]['營業收入']/1000 ) /float(d1.iloc[2]['營業收入']/1000 ) -1)*100
     except:
-        d.at[0,'去年營收年增率']=np.NaN
+        d.at[0,'去年營收年增率']=np.nan
     #print(lno(),r_df.iloc[0])
     #raise
 
@@ -292,7 +292,7 @@ def get_stock_season_composite_income_sheet(d,debug=0):
         d.at[0,'psr三年最高']=0
         d.at[0,'psrs/psr三年最低-1']=0
         d.at[0,'psrs/psr三年最高']=0
-    #d.d.at[0,'psrS']=np.NaN  
+    #d.d.at[0,'psrS']=np.nan  
     
     #print(d.iloc[0])
     #raise
@@ -400,7 +400,7 @@ def get_Operating_Profit_margin_score(r,debug=0):
     try:
         x=r['本季營利率']-r['前4季營利率']
     except:
-        return np.NaN    
+        return np.nan    
     if x/2.5<-2:
         y=-2
     elif x/2.5>2:
@@ -438,7 +438,7 @@ def get_peg_score(n,debug=0):
         r['去年eps']=r['前4季EPS']*2+r['前5季EPS']+r['前6季EPS']
         a=r['今年eps預估']/r['去年eps'] -1
     except:
-        return np.NaN    
+        return np.nan    
     if a<0 and r['去年eps']<0:
         a=0-a
     r['eps預估年成長率']=a
@@ -640,17 +640,17 @@ def gen_stock_info(r,debug=0):
 def check_skip_stock(r):
     close=np.nan
     if len(r.stock_id)!=4:
-        return np.NaN 
+        return np.nan 
     if r['stock_id'].startswith('00'):
-        return np.NaN 
+        return np.nan 
     if r['stock_id'].startswith( '25' ):
-        return np.NaN 
+        return np.nan 
     if r['stock_id'].startswith( '28' ):
-        return np.NaN 
+        return np.nan 
     if r['stock_id'].startswith( '55' ):
-        return np.NaN 
+        return np.nan 
     if r['stock_id'].startswith( '58' ):
-        return np.NaN 
+        return np.nan 
     cash=float(r.cash)
     if cash<3000000:
         return np.nan
@@ -759,21 +759,20 @@ def get_market_value(r):
     total_stock_nums=comm.get_total_stock_num(stock_id,date)
     #print(lno(),r.stock_id,total_stock_nums)
     if total_stock_nums==0:
-        return 
+        return np.nan, np.nan, np.nan
     last_close=comm.get_stock_last_close(stock_id,date)
-    if last_close==np.NaN:
-        return 
-    #print(lno(),r.stock_id,total_stock_nums)        
+    if pd.isna(last_close):
+        return np.nan, np.nan, np.nan
+    #print(lno(),r.stock_id,total_stock_nums)
     #print(lno(),df)
     try:
         market_value=last_close* total_stock_nums /1000000
     except:
         print(lno(),r)
         #print(lno(),df.iloc[0]['close'],total_stock_nums)
-        #df=stk.get_df_by_startdate_enddate(stock_id,date-relativedelta(days=7),date+relativedelta(days=1))  
+        #df=stk.get_df_by_startdate_enddate(stock_id,date-relativedelta(days=7),date+relativedelta(days=1))
         #print(lno(),df)
-        return
-        raise        
+        return np.nan, np.nan, np.nan
     return last_close,total_stock_nums/10000000, market_value
    
  

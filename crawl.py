@@ -28,9 +28,9 @@ def string_float(x):
         if '除' in x :
             return float('0.0')
         if '--' in x:
-            return np.NaN    
+            return np.nan    
         if '##' in x:
-            return np.NaN
+            return np.nan
         #print(lno(),x)    
         return float(x.strip().replace(',',''))
     else:   
@@ -158,9 +158,9 @@ class Crawler():
         #print(lno(),df.open)
         #df['date']=np.datetime64(now_date)
         df['date']='{0}-{1:02d}-{2:02d}'.format(date_tuple[0], date_tuple[1], date_tuple[2])
-        df=df.replace('--',np.NaN)
-        df=df.replace('---',np.NaN)
-        df=df.replace('----',np.NaN)
+        df=df.replace('--',np.nan)
+        df=df.replace('---',np.nan)
+        df=df.replace('----',np.nan)
         df['open']=df['open'].apply(string_float)
         df['high']=df['high'].apply(string_float)
         df['low']=df['low'].apply(string_float)
@@ -292,10 +292,10 @@ class Crawler():
         #now_date=datetime.strptime('{0}{1:02d}{2:02d}'.format(date_tuple[0], date_tuple[1], date_tuple[2]),'%Y%m%d')
         #df['date']=np.datetime64(now_date)
         df['date']='{0}-{1:02d}-{2:02d}'.format(date_tuple[0], date_tuple[1], date_tuple[2])
-        df=df.replace('--',np.NaN)
-        df=df.replace('---',np.NaN)
-        df=df.replace(' ---',np.NaN)
-        df=df.replace('----',np.NaN)
+        df=df.replace('--',np.nan)
+        df=df.replace('---',np.nan)
+        df=df.replace(' ---',np.nan)
+        df=df.replace('----',np.nan)
         
         df['open']=df['open'].apply(string_float)
         df['high']=df['high'].apply(string_float)

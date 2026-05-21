@@ -147,9 +147,9 @@ def get_stock_df(stock_no):
     df.dropna(axis=1,how='all',inplace=True)
     df.dropna(inplace=True)
     df.columns = ['date', 'vol', 'cash', 'open', 'high','low','close','diff','Tnumber','stock_name']
-    df=df.replace('--',np.NaN)
-    df=df.replace('---',np.NaN)
-    df=df.replace('----',np.NaN)
+    df=df.replace('--',np.nan)
+    df=df.replace('---',np.nan)
+    df=df.replace('----',np.nan)
     df=df.fillna(method='ffill')
     df=df.dropna(how='any',axis=0)
     
@@ -171,9 +171,9 @@ def get_stock_df_old(stock_no):
     df.columns = ['date', 'vol', 'cash', 'open', 'high','low','close','diff','Tnumber','stock_name']
     df.drop('cash', axis=1, inplace = True)
     df.drop('Tnumber', axis=1, inplace = True)
-    df=df.replace('--',np.NaN)
-    df=df.replace('---',np.NaN)
-    df=df.replace('----',np.NaN)
+    df=df.replace('--',np.nan)
+    df=df.replace('---',np.nan)
+    df=df.replace('----',np.nan)
     df=df.fillna(method='ffill')
     df=df.dropna(how='any',axis=0)
     #print(lno(),df.dtypes)
@@ -210,9 +210,9 @@ def get_stock_kline_df(stock_no,enddate,month=3):
     #fin_df=pd.merge(stock_df,dist_df,how='inner')
     
     df=stock_df.sort_values(by='date', ascending=True)
-    df=df.replace('--',np.NaN)
-    df=df.replace('---',np.NaN)
-    df=df[df.close!=np.NaN]
+    df=df.replace('--',np.nan)
+    df=df.replace('---',np.nan)
+    df=df[df.close!=np.nan]
     df.reset_index(inplace=True)
     #print lno(),df['b_pwr']
     try:
@@ -470,8 +470,8 @@ def get_stock_df_bydate_nums(stock_no,nums,date):
         
     df.columns = ['date', 'vol', 'cash', 'open', 'high','low','close','diff','Tnumber','stock_name']
     outcols=['date','open', 'high','low','close','diff','vol']
-    df=df.replace('--',np.NaN)
-    df=df.replace('---',np.NaN)
+    df=df.replace('--',np.nan)
+    df=df.replace('---',np.nan)
     df.fillna(method='ffill',inplace=True)
     df=df.reset_index(drop=True)    
     lendf=len(df)
@@ -783,7 +783,7 @@ class exchange_data:
         #if table_name in table_names:
         try:
             df = pd.read_sql('select * from "{}"'.format(selday.strftime('%Y%m%d')), con=self.con)
-            #df=df.replace('-',np.NaN)
+            #df=df.replace('-',np.nan)
             #print(lno(),self.df)
             return df
         except:
@@ -796,7 +796,7 @@ class exchange_data:
         #if table_name in table_names:
         try:
             df = pd.read_sql('select * from "{}"'.format(selday.strftime('%Y%m%d')), con=self.con, parse_dates=['date'])
-            #df=df.replace('-',np.NaN)
+            #df=df.replace('-',np.nan)
             #print(lno(),self.df)
             return df
         except:
@@ -815,7 +815,7 @@ class exchange_data:
                 
         try:
             df = pd.read_sql('select * from "{}"'.format(table_name), con=self.con, parse_dates=['date'])
-            #df=df.replace('-',np.NaN)
+            #df=df.replace('-',np.nan)
             #print(lno(),self.df)
             return df
         except:
@@ -1110,9 +1110,9 @@ def stock_df_to_sql_append_querydate(stock_id,table_name,df):
         df.to_sql(name=table_name, con=con, if_exists='replace',  index= False,dtype={'date': Date()},chunksize=10)        
 def tofloat64(x):
     if type(x)==str and '-' == x:
-        return np.NaN
+        return np.nan
     if type(x)==str and '--' == x:
-        return np.NaN
+        return np.nan
     return float(x)
 def get_sql_stock_df(stock_id,table_name,debug=0):
     engine=get_stock_sql_engine(stock_id)
@@ -1123,8 +1123,8 @@ def get_sql_stock_df(stock_id,table_name,debug=0):
     except:
         print(lno(),stock_id,table_name,"NG")    
         return pd.DataFrame()
-    d.replace('-',np.NaN)
-    d.replace('--',np.NaN)
+    d.replace('-',np.nan)
+    d.replace('--',np.nan)
     if table_name=='mix_income':
         #d['營業收入']=d['營業收入'].astype('float64')
         if debug==1:
@@ -1263,7 +1263,7 @@ def get_stock_season_df(r,debug=0):
     if debug==1:
         print(lno(),d)
     #單位K
-    d.replace('-',np.NaN)
+    d.replace('-',np.nan)
     try:
         d['單季營收']=d['營業收入']-d['營業收入'].shift(-1)
         d['單季EPS']=d['基本每股盈餘（元）']-d['基本每股盈餘（元）'].shift(-1)
@@ -1303,7 +1303,7 @@ def get_stock_RD_fee(stock_id,dw,debug=1,ver=1):
             if debug==1:
                 print(lno(),d)
             return d['研發費用(百萬)'].sum()
-        return np.NaN
+        return np.nan
     df=revenue.down_stock_composite_income(stock_id,download=dw)
     if len(df)>=4:
         d=df.head(4).copy()
@@ -1311,7 +1311,7 @@ def get_stock_RD_fee(stock_id,dw,debug=1,ver=1):
         if debug==1:
             print(lno(),d)
         return d['研究發展費'].sum()
-    return np.NaN
+    return np.nan
 import tdcc_dist
 g_tdcc=None
 def get_tdcc_dist():
@@ -1336,7 +1336,7 @@ def get_stock_last_close(stock_id,date):
     stk=get_stock_data()    
     df=stk.get_df_by_startdate_enddate(stock_id,date-relativedelta(days=14),date+relativedelta(days=1))  
     if len(df.index)==0:
-        return np.NaN
+        return np.nan
     return df.iloc[-1]['close']
 def get_tse_otc_stock_df_by_date(date):
     date1=date

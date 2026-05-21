@@ -387,8 +387,8 @@ def get_stock_df(stock_no):
             df.ix[i,'high']=df.iloc[i-1]['high']
             df.ix[i,'low']=df.iloc[i-1]['low']
             df.ix[i,'close']=df.iloc[i-1]['close']
-    df=df.replace('--',np.NaN)
-    df=df.replace('---',np.NaN)
+    df=df.replace('--',np.nan)
+    df=df.replace('---',np.nan)
     df=df.dropna(how='any',axis=0)
     try :
         df['date']=[twdate2datetime64(x) for x in df['date'] ]
@@ -648,7 +648,7 @@ def stock_kline_vol_js_v1(name, df,width,height):
 def stock_dist_js_new1(name, df):
     
     dist_bar = Bar()
-    dist_diffs =df[df['t_persons']!=np.NaN]
+    dist_diffs =df[df['t_persons']!=np.nan]
 
     if not 'date' in dist_diffs.columns:
         DATE=pd.to_datetime(dist_diffs.index).strftime('%y/%m/%d')
@@ -705,7 +705,7 @@ def stock_dist_js_new1(name, df):
 def stock_dist_js(name, df,pos1='70%',pos2='83%',):
     
     dist_bar = Bar(name[2],title_top=pos1)
-    dist_diffs =df[df['t_persons_diff']!=np.NaN]
+    dist_diffs =df[df['t_persons_diff']!=np.nan]
 
     if not 'date' in dist_diffs.columns:
         DATE=pd.to_datetime(dist_diffs.index).strftime('%y/%m/%d')
@@ -847,8 +847,8 @@ def generate_stock_kline_html_v1(stock_no,title,begindate,html_filen,practice=0)
     #print (lno(),dist_df.tail(4))
     #print (lno(),stock_df.tail())
     df=stock_df.sort_values(by='date', ascending=True)
-    df=df.replace('--',np.NaN)
-    df=df.replace('---',np.NaN)
+    df=df.replace('--',np.nan)
+    df=df.replace('---',np.nan)
     df=df.dropna(how='any',axis=0)
     df['b_pwr'] = df.apply(calc_bpwr, axis=1)
     df['s_pwr'] = df.apply(calc_spwr, axis=1)
@@ -1496,7 +1496,7 @@ def get_eps_by_stockid(stock_id,enddate,market):
             if len(df)==1:
                 tmp_list.append(df.iloc[0]['基本每股盈餘（元）'])
             else:
-                tmp_list.append(np.NaN)
+                tmp_list.append(np.nan)
             _csv='data/eps/%s_%d-%d.csv'% (market,year-1,season )    
             df_s = pd.read_csv(_csv,encoding = 'utf-8',dtype= {'公司代號':str})
             df_s.dropna(axis=1,how='all',inplace=True)
@@ -1505,7 +1505,7 @@ def get_eps_by_stockid(stock_id,enddate,market):
             if len(df)==1:
                 tmp_list.append(df.iloc[0]['基本每股盈餘（元）'])
             else:
-                tmp_list.append(np.NaN)
+                tmp_list.append(np.nan)
             #print(lno(),df)
             return tmp_list
             cnt=cnt+1

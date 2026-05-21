@@ -109,7 +109,7 @@ def down_tse_eps(year, reason,download=1):
             df1['毛利率']=0.0
             df1['營利率']=0.0
             df1['純益率']=0.0
-            df=df.replace('--',np.NaN)
+            df=df.replace('--',np.nan)
             if '營業收入' in df.columns:
                 if '營業毛利（毛損）淨額' in df.columns:
                     df1['毛利率']=df['營業毛利（毛損）淨額'].astype(float)/df['營業收入'].astype(float)*100
@@ -199,7 +199,7 @@ def down_otc_eps(year, reason,download=1):
             df1['毛利率']=0.0
             df1['營利率']=0.0
             df1['純益率']=0.0
-            df=df.replace('--',np.NaN)
+            df=df.replace('--',np.nan)
             if '營業收入' in columns:
                 if '營業毛利（毛損）淨額' in columns:
                     df1['毛利率']=df['營業毛利（毛損）淨額'].astype(float)/df['營業收入'].astype(float)*100
@@ -365,7 +365,7 @@ def get_eps_by_stockid(stock_id,enddate,market):
             if len(df)==1:
                 tmp_list.append(df.iloc[0]['基本每股盈餘（元）'])
             else:
-                tmp_list.append(np.NaN)
+                tmp_list.append(np.nan)
             _csv='data/eps/%s_%d-%d.csv'% (market,year-1,season )    
             df_s = pd.read_csv(_csv,encoding = 'utf-8',dtype= {'公司代號':str})
             df_s.dropna(axis=1,how='all',inplace=True)
@@ -374,7 +374,7 @@ def get_eps_by_stockid(stock_id,enddate,market):
             if len(df)==1:
                 tmp_list.append(df.iloc[0]['基本每股盈餘（元）'])
             else:
-                tmp_list.append(np.NaN)
+                tmp_list.append(np.nan)
             #print(lno(),df)
             return tmp_list
             cnt=cnt+1
@@ -676,7 +676,7 @@ def down_financial(year, reason,market,type='綜合損益彙總表',download=1):
             df1['毛利率']=0.0
             df1['營利率']=0.0
             df1['純益率']=0.0
-            df=df.replace('--',np.NaN)
+            df=df.replace('--',np.nan)
             if '營業收入' in columns:
                 if '營業毛利（毛損）淨額' in columns:
                     df1['毛利率']=df['營業毛利（毛損）淨額'].astype(float)/df['營業收入'].astype(float)*100

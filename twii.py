@@ -695,9 +695,9 @@ def show_twii_v1(objdatetime,debug=0):
 def get_stock_tse_df(stock_id,df):
     df1=df[(df.loc[:,"stock_id"] == stock_id) ].sort_values(by='date', ascending=True)
     
-    df1=df1.replace('--',np.NaN)
-    df1=df1.replace('---',np.NaN)
-    df1=df1.replace('NaN',np.NaN)
+    df1=df1.replace('--',np.nan)
+    df1=df1.replace('---',np.nan)
+    df1=df1.replace('NaN',np.nan)
     df1=df1.fillna(method='ffill') 
     try:
         df1['close'].astype('float64')
@@ -707,7 +707,7 @@ def get_stock_tse_df(stock_id,df):
     df1=df1.dropna(how='any',axis=0)
     df1=df1.tail(21)    
     df1.reset_index(inplace=True)    
-    #df1=df1.replace('--',np.NaN)
+    #df1=df1.replace('--',np.nan)
     #df1=df1.fillna(method='ffill') 
     #print (lno(),df1)
     return df1

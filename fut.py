@@ -480,7 +480,7 @@ def calc_fix_delta(enddate,BoS,price,df_top10,debug=0,v=1):
     except:
         print(lno(),enddate)
         raise    
-    df1=df1.replace('-',np.NaN)
+    df1=df1.replace('-',np.nan)
     df1.dropna(axis=1,how='all',inplace=True)
     df1['結算價']=df1['結算價'].astype(float)
     if BoS=='買權':
@@ -518,7 +518,7 @@ def calc_fix_delta(enddate,BoS,price,df_top10,debug=0,v=1):
         ## 計算周
         ##  from price get op upper left
         df1=list[0][['到期月份(週別)','買賣權','結算價','履約價']].copy()
-        df1=df1.replace('-',np.NaN)
+        df1=df1.replace('-',np.nan)
         df1.dropna(axis=1,how='all',inplace=True)
         df1['結算價']=df1['結算價'].astype(float)
 
@@ -586,7 +586,7 @@ def calc_pressure_support(enddate,BoS,price,df_top10,debug=0):
     list=op.get_Op_Data_df_list(enddate,0)
     ## 月 op data            
     df1=list[1][['到期月份(週別)','買賣權','結算價','履約價']].copy()
-    df1=df1.replace('-',np.NaN)
+    df1=df1.replace('-',np.nan)
     df1.dropna(axis=1,how='all',inplace=True)
     df1['結算價']=df1['結算價'].astype(float)
     df1['履約價']=df1['履約價'].astype(float)
@@ -615,7 +615,7 @@ def calc_pressure_support(enddate,BoS,price,df_top10,debug=0):
     if '-' not in week:
         ##  from price get op upper left
         df1=list[0][['到期月份(週別)','買賣權','結算價','履約價']].copy()
-        df1=df1.replace('-',np.NaN)
+        df1=df1.replace('-',np.nan)
         df1.dropna(axis=1,how='all',inplace=True)
         df1['結算價']=df1['結算價'].astype(float)
         df1['履約價']=df1['履約價'].astype(float)
@@ -879,7 +879,7 @@ def down_fut_op_big3_top10_data_bydate(enddate,download=1,debug=0xff):
         o_list=df_o.iloc[0].values.tolist()
         o_list[0]=enddate.strftime('%Y/%m/%d')
         df_o=pd.DataFrame([o_list],columns=outcols)
-        df_o=df_o.replace(np.NaN,0)
+        df_o=df_o.replace(np.nan,0)
         #print(lno(),o_list)
         #print(lno(),df_o)
         #存入歷史資料

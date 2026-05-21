@@ -193,7 +193,7 @@ def get_fix_delta(date,BoS,opprice,debug=0):
         if debug==3:
             print(lno(),df1[(df1['買賣權']==BoS)])
         df1=df1[['到期月份(週別)','買賣權','結算價','履約價']].copy()
-        df1=df1.replace('-',np.NaN)
+        df1=df1.replace('-',np.nan)
         df1.dropna(axis=1,how='all',inplace=True)
         #df1.dropna(inplace=True)
         df1['結算價']=df1['結算價'].astype(float)

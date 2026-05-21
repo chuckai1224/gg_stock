@@ -29,7 +29,7 @@ def string_float(x):
         if '除息' in x :
             return float('0.0')
         if '--' in x:
-            return np.NaN    
+            return np.nan    
         return float(x.strip().replace(',',''))
     else:   
         return float(x)
@@ -54,9 +54,9 @@ def main():
         df.columns = ['date', 'vol', 'cash', 'open', 'high','low','close','diff','Tnumber','stock_name']
         #print(df.head())
         df['date']=df['date'].apply(string_to_time)
-        df=df.replace('--',np.NaN)
-        df=df.replace('---',np.NaN)
-        df=df.replace('----',np.NaN)
+        df=df.replace('--',np.nan)
+        df=df.replace('---',np.nan)
+        df=df.replace('----',np.nan)
         df['open']=df['open'].apply(string_float)
         df['high']=df['high'].apply(string_float)
         df['low']=df['low'].apply(string_float)
