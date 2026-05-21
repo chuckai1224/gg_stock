@@ -1,3 +1,25 @@
+# gg_stock — 台股選股系統
+
+## 文件索引
+
+| 文件 | 作用 |
+|------|------|
+| `README.md` | (本檔)選股評分標準 SOP、籌碼面(期貨/選擇權/三大法人)研究筆記 |
+| `setup.md` | 環境安裝:Python 套件清單、必要資料夾 |
+| `gg_stock_logic.md` | `gg_stock.py` 程式邏輯與流程(4 種選股方法、評分系統) |
+| `data_sources.md` | 各資料來源、開放資料 API、如何取得/回補歷史資料、定期排程 |
+| `todo.md` | 待辦清單 |
+
+## 建議閱讀順序
+
+1. **`README.md`** —— (本檔)先看上方文件索引,掌握整體
+2. **`setup.md`** —— 安裝 Python 套件、建立必要資料夾
+3. **`data_sources.md`** —— 下載/回補資料,了解各資料來源與排程
+4. **`gg_stock_logic.md`** —— 了解 `gg_stock.py` 選股邏輯與評分系統
+5. **`todo.md`** —— 待辦清單(選讀)
+
+---
+
 ## 0420 
 1. get_psrs_div_psr3y_score    gg_stock.py
    psrs/psr 三年低  -1  (-2 << 2)
