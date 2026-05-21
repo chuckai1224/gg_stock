@@ -26,72 +26,63 @@ def check_dst_folder(dstpath):
     if not os.path.isdir(dstpath):
         os.makedirs(dstpath)     
   
-def down_pe_networth_yield(date,dw=1,debug=1):
-    dst_folder='data/down_pe_networth_yield'
+def down_pe_networth_yield(date, dw=1, debug=1):
+    """下載個股 本益比/股價淨值比/殖利率,輸出
+    data/down_pe_networth_yield/{tse,otc}YYYYMMDD.csv
+    欄位: stock_id, 本益比, 股價淨值比, 殖利率(%), 股利年度
+    上市: TWSE BWIBBU_d(可指定日期);上櫃: TPEX 開放資料(僅最新一日)。"""
+    dst_folder = 'data/down_pe_networth_yield'
     check_dst_folder(dst_folder)
-    
-    filename='%s/%s.html'%(dst_folder,date.strftime('%Y%m%d'))
-    # 偽瀏覽器
-    headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.95 Safari/537.36'}
-    tseurl='http://www.twse.com.tw/exchangeReport/BWIBBU_d?response=csv&date={}&selectType=ALL'.format(date.strftime('%Y%m%d'))
-    #url='https://www.tpex.org.tw/web/stock/aftertrading/peratio_analysis/pera.php?l=zh-tw&o=csv&se=EW&t=D&d=%d/%02d/%02d&s=0,asc,0'%(int(nowdatetime.year)-1911,int(nowdatetime.month),int(nowdatetime.day))
-    otcurl='https://www.tpex.org.tw/web/stock/aftertrading/peratio_analysis/pera_result.php?l=zh-tw&o=csv&d=%d/%02d/%02d&c=&s=0,asc,0'%(date.year-1911,date.month,date.day)
-    url_list=[tseurl,otcurl]
-    #url_list=[otcurl]
-    
-    for url in url_list:
-        if 'twse' in url:
-            filename='%s/tse%s.html'%(dst_folder,date.strftime('%Y%m%d'))
-            ofile='%s/tse%s.csv'%(dst_folder,date.strftime('%Y%m%d'))
-            skip_rows=1
-            columns=['stock_id', '證券名稱', '殖利率(%)', '股利年度', '本益比', '股價淨值比', '財報年/季','dummy']
-            
+    headers = {'User-Agent': 'Mozilla/5.0'}
+    ymd = date.strftime('%Y%m%d')
+
+    def _save(df, ofile):
+        d = df.copy()
+        d['stock_id'] = d['stock_id'].astype(str).str.strip()
+        for c in ('本益比', '股價淨值比', '殖利率(%)'):
+            d[c] = pd.to_numeric(d[c].astype(str).str.replace(',', '', regex=False),
+                                 errors='coerce')
+        d = d[['stock_id', '本益比', '股價淨值比', '殖利率(%)', '股利年度']]
+        d.to_csv(ofile, encoding='utf-8', index=False)
+        print(lno(), 'saved', ofile, len(d))
+
+    # 上市 TSE
+    tse_file = '%s/tse%s.csv' % (dst_folder, ymd)
+    if dw == 1 or not os.path.exists(tse_file):
+        url = ('https://www.twse.com.tw/rwd/zh/afterTrading/BWIBBU_d'
+               '?date=%s&selectType=ALL&response=json' % ymd)
+        try:
+            js = requests.get(url, headers=headers, timeout=30).json()
+        except Exception as e:
+            print(lno(), 'tse pe request fail', e)
+            js = {}
+        if js.get('stat') == 'OK' and js.get('data'):
+            df = pd.DataFrame(js['data'], columns=js['fields'])
+            df = df.rename(columns={'證券代號': 'stock_id'})
+            _save(df, tse_file)
         else:
-            filename='%s/otc%s.html'%(dst_folder,date.strftime('%Y%m%d'))
-            ofile='%s/otc%s.csv'%(dst_folder,date.strftime('%Y%m%d'))
-            columns=['stock_id', '證券名稱', '本益比', '每股股利', '股利年度', '殖利率(%)', '股價淨值比']
-            skip_rows=3
-        #if os.path.exists(filename):
-        #    return 
-        if dw==1 :
-            print(lno(),url)
-            r = requests.get(url)
-            if not r.ok:
-                print(lno(),"Can not get data at {}".format(url))
-                return pd.DataFrame() 
-            with open(filename, 'wb') as file:
-                # A chunk of 128 bytes
-                for chunk in r:
-                    file.write(chunk)
-            r.close()        
-            #time.sleep(5)
-        if os.path.getsize(filename)<4096:
-            print(lno(),filename,"size:",os.path.getsize(filename));
-            os.remove(filename)    
-        if not os.path.exists(filename): 
-            return pd.DataFrame()
-        try:    
-            dfs = pd.read_csv(filename,encoding = 'big5hkscs',skiprows=skip_rows)
-            dfs=dfs.dropna(thresh=2)
-        except:
-            print(lno(),filename,"ng file")
-            return pd.DataFrame()
-        dfs.columns=columns
-        d=dfs[['stock_id','本益比', '股價淨值比', '殖利率(%)','股利年度']].copy()
-        d.to_csv(ofile,encoding='utf-8', index=False) 
-        """ too long to save to sql
-        for i in range(0,len(d)):
-            comm.stock_df_to_sql(d.iloc[i]['stock_id'],'pe_ratio',d[i:i+1])
-        """    
-        print(lno(), d)
-        
-        if debug==1:
-            #print(lno(),dfs)
-            pass
-            #print(lno(),len(dfs),dfs)
-            #print(lno(),dfs[1].iloc[0][0] )
-    #raise    
-        
+            print(lno(), 'no tse pe data', ymd)
+
+    # 上櫃 OTC(TPEX 開放資料,僅最新一日)
+    otc_file = '%s/otc%s.csv' % (dst_folder, ymd)
+    if dw == 1 or not os.path.exists(otc_file):
+        url = 'https://www.tpex.org.tw/openapi/v1/tpex_mainboard_peratio_analysis'
+        try:
+            arr = requests.get(url, headers=headers, timeout=30).json()
+        except Exception as e:
+            print(lno(), 'otc pe request fail', e)
+            arr = []
+        if arr:
+            df = pd.DataFrame(arr)
+            df = df.rename(columns={'SecuritiesCompanyCode': 'stock_id',
+                                    'PriceEarningRatio': '本益比',
+                                    'PriceBookRatio': '股價淨值比',
+                                    'YieldRatio': '殖利率(%)'})
+            df['股利年度'] = np.nan
+            _save(df, otc_file)
+        else:
+            print(lno(), 'no otc pe data')
+
 
 if __name__ == '__main__':
 
