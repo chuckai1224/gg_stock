@@ -536,6 +536,58 @@ def gen_director_good_list(date,debug=0,ver=1):
         
         
                      
+def down_director(dw=1):
+    """從 TWSE/TPEX 開放資料下載董監事持股餘額,彙總為每檔『全體董監持股合計』,
+    寫入 data/director/final/ 的月檔與個股檔。"""
+    headers = {'User-Agent': 'Mozilla/5.0'}
+    sources = ['https://openapi.twse.com.tw/v1/opendata/t187ap11_L',
+               'https://www.tpex.org.tw/openapi/v1/mopsfin_t187ap11_O']
+    frames = []
+    for url in sources:
+        try:
+            arr = requests.get(url, headers=headers, timeout=60).json()
+        except Exception as e:
+            print(lno(), 'director request fail', url, e)
+            continue
+        if arr:
+            frames.append(pd.DataFrame(arr))
+    if not frames:
+        print(lno(), 'no director data')
+        return
+    df = pd.concat(frames, ignore_index=True)
+    df.columns = [str(c).strip() for c in df.columns]
+    df['公司代號'] = df['公司代號'].astype(str).str.strip()
+    df = df[df['公司代號'].str.len() == 4]
+    df['目前持股'] = pd.to_numeric(
+        df['目前持股'].astype(str).str.replace(',', '', regex=False), errors='coerce')
+    ym = str(df['資料年月'].dropna().iloc[0]).strip()
+    year = int(ym[:-2]) + 1911
+    month = int(ym[-2:])
+    g = df.groupby('公司代號', as_index=False).agg(
+        stock_name=('公司名稱', 'first'),
+        全體董監持股合計=('目前持股', 'sum'))
+    g = g.rename(columns={'公司代號': 'stock_id'})
+    check_dst_folder('data/director/final')
+    mfile = 'data/director/final/%d-%d.csv' % (year - 1911, month)
+    g[['stock_id', 'stock_name', '全體董監持股合計']].to_csv(
+        mfile, encoding='utf-8', index=False)
+    # 個股檔:累積、依 date 去重,最新月在最前
+    date_str = '%d-%02d-01' % (year, month)
+    for i in range(0, len(g)):
+        sid = g.iloc[i]['stock_id']
+        sfile = 'data/director/final/%s.csv' % sid
+        row = pd.DataFrame([{'date': date_str, 'stock_id': sid,
+                             'stock_name': g.iloc[i]['stock_name'],
+                             '全體董監持股合計': g.iloc[i]['全體董監持股合計']}])
+        if os.path.exists(sfile):
+            old = pd.read_csv(sfile, encoding='utf-8', dtype={'stock_id': str})
+            if date_str in old['date'].astype(str).tolist():
+                continue
+            row = pd.concat([row, old], ignore_index=True)
+        row.to_csv(sfile, encoding='utf-8', index=False)
+    print(lno(), 'director saved', mfile, len(g), 'stocks')
+
+
 if __name__ == '__main__':
 
     sql_data=director()
@@ -548,10 +600,7 @@ if __name__ == '__main__':
         
         #down_stock_director('6152',nowdate)
         #"""
-        startdate=datetime(2019,8,1)
-        enddate=datetime(2020,3,1)
-        parse_stock_director_xq(startdate,enddate)
-        #"""
+        down_director()
             
     elif sys.argv[1]=='xq' :
         startdate=datetime.strptime(sys.argv[2],'%Y%m%d')

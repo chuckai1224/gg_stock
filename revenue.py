@@ -245,12 +245,21 @@ def gen_revenue_good_list(enddate,ver=2,debug=0):
     elif ver==2:
         in1=income()
         df_s=in1.get_by_date(enddate)
+        if len(df_s)==0 or "去年同月增減(%)" not in df_s.columns:
+            print(lno(),'no income data for',enddate)
+            return pd.DataFrame()
         df=df_s[(df_s.loc[:,"去年同月增減(%)"] >= 20)].copy().reset_index(drop=True)
         if len(df.index)==0 :
            return pd.DataFrame()     
         print(lno(),df[['公司代號','公司名稱']])
         prev_month = enddate - relativedelta(months=1)
         df_p=in1.get_by_date(prev_month)
+        if len(df_p)==0 or "去年同月增減(%)" not in df_p.columns:
+            # 無上月營收資料 → 僅用單月年增率 >=20 篩選
+            df_o=df[['公司代號','公司名稱','去年同月增減(%)','前期比較增減(%)']].copy()
+            df_o['上月去年同月增減(%)']=np.nan
+            df_o.columns=['stock_id','stock_name','單月年增率','累計年增率','前月年增率']
+            return df_o
         df_p=df_p[['公司代號','去年同月增減(%)']]
         df_p=df_p.rename(columns={'去年同月增減(%)':'上月去年同月增減(%)'})
         d1=pd.merge(df,df_p, how='left', on='公司代號')
@@ -397,6 +406,12 @@ class income:
         year = int(ym[:-2]) + 1911
         month = int(ym[-2:])
         df_out = df[cols].copy()
+        # 數值欄位轉數值,供 gen_revenue_good_list 等比較運算使用
+        for c in ['當月營收', '上月營收', '去年當月營收', '上月比較增減(%)',
+                  '去年同月增減(%)', '當月累計營收', '去年累計營收', '前期比較增減(%)']:
+            df_out[c] = pd.to_numeric(
+                df_out[c].astype(str).str.replace(',', '', regex=False),
+                errors='coerce')
         table_name = '%d%02d' % (year, month)
         df_out.to_sql(name=table_name, con=self.con, if_exists='replace',
                       index=False, chunksize=200)
