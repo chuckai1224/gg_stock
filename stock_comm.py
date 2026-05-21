@@ -538,7 +538,7 @@ def get_stock_df_bydate_nums(stock_no,nums,date):
                 break
     outdf.fillna(method='ffill')                
     outdf=outdf.dropna(how='any',axis=0)
-    outdf=outdf.sort_values(by='date', ascending=True)
+    outdf=outdf.sort_values(by='date', ascending=True).drop_duplicates(subset='date',keep='last')
     outdf=outdf.reset_index(drop=True)
     if nums >0:
         outdf=outdf.tail(nums)
@@ -939,7 +939,7 @@ class stock_data:
             #df = pd.read_sql('select * from "{}" where date < "{}" ORDER BY date DESC'.format(stock_id,date), con=self.con, parse_dates=['date'])
             df = pd.read_sql('select * from "{}"'.format(stock_id), con=self.con, parse_dates=['date'])
             #df=pd.read_sql(stock_id, self.engine, parse_dates=['date'])  
-            df=df.fillna(method='ffill')
+            df=df.sort_values('date').fillna(method='ffill')
             #print(lno(),df.head())
             #df['date']=df['date'].apply(date_sub2time64)
             return df
@@ -956,7 +956,7 @@ class stock_data:
             cmd='SELECT * FROM "{}" WHERE date >= "{}" and date < "{}"'.format(stock_id,startdate,enddate)
             df = pd.read_sql(cmd, con=self.con, parse_dates=['date'])
             #df=pd.read_sql(stock_id, self.engine, parse_dates=['date'])  
-            df=df.fillna(method='ffill')
+            df=df.sort_values('date').fillna(method='ffill')
             #print(lno(),df.head())
             #df['date']=df['date'].apply(date_sub2time64)
             return df
@@ -974,7 +974,7 @@ class stock_data:
             #cmd='SELECT * FROM "{}" WHERE date <= "{}" ORDER BY "date" DESC limit {} '.format(stock_id,date,num)
             df = pd.read_sql(cmd, con=self.con, parse_dates=['date'])
             #df=df.sort_values(by=['date'], ascending=True).reset_index(drop=True)
-            df=df.fillna(method='ffill')
+            df=df.sort_values('date').fillna(method='ffill')
             df=df.tail(num).reset_index(drop=True)
             #print(lno(),df.head())
             return df
@@ -986,7 +986,7 @@ class stock_data:
             cmd='SELECT * FROM "{}" WHERE date >= "{}" and date < "{}"'.format(stock_id,startdate,enddate)
             df = pd.read_sql(cmd, con=self.con, parse_dates=['date'])
             #df=pd.read_sql(stock_id, self.engine, parse_dates=['date'])  
-            df=df.fillna(method='ffill')
+            df=df.sort_values('date').fillna(method='ffill')
             #print(lno(),df.head())
             #df['date']=df['date'].apply(date_sub2time64)
             return df
