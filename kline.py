@@ -180,7 +180,11 @@ def resample(in_df,period,cnt):
     # https://pandas-docs.github.io/pandas-docs-travis/timeseries.html#offset-aliases
     # 周 W、月 M、季度 Q、10天 10D、2周 2W
     #    period = 'W'
-    df=in_df.set_index('date')
+    df=in_df.dropna(subset=['date']).copy()
+    if len(df)==0:
+        return pd.DataFrame(columns=list(in_df.columns))
+    df['date']=pd.to_datetime(df['date'])
+    df=df.set_index('date')
     print (lno(),df.tail(2))
     #df.set_index('date', inplace=True)
     weekly_df = df.resample(period).last()

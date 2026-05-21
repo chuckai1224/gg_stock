@@ -763,6 +763,49 @@ def gen_buy_mode1(date):
         print(lno(),df.iloc[i]['公司代號'])
         print(lno(),df_eps)
     #print(lno(),df)
+def down_eps(dw=1):
+    """從 TWSE/TPEX 開放資料下載最新一季綜合損益表(一般業),
+    寫入每檔 sql/stock/{id}.db 的 mix_income 表(欄位含 ys)。"""
+    headers = {'User-Agent': 'Mozilla/5.0'}
+    sources = ['https://openapi.twse.com.tw/v1/opendata/t187ap06_L_ci',
+               'https://www.tpex.org.tw/openapi/v1/mopsfin_t187ap06_O_ci']
+    frames = []
+    for url in sources:
+        try:
+            arr = requests.get(url, headers=headers, timeout=60).json()
+        except Exception as e:
+            print(lno(), 'eps request fail', url, e)
+            continue
+        if arr:
+            # 各來源欄位名不同(TPEX 用英文),先各自正規化再合併
+            frames.append(pd.DataFrame(arr).rename(columns={
+                'SecuritiesCompanyCode': '公司代號', 'CompanyName': '公司名稱',
+                'Year': '年度', 'Season': '季別'}))
+    if not frames:
+        print(lno(), 'no eps data')
+        return
+    df = pd.concat(frames, ignore_index=True)
+    need = ['公司代號', '公司名稱', '營業收入', '營業毛利（毛損）淨額',
+            '營業利益（損失）', '本期綜合損益總額', '基本每股盈餘（元）', '年度', '季別']
+    for c in need:
+        if c not in df.columns:
+            print(lno(), 'eps missing column', c)
+            return
+    df['公司代號'] = df['公司代號'].astype(str).str.strip()
+    df = df[df['公司代號'].str.len() == 4].reset_index(drop=True)
+    df['ys'] = df['年度'].astype(int) * 4 + df['季別'].astype(int) - 1
+    numcols = ['營業收入', '營業毛利（毛損）淨額', '營業利益（損失）',
+               '本期綜合損益總額', '基本每股盈餘（元）']
+    for c in numcols:
+        df[c] = pd.to_numeric(df[c].astype(str).str.replace(',', '', regex=False),
+                              errors='coerce')
+    cols = ['公司代號', '公司名稱'] + numcols + ['ys']
+    d = df[cols]
+    for i in range(0, len(d)):
+        comm.stock_df_to_sql_append(d.iloc[i]['公司代號'], 'mix_income', d[i:i + 1])
+    print(lno(), 'eps mix_income saved', len(d), 'stocks, ys', int(d['ys'].iloc[0]))
+
+
 if __name__ == '__main__':
 
     sns.set()
@@ -785,8 +828,7 @@ if __name__ == '__main__':
                 year=str(int(now_date.year)-1911)
                 season=str(int((int(now_date.month)+2)/3))
                 print(lno(),year,season)
-                down_tse_eps(year,season,0)
-                down_otc_eps(year,season,0)
+                down_eps()
 
                 now_date = now_date + relativedelta(months=3)
    
@@ -857,8 +899,7 @@ if __name__ == '__main__':
         season=int(sys.argv[2])
        
         #down_financial(year,reason,'tse',type='綜合損益彙總表',download=1)
-        down_tse_eps(year,season,1)
-        down_otc_eps(year,season,1)
+        down_eps()
         #gen_eps(year,season)
         
     else:

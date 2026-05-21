@@ -252,8 +252,14 @@ def get_stock_season_composite_income_sheet(d,debug=0):
         else:
             d.at[0,'前{}年營收(百萬)'.format(i)]=float(d1.iloc[i]['營業收入']/1000 ) 
     ##計算3年psr high low and 計算psrS
-    rev_S=(1+float(d.at[0,'本年累計營收年增率'])/100)*float(d1.iloc[0]['營業收入']/1000)
-    d.at[0,'psrS']=d.at[0,'市值(百萬)']/rev_S
+    if len(d1)>0:
+        try:
+            rev_S=(1+float(d.at[0,'本年累計營收年增率'])/100)*float(d1.iloc[0]['營業收入']/1000)
+            d.at[0,'psrS']=d.at[0,'市值(百萬)']/rev_S
+        except:
+            d.at[0,'psrS']=np.nan
+    else:
+        d.at[0,'psrS']=np.nan
     try:
         d.at[0,'去年營收年增率']=(float(d1.iloc[1]['營業收入']/1000 ) /float(d1.iloc[2]['營業收入']/1000 ) -1)*100
     except:
@@ -473,7 +479,9 @@ def get_peg_score(n,debug=0):
     return y
 
 def time642str(x):
-        ts = pd.to_datetime(str(x)) 
+        ts = pd.to_datetime(str(x), errors='coerce')
+        if pd.isna(ts):
+            return ''
         d = ts.strftime('%y-%m-%d')
         return d
     
