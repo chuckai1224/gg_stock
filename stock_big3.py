@@ -2,6 +2,7 @@
 #from __future__ import unicode_literals
 import io
 import csv
+import json
 import os
 import time
 import sys
@@ -19,7 +20,8 @@ import numpy as np
 from io import StringIO
 from matplotlib import pyplot as plt
 from sqlalchemy import create_engine
-from sqlalchemy.types import NVARCHAR, Float, Integer    
+from sqlalchemy import inspect as sa_inspect
+from sqlalchemy.types import NVARCHAR, Float, Integer
 from sqlalchemy import Table, Column,  String, MetaData, ForeignKey  
 #import pyecharts
 #from pyecharts import Kline
@@ -384,6 +386,7 @@ def get_stock_3big_all(date,flag='tse',ver=1):
     return pd.DataFrame()
 class stock_big3:
     def __init__(self):
+        check_dst_folder('sql')
         self.engine = create_engine('sqlite:///sql/stock_big3.db', echo=False)
         self.con = self.engine.connect()
         self.datafolder='csv/stock_big3'
@@ -392,126 +395,107 @@ class stock_big3:
        '外資自營商買進股數', '外資自營商賣出股數', '外資自營商買賣超股數', '投信買進股數', '投信賣出股數', '投信買賣超股數',
        '自營商買賣超股數', '自營商買進股數(自行買賣)', '自營商賣出股數(自行買賣)', '自營商買賣超股數(自行買賣)',
        '自營商買進股數(避險)', '自營商賣出股數(避險)', '自營商買賣超股數(避險)', '三大法人買賣超股數' ]
-    def download_(self,date,market,download=1):
-        if market=='tse':
-            url='https://www.twse.com.tw/fund/T86?response=csv&date=%d%02d%02d&selectType=ALLBUT0999'%(int(date.year),int(date.month),int(date.day))
-            htmlfile='%s/html/%s.html'%(self.datafolder,date.strftime('%Y%m%d'))
-        else:
-            changedate=datetime.strptime('20141201','%Y%m%d')
-            htmlfile='%s/html/%s_otc.html'%(self.datafolder,date.strftime('%Y%m%d'))
-            if date>=changedate:
-                url='https://www.tpex.org.tw/web/stock/3insti/daily_trade/3itrade_hedge_result.php?l=zh-tw&o=csv&se=EW&t=D&d=%d/%02d/%02d&s=0,asc,0'%(int(date.year)-1911,int(date.month),int(date.day))
-            else :    
-                url='https://www.tpex.org.tw/web/stock/3insti/daily_trade/3itrade_print.php?l=zh-tw&se=EW&t=D&d=%d/%02d/%02d&s=0,asc,0'%(int(date.year)-1911,int(date.month),int(date.day))                
-        if download==1:
-            check_dst_folder(os.path.dirname(htmlfile))
-            response = requests.get(url)
-            if response.status_code == 200:
-                with open(htmlfile, 'wb') as file:
-                    for chunk in response:
-                        file.write(chunk)
-        else:
-            csv=htmlfile
-            
-        if not os.path.exists(htmlfile):
-            return
-        print(lno(),date)
-        try:
-            df = pd.read_csv(htmlfile,encoding = 'big5hkscs',header=1,dtype=self.dtypes, thousands=',' )
-            #print(lno(),len(df.columns))    
-            #df = pd.read_csv(htmlfile,encoding = 'big5hkscs',header=1,usecols=columns,dtype=self.dtypes, thousands=',' )
-        except:
-            filesize=os.path.getsize(htmlfile)
-            if  filesize<1024:
-                try:
-                    os.remove(htmlfile)
-                except:    
-                #print(lno(),"wrong file size", htmlfile)
-                    pass
-                return
-            else:
-                if market == 'otc' and date <= datetime(2014, 12, 1):
-                    dfs = pd.read_html(htmlfile)
-                    df=dfs[0].copy()
-                    #df.columns=['證券代號', '證券名稱', '外陸資買進股數(不含外資自營商)', '外陸資賣出股數(不含外資自營商)', '外陸資買賣超股數(不含外資自營商)', '投信買進股數', '投信賣出股數', '投信買賣超股數', '自營商買進股數(自行買賣)', '自營商賣出股數(自行買賣)', '自營商買賣超股數(自行買賣)', '三大法人買賣超股數']
-                else :   
-                    print(lno(),"wrong xxx", market,htmlfile,filesize)
-                    df = pd.read_csv(htmlfile,encoding = 'big5hkscs',header=1,dtype=self.dtypes, thousands=',' )
-                    print(lno(),df.columns)
-                    print(lno(),len(df.columns))
-                    raise    
+    def _big3_url(self, date, market):
+        # 證交所 T86 / 櫃買中心 dailyTrade 開放資料 JSON API
+        if market == 'tse':
+            return ('https://www.twse.com.tw/rwd/zh/fund/T86'
+                    '?date=%s&selectType=ALLBUT0999&response=json' % date.strftime('%Y%m%d'))
+        return ('https://www.tpex.org.tw/www/zh-tw/insti/dailyTrade'
+                '?type=Daily&sect=EW&date=%s&response=json' % date.strftime('%Y/%m/%d'))
 
-        df=df.dropna(thresh=3)
-        df.dropna(axis=1,how='all',inplace=True)
-       
-        if market=='otc':
-            print(lno(),len(df.columns)) 
-            print(lno(),df.columns) 
-            if date < datetime(2014, 12, 1):
-                columns=['證券代號', '證券名稱', 
-                         '外陸資買進股數(不含外資自營商)', '外陸資賣出股數(不含外資自營商)', '外陸資買賣超股數(不含外資自營商)', 
-                         '投信買進股數', '投信賣出股數', '投信買賣超股數',
-                         '自營商買進股數(自行買賣)', '自營商賣出股數(自行買賣)', '自營商買賣超股數', '三大法人買賣超股數']
-            elif date < datetime(2018, 1, 15):
-                columns=['證券代號','證券名稱', 
-                            '外陸資買進股數(不含外資自營商)', '外陸資賣出股數(不含外資自營商)', '外陸資買賣超股數(不含外資自營商)', 
-                            '投信買進股數', '投信賣出股數', '投信買賣超股數', 
-                            '自營商買賣超股數',
-                            '自營商買進股數(自行買賣)','自營商賣出股數(自行買賣)', '自營商買賣超股數(自行買賣)',
-                            '自營商買進股數(避險)','自營商賣出股數(避險)','自營商買賣超股數(避險)', '三大法人買賣超股數']
-            else:
-                df.columns=['證券代號','證券名稱', 
-                        '外陸資買進股數(不含外資自營商)', '外陸資賣出股數(不含外資自營商)', '外陸資買賣超股數(不含外資自營商)',
-                        '外資自營商買進股數', '外資自營商賣出股數', '外資自營商買賣超股數',
-                        '外資及陸資-買進股數', '外資及陸資-賣出股數', '外資及陸資-買賣超股數', 
-                        '投信買進股數', '投信賣出股數', '投信買賣超股數',
-                        '自營商買進股數(自行買賣)', '自營商賣出股數(自行買賣)', '自營商買賣超股數(自行買賣)',
-                        '自營商買進股數(避險)', '自營商賣出股數(避險)', '自營商買賣超股數(避險)',
-                        '自營商-買進股數', '自營商-賣出股數','自營商買賣超股數',
-                         '三大法人買賣超股數' ]  
-                df=df[self.columns]  
-                columns=self.columns 
-                
-        else:  
-            print(lno(),len(df.columns)) 
-            print(lno(),df.columns)       
-            if date < datetime(2014, 12, 1):
-                
-                columns=['證券代號','證券名稱', 
-                            '外陸資買進股數(不含外資自營商)', '外陸資賣出股數(不含外資自營商)', '外陸資買賣超股數(不含外資自營商)', 
-                            '投信買進股數', '投信賣出股數', '投信買賣超股數', 
-                            '自營商買進股數(自行買賣)','自營商賣出股數(自行買賣)','自營商買賣超股數',
-                            '三大法人買賣超股數']
-            elif date < datetime(2017, 12, 18):
-                columns=['證券代號','證券名稱', 
-                            '外陸資買進股數(不含外資自營商)', '外陸資賣出股數(不含外資自營商)', '外陸資買賣超股數(不含外資自營商)', 
-                            '投信買進股數', '投信賣出股數', '投信買賣超股數',
-                            '自營商買賣超股數', 
-                            '自營商買進股數(自行買賣)','自營商賣出股數(自行買賣)','自營商買賣超股數(自行買賣)',
-                            '自營商買進股數(避險)', '自營商賣出股數(避險)', '自營商買賣超股數(避險)',
-                            '三大法人買賣超股數']
-            else:
-                columns=self.columns    
-                    
-        df.columns=columns        
-        df['date']=date
-        df['market']=market
-        df['證券代號']=[x.strip().replace('=', '').replace('\"','') for x in df['證券代號'] ]
-        enddate=date+relativedelta(days=1)
-        table_name=date.strftime('%Y%m%d')
-        if table_name in self.engine.table_names():
-            cmd='SELECT * FROM "{}" WHERE date >= "{}" and date < "{}" and market=="{}"'.format(table_name,date,enddate,market)
-            df_query= pd.read_sql(cmd, con=self.con, parse_dates=['date'])
-            if len(df_query):
-                print(lno(),"repeat",date)
-                return
-            else:
-                df.to_sql(name=table_name,  con=self.con, if_exists='append',  index= False,chunksize=10)
-            
-        else:    
-            df.to_sql(name=table_name, con=self.con, if_exists='append',  index= False,chunksize=10)
-           
-        
+    def _fetch_big3_json(self, date, market, download=1):
+        # download=0 時優先讀本機 json 快取，避免重複連線
+        cache = '%s/json/%s%s.json' % (self.datafolder, date.strftime('%Y%m%d'),
+                                       '' if market == 'tse' else '_otc')
+        if download == 0 and os.path.exists(cache):
+            with open(cache, encoding='utf-8') as f:
+                text = f.read()
+        else:
+            try:
+                resp = requests.get(self._big3_url(date, market),
+                                    headers={'User-Agent': 'Mozilla/5.0'}, timeout=30)
+            except Exception as e:
+                print(lno(), 'request fail', market, date, e)
+                return None
+            if resp.status_code != 200:
+                print(lno(), 'http', resp.status_code, market, date)
+                return None
+            text = resp.text
+            check_dst_folder(os.path.dirname(cache))
+            with open(cache, 'w', encoding='utf-8') as f:
+                f.write(text)
+        try:
+            return json.loads(text)
+        except Exception:
+            print(lno(), 'json parse fail', market, date)
+            return None
+
+    def _big3_json_to_df(self, js, market):
+        # 將 API 回傳的 JSON 整理成 self.columns 的 19 欄 DataFrame
+        if market == 'tse':
+            if js.get('stat') != 'OK' or not js.get('data'):
+                return pd.DataFrame()
+            df = pd.DataFrame(js['data'], columns=js['fields'])
+            if not set(self.columns).issubset(df.columns):
+                print(lno(), 'tse fields mismatch', list(df.columns))
+                return pd.DataFrame()
+        else:
+            tables = js.get('tables') or []
+            if not tables or not tables[0].get('data'):
+                return pd.DataFrame()
+            # 上櫃 dailyTrade 自 2018 起為 24 欄版面
+            otc_cols = ['證券代號', '證券名稱',
+                '外陸資買進股數(不含外資自營商)', '外陸資賣出股數(不含外資自營商)', '外陸資買賣超股數(不含外資自營商)',
+                '外資自營商買進股數', '外資自營商賣出股數', '外資自營商買賣超股數',
+                '外資及陸資-買進股數', '外資及陸資-賣出股數', '外資及陸資-買賣超股數',
+                '投信買進股數', '投信賣出股數', '投信買賣超股數',
+                '自營商買進股數(自行買賣)', '自營商賣出股數(自行買賣)', '自營商買賣超股數(自行買賣)',
+                '自營商買進股數(避險)', '自營商賣出股數(避險)', '自營商買賣超股數(避險)',
+                '自營商-買進股數', '自營商-賣出股數', '自營商買賣超股數',
+                '三大法人買賣超股數']
+            df = pd.DataFrame(tables[0]['data'])
+            if df.shape[1] != len(otc_cols):
+                print(lno(), 'otc column count mismatch', df.shape[1])
+                return pd.DataFrame()
+            df.columns = otc_cols
+        df = df[self.columns].copy()
+        num_cols = self.columns[2:]
+        for c in num_cols:
+            df[c] = pd.to_numeric(
+                df[c].astype(str).str.replace(',', '', regex=False).str.strip(),
+                errors='coerce')
+        df = df.dropna(subset=num_cols, how='all').reset_index(drop=True)
+        df['證券名稱'] = df['證券名稱'].astype(str).str.strip()
+        return df
+
+    def download_(self, date, market, download=1):
+        table_name = date.strftime('%Y%m%d')
+        # 該日該市場資料若已存在資料庫 → 不重複下載
+        if table_name in sa_inspect(self.engine).get_table_names():
+            enddate = date + relativedelta(days=1)
+            cmd = ('SELECT * FROM "{}" WHERE date >= "{}" and date < "{}" '
+                   'and market=="{}"').format(table_name, date, enddate, market)
+            try:
+                if len(pd.read_sql(cmd, con=self.con, parse_dates=['date'])):
+                    print(lno(), 'repeat', date, market)
+                    return
+            except Exception:
+                pass
+        js = self._fetch_big3_json(date, market, download)
+        if js is None:
+            return
+        df = self._big3_json_to_df(js, market)
+        if len(df) == 0:
+            print(lno(), 'no data', market, date)
+            return
+        df['證券代號'] = [str(x).strip().replace('=', '').replace('"', '')
+                          for x in df['證券代號']]
+        df['date'] = date
+        df['market'] = market
+        df.to_sql(name=table_name, con=self.engine, if_exists='append',
+                  index=False, chunksize=200)
+        print(lno(), 'saved', market, date.strftime('%Y%m%d'), len(df))
+
     def download(self,date,download=1):
         self.download_(date,'tse',download)
         self.download_(date,'otc',download)
@@ -543,7 +527,7 @@ class stock_big3:
     def get_df_by_id_date_num(self,stock_id,date,num,debug=0):
         day=0
         rec=0
-        table_names = self.engine.table_names()
+        table_names = sa_inspect(self.engine).get_table_names()
         df_fin=pd.DataFrame()
         while   rec<num :
             nowdate = date - relativedelta(days=day)
