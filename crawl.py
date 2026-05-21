@@ -45,8 +45,7 @@ def string_int(x):
 class Crawler():
     def __init__(self, prefix="{}/stock_data".format(comm.datafolder())):
         ''' Make directory if not exist when initialize '''
-        if not isdir(prefix):
-            mkdir(prefix)
+        comm.check_dst_folder(prefix)
         self.prefix = prefix
         self.stock_columns= ['date', 'vol', 'cash','open', 'high', 'low','close', 'diff', 'Tnumber','stock_name']
 
@@ -120,85 +119,57 @@ class Crawler():
     
     def _get_tse_data(self, date_tuple):
         date_str = '{0}{1:02d}{2:02d}'.format(date_tuple[0], date_tuple[1], date_tuple[2])
-        url = 'https://www.twse.com.tw/exchangeReport/MI_INDEX'
-        query_params = {
-            'date': date_str,
-            'response': 'json',
-            'type': 'ALLBUT0999',
-            '_': str(round(time.time() * 1000) - 500)
-        }
-
-        # Get json data
-        page = requests.get(url, params=query_params,timeout=30)
+        url = 'https://www.twse.com.tw/rwd/zh/afterTrading/MI_INDEX'
+        query_params = {'date': date_str, 'type': 'ALLBUT0999', 'response': 'json'}
+        page = requests.get(url, params=query_params,
+                            headers={'User-Agent': 'Mozilla/5.0'}, timeout=30)
         if not page.ok:
             logging.error("Can not get TSE data at {}".format(date_str))
             print("Can not get TSE data at {}".format(date_str))
             return
-           
         content = page.json()
-        #print(content)              
-        # For compatible with original data
-        date_str_mingguo = '{0}/{1:02d}/{2:02d}'.format(date_tuple[0] - 1911, date_tuple[1], date_tuple[2])
-        res=[]
-        now_date=datetime.strptime(date_str,'%Y%m%d')
-        idx_date=datetime.strptime('20110729','%Y%m%d')
-        idx_date9=datetime.strptime('20190718','%Y%m%d')
-        #print(lno(),content) 
-        #raise
-        if now_date<=idx_date:
-            text=content['data8']
-        elif now_date>=idx_date9:    
-            text=content['data9']
-        else:
-            text=content['data9']
-        #print(lno(),text)    
-        ## TODO fix craw tse ok need time verify
-        columns = ['stock_id','stock_name', 'vol', 'Tnumber','cash','open', 'high', 'low','close','sign','diff','d1','d2','d3','d4','本益比']
-        df=pd.DataFrame(text, columns=columns)
-        #print(lno(),df.open)
-        #df['date']=np.datetime64(now_date)
-        df['date']='{0}-{1:02d}-{2:02d}'.format(date_tuple[0], date_tuple[1], date_tuple[2])
-        df=df.replace('--',np.nan)
-        df=df.replace('---',np.nan)
-        df=df.replace('----',np.nan)
-        df['open']=df['open'].apply(string_float)
-        df['high']=df['high'].apply(string_float)
-        df['low']=df['low'].apply(string_float)
-        df['close']=df['close'].apply(string_float)
-        df['vol']=df['vol'].apply(string_int)
-        df['cash']=df['cash'].apply(string_int)
-        df['diff']=df['diff'].apply(string_float)
+        # 從 tables 找出個股每日收盤行情(16 欄、首欄為證券代號)
+        text = None
+        for tb in content.get('tables', []):
+            f = tb.get('fields', [])
+            if len(f) == 16 and f[0] == '證券代號':
+                text = tb.get('data')
+                break
+        if not text:
+            print(lno(), 'no TSE quote table', date_str)
+            return
+        columns = ['stock_id', 'stock_name', 'vol', 'Tnumber', 'cash', 'open',
+                   'high', 'low', 'close', 'sign', 'diff', 'd1', 'd2', 'd3',
+                   'd4', '本益比']
+        df = pd.DataFrame(text, columns=columns)
+        df['date'] = '{0}-{1:02d}-{2:02d}'.format(date_tuple[0], date_tuple[1], date_tuple[2])
+        df = df.replace('--', np.nan).replace('---', np.nan).replace('----', np.nan)
+        df['open'] = df['open'].apply(string_float)
+        df['high'] = df['high'].apply(string_float)
+        df['low'] = df['low'].apply(string_float)
+        df['close'] = df['close'].apply(string_float)
+        df['vol'] = df['vol'].apply(string_int)
+        df['cash'] = df['cash'].apply(string_int)
+        df['diff'] = df['diff'].apply(string_float)
+
         def calc_diff(row):
-            if row['sign'].find('green') > 0:
+            if str(row['sign']).find('green') > 0:
                 return -row['diff']
-            else:
-                return row['diff']     
-        df['diff']=df.apply(calc_diff, axis=1)
-        df1=df[ ['stock_id','date', 'vol', 'cash','open', 'high', 'low','close', 'diff', 'Tnumber','stock_name']]
-        #print(lno(),df1.dtypes)
-        tStart = time.time()  
+            return row['diff']
+        df['diff'] = df.apply(calc_diff, axis=1)
+        df1 = df[['stock_id', 'date', 'vol', 'cash', 'open', 'high', 'low',
+                  'close', 'diff', 'Tnumber', 'stock_name']]
+
         def add_stock_data(row):
-            if len(row['stock_id'])!=4:
+            if len(row['stock_id']) != 4:
                 return
-            #print(lno(),row['stock_id'])    
             self._record(row['stock_id'], row.tolist()[1:])
-            return    
-            
-        df1.apply(add_stock_data,axis=1)
-        out_file='{0}/exchange/tse/{1}{2:02d}{3:02d}'.format(comm.datafolder(),date_tuple[0] , date_tuple[1], date_tuple[2])
+        df1.apply(add_stock_data, axis=1)
+        out_file = '{0}/exchange/tse/{1}{2:02d}{3:02d}'.format(
+            comm.datafolder(), date_tuple[0], date_tuple[1], date_tuple[2])
         comm.check_dst_folder(os.path.dirname(out_file))
-        df1.to_csv(out_file,encoding='utf-8', index=False) 
-        """
-        out_file='{0}{1:02d}{2:02d}'.format(date_tuple[0] , date_tuple[1], date_tuple[2])
-        df1.to_csv(out_file,encoding='utf-8', index=False) 
-        dateparse = lambda dates: pd.datetime.strptime(dates,'%Y-%m-%d')
-        df2 = pd.read_csv(out_file,encoding = 'utf-8',parse_dates=['date'], date_parser=dateparse)
-        print(lno(),df2.dtypes)
-        """
-           
-        tEnd = time.time()      
-        print ("It cost %.3f sec" % (tEnd - tStart))   
-    
+        df1.to_csv(out_file, encoding='utf-8', index=False)
+
     def _get_tse_data_old(self, date_tuple):
         date_str = '{0}{1:02d}{2:02d}'.format(date_tuple[0], date_tuple[1], date_tuple[2])
         url = 'https://www.twse.com.tw/exchangeReport/MI_INDEX'
@@ -258,98 +229,48 @@ class Crawler():
         df.to_csv(out_file,encoding='utf-8', index=False)   
         #print("test113",df.head())
     def _get_otc_data(self, date_tuple):
-        date_str = '{0}/{1:02d}/{2:02d}'.format(date_tuple[0] - 1911, date_tuple[1], date_tuple[2])
-        ttime = str(int(time.time()*100))
-        url = 'http://www.tpex.org.tw/web/stock/aftertrading/daily_close_quotes/stk_quote_result.php?l=zh-tw&d={}&_={}'.format(date_str, ttime)
-        page = requests.get(url,timeout=30)
-
+        date_str = '{0}/{1:02d}/{2:02d}'.format(date_tuple[0], date_tuple[1], date_tuple[2])
+        url = 'https://www.tpex.org.tw/www/zh-tw/afterTrading/dailyQuotes'
+        query_params = {'date': date_str, 'type': 'EW', 'response': 'json'}
+        page = requests.get(url, params=query_params,
+                            headers={'User-Agent': 'Mozilla/5.0'}, timeout=30)
         if not page.ok:
             logging.error("Can not get OTC data at {}".format(date_str))
+            print("Can not get OTC data at {}".format(date_str))
             return
-
-        result = page.json()
-
-        if result['reportDate'] != date_str:
-            logging.error("Get error date OTC data at {}".format(date_str))
+        content = page.json()
+        tables = content.get('tables', [])
+        if not tables or not tables[0].get('data'):
+            print(lno(), 'no OTC data', date_str)
             return
-        
-        ## TODO fix craw otc
-        res=[]
-        #print(lno(),type(result['mmData']))
-        #print(lno(),result['aaData'][0])
-        res=result['mmData']
-        res.extend(result['aaData'])
-        #print(lno(),res)
-        columns = ['stock_id','stock_name','close','diff', 'open', 'high', 'low', 'av','vol','cash',\
-         'Tnumber','b1','s1','total_stock','d1','d2','d3']
-        try:
-            df=pd.DataFrame( res, columns=columns)
-        except:    
-            columns = ['stock_id','stock_name','close','diff', 'open', 'high', 'low', 'av','vol','cash',\
-         'Tnumber','b1','dd1','s1','dd2','total_stock','d1','d2','d3']
-            df=pd.DataFrame( res, columns=columns)
-            
-        #now_date=datetime.strptime('{0}{1:02d}{2:02d}'.format(date_tuple[0], date_tuple[1], date_tuple[2]),'%Y%m%d')
-        #df['date']=np.datetime64(now_date)
-        df['date']='{0}-{1:02d}-{2:02d}'.format(date_tuple[0], date_tuple[1], date_tuple[2])
-        df=df.replace('--',np.nan)
-        df=df.replace('---',np.nan)
-        df=df.replace(' ---',np.nan)
-        df=df.replace('----',np.nan)
-        
-        df['open']=df['open'].apply(string_float)
-        df['high']=df['high'].apply(string_float)
-        df['low']=df['low'].apply(string_float)
-        df['close']=df['close'].apply(string_float)
-        df['vol']=df['vol'].apply(string_int)
-        df['cash']=df['cash'].apply(string_int)
-        df['diff']=df['diff'].apply(string_float)
-        df1=df[ ['stock_id','date', 'vol', 'cash','open', 'high', 'low','close', 'diff', 'Tnumber','stock_name']]
-        #print(lno(),df1.dtypes)
-        tStart = time.time()  
+        res = tables[0]['data']
+        columns = ['stock_id', 'stock_name', 'close', 'diff', 'open', 'high',
+                   'low', 'av', 'vol', 'cash', 'Tnumber', 'b1', 'dd1', 's1',
+                   'dd2', 'total_stock', 'd1', 'd2', 'd3']
+        df = pd.DataFrame(res, columns=columns)
+        df['date'] = '{0}-{1:02d}-{2:02d}'.format(date_tuple[0], date_tuple[1], date_tuple[2])
+        df = df.replace('--', np.nan).replace('---', np.nan)
+        df = df.replace(' ---', np.nan).replace('----', np.nan)
+        df['open'] = df['open'].apply(string_float)
+        df['high'] = df['high'].apply(string_float)
+        df['low'] = df['low'].apply(string_float)
+        df['close'] = df['close'].apply(string_float)
+        df['vol'] = df['vol'].apply(string_int)
+        df['cash'] = df['cash'].apply(string_int)
+        df['diff'] = df['diff'].apply(string_float)
+        df1 = df[['stock_id', 'date', 'vol', 'cash', 'open', 'high', 'low',
+                  'close', 'diff', 'Tnumber', 'stock_name']]
+
         def add_stock_data(row):
-            #print(lno(),row)
-            if len(row['stock_id'])!=4:
+            if len(row['stock_id']) != 4:
                 return
             self._record(row['stock_id'], row.tolist()[1:])
-            return    
-            
-        tStart = time.time()
-        df1.apply(add_stock_data,axis=1)
-        out_file='{0}/exchange/otc/{1}{2:02d}{3:02d}'.format(comm.datafolder(),date_tuple[0] , date_tuple[1], date_tuple[2])
+        df1.apply(add_stock_data, axis=1)
+        out_file = '{0}/exchange/otc/{1}{2:02d}{3:02d}'.format(
+            comm.datafolder(), date_tuple[0], date_tuple[1], date_tuple[2])
         comm.check_dst_folder(os.path.dirname(out_file))
-        #print(lno(),out_file)
-        df1.to_csv(out_file,encoding='utf-8', index=False)
-        tEnd = time.time()      
-        print ("It cost %.3f sec" % (tEnd - tStart))
-        #print(lno(),df)
-        """
-        raise
-        for table in [result['mmData'], result['aaData']]:
-            for tr in table:
-                row = self._clean_row([
-                    date_str,
-                    tr[8], # 成交股數
-                    tr[9], # 成交金額
-                    tr[4], # 開盤價
-                    tr[5], # 最高價
-                    tr[6], # 最低價
-                    tr[2], # 收盤價
-                    tr[3], # 漲跌價差
-                    tr[10], # 成交筆數
-                    tr[1]
-                ])
-                #print("test12", tr[0])
-               
-                self._record(tr[0], row)
-                res.append([tr[0]]+row)
-        labels = ['stock_id','date', 'vol', 'cash','open', 'high', 'low','close', 'diff', 'Transactions','stock_name']
-        df = pd.DataFrame.from_records(res, columns=labels)
-        if not os.path.isdir('csv/data/otc'):
-            os.makedirs('csv/data/otc')  
-        out_file='csv/data/otc/{0}{1:02d}{2:02d}'.format(date_tuple[0] , date_tuple[1], date_tuple[2])
-        df.to_csv(out_file,encoding='utf-8', index=False)
-        """
+        df1.to_csv(out_file, encoding='utf-8', index=False)
+
     def get_data(self, date_tuple):
         print('Crawling {}'.format(date_tuple))
         self._get_tse_data(date_tuple)
@@ -422,7 +343,11 @@ class Crawler():
 
     def get_stocks_index(self, date_tuple):
         print('Crawling {}'.format(date_tuple))
-        self._get_stocks_index_data(date_tuple)
+        # 類股指數仍為舊版 API 格式,失敗不影響股價建庫
+        try:
+            self._get_stocks_index_data(date_tuple)
+        except Exception as e:
+            print(lno(), 'get_stocks_index skipped:', e)
 def download_job(startdate,enddate):
     if startdate==enddate:
         first_day=startdate

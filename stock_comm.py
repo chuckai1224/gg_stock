@@ -18,6 +18,7 @@ import pandas as pd
 from bs4 import BeautifulSoup
 import scipy.signal as signal 
 from sqlalchemy import create_engine
+from sqlalchemy import inspect as sa_inspect
 from sqlalchemy.types import NVARCHAR, Float, Integer,DateTime,Date
 import platform
 import stock_big3
@@ -601,10 +602,7 @@ def get_name_by_stock_id(stock_id):
             
     return 0   
 def datafolder():
-    if platform.system().upper()=='LINUX':
-        return '/src/stock/data'
-    else:
-        return 'data'
+    return 'data'
 
 def time64_Date_str(date):
     ts = pd.to_datetime(str(date)) 
@@ -778,7 +776,7 @@ class exchange_data:
     def get_df(self,selday):   
         #print(lno(),self.stock_id) 
         #table_name=(selday.strftime('%Y%m%d'))
-        #table_names = self.engine.table_names() # 取得資料庫內全部Tables的名稱
+        #table_names = sa_inspect(self.engine).get_table_names() # 取得資料庫內全部Tables的名稱
         #print(lno(),table_names)  
         #if table_name in table_names:
         try:
@@ -791,7 +789,7 @@ class exchange_data:
     def get_df_date_parse(self,selday):   
         #print(lno(),self.stock_id) 
         #table_name=(selday.strftime('%Y%m%d'))
-        #table_names = self.engine.table_names() # 取得資料庫內全部Tables的名稱
+        #table_names = sa_inspect(self.engine).get_table_names() # 取得資料庫內全部Tables的名稱
         #print(lno(),table_names)  
         #if table_name in table_names:
         try:
@@ -804,7 +802,7 @@ class exchange_data:
     def get_last_df_bydate(self,selday):   
         #print(lno(),self.stock_id) 
         
-        table_names = self.engine.table_names() # 取得資料庫內全部Tables的名稱
+        table_names = sa_inspect(self.engine).get_table_names() # 取得資料庫內全部Tables的名稱
         print(lno(),table_names)  
         nowdate=selday
         while True:
@@ -904,51 +902,33 @@ class stock_data:
             df.to_sql(name=stock_id, con=self.con, if_exists='replace', index=False,dtype=self.dtypedict,chunksize=10)
 
     def insertdf(self,df):
-        if len(df):
-            date_xx= df.reset_index().at[0,'date']
-            #print(lno(),date_xx,type(date_xx))
-            if  (type(date_xx) is datetime) or (type(date_xx) is pd.Timestamp):
-                date=date_xx
-            elif type(date_xx)==str:
-                date=datetime.strptime(date_xx,'%Y%m%d')
-                print(lno(),date_xx,type(date_xx))
-            else:
-                print(lno(),date_xx,type(date_xx))    
-                raise
-            enddate= date + relativedelta(days=1)    
-            stock_id= df.reset_index().at[0,'stock_id']
-            #print(lno(),date_str,df['stock_id'].values.tolist())
+        if len(df)==0:
+            return
+        date_xx= df.reset_index().at[0,'date']
+        if  (type(date_xx) is datetime) or (type(date_xx) is pd.Timestamp):
+            date=date_xx
+        elif type(date_xx)==str:
+            date=datetime.strptime(date_xx,'%Y%m%d')
+        else:
+            print(lno(),date_xx,type(date_xx))
+            return
+        enddate= date + relativedelta(days=1)
+        stock_id= df.reset_index().at[0,'stock_id']
+        # 用 engine(每次操作獨立連線+commit),避免與持久連線 self.con 互鎖
+        if stock_id in sa_inspect(self.engine).get_table_names():
             cmd='SELECT * FROM "{}" WHERE date >= "{}" and date < "{}"'.format(stock_id,date,enddate)
-            try:
-                df_sql=pd.read_sql(cmd, con=self.con)  
-                if len(df_sql)!=0:
-                    repeat=1
-                else:
-                    repeat=0    
-            except:
-                if stock_id not in self.engine.table_names():
-                    repeat=0
-                else:
-                    print(lno(),stock_id,date,enddate)
-                    raise    
-                    
-            if repeat==0:
-                #print(lno(),df_sql)
-                df=df.drop(['stock_id'], axis=1)
-                #print(lno(),df.head())
-                #df['date']=df['date'].apply(time64_Date_str)
-                #df.to_sql(name=self.stock_id, con=self.con, if_exists='append', index=False,dtype=self.dtypedict,method='upsert_ignore')        
-                df.to_sql(name=stock_id, con=self.con, if_exists='append', index=False,dtype=self.dtypedict)        
-                pass
-            else:
-                print(lno(),'repeat')
+            if len(pd.read_sql(cmd, con=self.engine))!=0:
+                print(lno(),'repeat',stock_id)
+                return
+        df=df.drop(['stock_id'], axis=1)
+        df.to_sql(name=stock_id, con=self.engine, if_exists='append', index=False,dtype=self.dtypedict)
         
 
     def showtable(self):
         cmd='SELECT * FROM "{}" WHERE date IS "{}"'.format(self.stock_id,'2019-10-15')
         df=pd.read_sql(cmd, con=self.con)  
         print(lno(),df)
-        #table_names_1 = self.engine.table_names() # 取得資料庫內全部Tables的名稱
+        #table_names_1 = sa_inspect(self.engine).get_table_names() # 取得資料庫內全部Tables的名稱
         #print(table_names_1)    
         #df_mysql = pd.read_sql('select * from test', con=self.con)  
         #print(lno(),df_mysql)  
@@ -1062,7 +1042,7 @@ def stock_df_to_sql(stock_id,table_name,df):
 def stock_df_to_sql_append(stock_id,table_name,df):
     engine=get_stock_sql_engine(stock_id)
     con = engine.connect()
-    if table_name in engine.table_names():
+    if table_name in sa_inspect(engine).get_table_names():
         cmd='SELECT * FROM "{}" WHERE ys == "{}" '.format(table_name,df.iloc[0]['ys'])
         df_query= pd.read_sql(cmd, con=con)
         if len(df_query):
@@ -1078,7 +1058,7 @@ def stock_read_sql_add_df(stock_id,table_name,df):
 
     engine=get_stock_sql_engine(stock_id)
     con = engine.connect()
-    if table_name in engine.table_names():
+    if table_name in sa_inspect(engine).get_table_names():
         cmd='SELECT * FROM "{}"'.format(table_name)
         df_query= pd.read_sql(cmd, con=con, parse_dates=['date'])
         if df.columns.all()==df_query.columns.all():
@@ -1093,7 +1073,7 @@ def stock_read_sql_add_df(stock_id,table_name,df):
 def stock_df_to_sql_append_querydate(stock_id,table_name,df):
     engine=get_stock_sql_engine(stock_id)
     con = engine.connect()
-    if table_name in engine.table_names():
+    if table_name in sa_inspect(engine).get_table_names():
         #print(lno(),df.iloc[0])   
         date=df.iloc[0]['date']
         cmd='SELECT * FROM "{}" WHERE date >= "{}" and date < "{}" '.format(table_name,date-relativedelta(days=1),date+relativedelta(days=1))
