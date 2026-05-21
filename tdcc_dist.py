@@ -31,6 +31,7 @@ from matplotlib import pyplot as plt
 from sqlalchemy.types import NVARCHAR, Float, Integer,DateTime  
 
 from sqlalchemy import create_engine
+from sqlalchemy import inspect as sa_inspect
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -302,6 +303,61 @@ def update_tdcc_data():
     except IOError:
         print (lno(),'IOError')
         pass
+
+
+def update_tdcc_from_opendata(download=1):
+    """從 TDCC 開放資料(集保戶股權分散表 id=1-5)抓取最新一週資料,
+    寫入 sql/tdcc_dist.db。每檔一張表,date 為索引,
+    欄位 0~44 = 持股分級 1~15 級的 人數/股數/比例。
+    開放資料現為 17 級(16=差異數調整、17=合計),只取 1~15 級。"""
+    url = 'https://smart.tdcc.com.tw/opendata/getOD.ashx?id=1-5'
+    check_dst_folder('download')
+    csv_path = 'download/TDCC_OD_1-5.csv'
+    if download == 1:
+        try:
+            resp = requests.get(url, headers={'User-Agent': 'Mozilla/5.0'}, timeout=120)
+        except Exception as e:
+            print(lno(), 'request fail', e)
+            return
+        if resp.status_code != 200:
+            print(lno(), 'http', resp.status_code)
+            return
+        with open(csv_path, 'wb') as f:
+            f.write(resp.content)
+    if not os.path.exists(csv_path):
+        print(lno(), 'no csv', csv_path)
+        return
+    df = pd.read_csv(csv_path, encoding='utf-8-sig', dtype=str)
+    df.columns = ['date', 'stock_id', 'level', '人數', '股數', '比例']
+    df['stock_id'] = df['stock_id'].str.strip()
+    for c in ('level', '人數', '股數', '比例'):
+        df[c] = pd.to_numeric(df[c], errors='coerce')
+    df = df[df['level'].between(1, 15)].dropna(subset=['level'])
+    td = tdcc_dist()
+    conn = td.engine.connect()
+    existed = set(sa_inspect(td.engine).get_table_names())
+    saved = 0
+    for stock_id, g in df.groupby('stock_id'):
+        if len(stock_id) != 4:
+            continue
+        g = g.sort_values('level')
+        if len(g) != 15:
+            continue
+        date = datetime.strptime(str(g.iloc[0]['date']), '%Y%m%d')
+        if stock_id in existed:
+            old = pd.read_sql('SELECT date FROM "%s"' % stock_id, conn,
+                              parse_dates=['date'])
+            if (old['date'] == date).any():
+                continue
+        row = g['人數'].tolist() + g['股數'].tolist() + g['比例'].tolist()
+        df_fin = pd.DataFrame([row], columns=list(range(0, 45)), index=[date])
+        df_fin.to_sql(stock_id, conn, if_exists='append', index_label='date',
+                      dtype=td.dtypedict, chunksize=10)
+        saved += 1
+    conn.commit()
+    conn.close()
+    d = df.iloc[0]['date'] if len(df) else 'NA'
+    print(lno(), 'tdcc opendata updated:', saved, 'stocks, date', d)
        
 class stock_dist(object):  
     def __init__(self,stock_no=0,data_time=None,data_cnt=6,raw=None):  
@@ -1057,6 +1113,7 @@ class tdcc_dist():
         # ['<1','1-5','5-10','10-15','15-20','20-30','30-40','40-50','50-100','100-200','200-400','400-600','600-800','800-1000','>1000']
         #  0     1     2      3       4       5       6      7       8        9         10        11        12        13         14
         self.columns_old=['<1.人數', '<1.股數', '<1.比例(%)', '1-5.人數', '1-5.股數', '1-5.比例(%)', '5-10.人數', '5-10.股數', '5-10.比例(%)', '10-15.人數', '10-15.股數', '10-15.比例(%)', '15-20.人數', '15-20.股數', '15-20.比例(%)', '20-30.人數', '20-30.股數', '20-30.比例(%)', '30-40.人數', '30-40.股數', '30-40.比例(%)', '40-50.人數', '40-50.股數', '40-50.比例(%)', '50-100.人數', '50-100.股數', '50-100.比例(%)', '100-200.人數', '100-200.股數', '100-200.比例(%)', '200-400.人數', '200-400.股數', '200-400.比例(%)', '400-600.人數', '400-600.股數', '400-600.比例(%)', '600-800.人數', '600-800.股數', '600-800.比例(%)', '800-1000.人數', '800-1000.股數', '800-1000.比例(%)', '>1000.人數', '>1000.股數', '>1000.比例(%)']
+        check_dst_folder('sql')
         self.engine = create_engine('sqlite:///sql/tdcc_dist.db', echo=False)
         self.engine_old = create_engine('sqlite:///sql/tdcc_dist_old.db', echo=False)
         self.conn=self.engine.connect()
@@ -1174,7 +1231,7 @@ class tdcc_dist():
             if len(stock_id)!=4:
                 continue
             #stock_id='9103'
-            table_names = self.engine.table_names()
+            table_names = sa_inspect(self.engine).get_table_names()
             if stock_id not in table_names:
                 print(lno(),stock_id,"no exist in sql table need to create")
                 filename='data/csv/dist/{}/{}_dist.csv'.format(stock_id,date.strftime('%Y%m%d'))
@@ -1225,7 +1282,7 @@ class tdcc_dist():
                 continue
             """
             check=0
-            table_names = self.engine.table_names()
+            table_names = sa_inspect(self.engine).get_table_names()
             #if stock_id in table_names:
             #    continue
             df_fin = pd.DataFrame(columns=self.columns, dtype=np.int64)
@@ -1277,7 +1334,7 @@ class tdcc_dist():
             continue
         """
         check=0
-        table_names = self.engine.table_names()
+        table_names = sa_inspect(self.engine).get_table_names()
         #if stock_id in table_names:
         #    continue
         df_fin = pd.DataFrame(columns=self.columns, dtype=np.int64)
@@ -1545,9 +1602,7 @@ def old_dist_tosql():
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
     if len(sys.argv)==1:
-        today= datetime.today().date()
-        datatime=datetime(year=today.year,month=today.month,day=today.day,)
-        logging.info( datatime)
+        update_tdcc_from_opendata()
     elif sys.argv[1]=='-d' :
         df_date = pd.read_csv('csv/tdcc_date.csv',header=None)
         df_date.dropna(axis=1,how='all',inplace=True)
