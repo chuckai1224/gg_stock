@@ -5,6 +5,72 @@
 
 ---
 
+## 🚀 快速開始：直接下載資料快照
+
+**不想花 10+ 小時自己跑回補腳本?** 下載已備好的資料快照,解壓即可使用。
+
+### 📦 下載連結
+
+> [**gg_stock_data_20260523.tar.gz**](https://drive.google.com/file/d/1aKMvIJ8Au2RZoS7nTphRZJyCkZX9aFY2/view?usp=drive_link) (39 MB,解壓後約 181 MB)
+
+包含內容:
+
+| 路徑 | 內容 | 大小 |
+|------|------|------|
+| `sql/stock/*.db` | 1966 檔個股 mix_income + revenue (FinMind 已回補 8 季 + 24 月) | 24 MB |
+| `sql/stock_data.db` | 上市股價(到 2026-05-22) | 8 MB |
+| `sql/otc_exchange_data.db` | 上櫃股價 | 22 MB |
+| `sql/stock_big3.db` | 三大法人 | 2.5 MB |
+| `sql/tdcc_dist.db` | 集保股權分散 | 30 MB |
+| `data/stock_data/*.csv` | 個股日K CSV | ~89 MB |
+| `data/down_pe_networth_yield/` | 本益比/淨值比 | (內含) |
+| `data/director/final/` | 董監持股 | (內含) |
+
+### 🛠 解壓步驟
+
+1. **下載檔案**:點上方連結 → Google Drive 右上角下載圖示
+
+2. **clone repo** (如還沒):
+   ```bash
+   git clone git@github.com:chuckai1224/gg_stock.git
+   cd gg_stock
+   ```
+
+3. **把 tar.gz 放到 repo 根目錄**(和 `gg_stock.py` 同層)
+
+4. **解壓**:
+   ```bash
+   # Linux / macOS / WSL
+   tar -xzf gg_stock_data_20260523.tar.gz
+
+   # Windows PowerShell (內建 tar,Win10+)
+   tar -xzf gg_stock_data_20260523.tar.gz
+
+   # Windows 7-Zip / WinRAR 也支援
+   ```
+
+5. **驗證**:
+   ```bash
+   ls sql/stock | wc -l       # 應顯示 1966
+   ls data/stock_data | wc -l # 應顯示 ~2000
+   ```
+
+6. **直接跑選股**:
+   ```bash
+   python gg_stock.py fund 20260522
+   python gg_stock.py revenue 20260522
+   python gg_stock.py director 20260522
+   python gg_stock.py pointK 20260522
+   ```
+
+### ⚠️ 注意事項
+
+- 解壓**會直接覆寫**現有的 `sql/` 和 `data/` 目錄,使用前先備份(如有需要)
+- 快照日期為 **2026-05-23**,之後的每日新資料仍須執行 `crawl.py` / `stock_big3.py` / `pe_networth_yeild.py` 累積(見[第六節](#六建議的定期排程cron))
+- `*.tar.gz` 已在 `.gitignore` 中,不會被 git 追蹤
+
+---
+
 ## 一、資料流總覽
 
 ```

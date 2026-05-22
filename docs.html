@@ -501,14 +501,120 @@ mkdir<span class="w"> </span>-p<span class="w"> </span>sql<span class="w"> </spa
 2026-05 將所有失效的舊網址改接證交所 / 櫃買中心 / 集保的開放資料 API 後整理。</p>
 </blockquote>
 <hr />
-<h2 id="_2">一、資料流總覽</h2>
+<h2 id="_2">🚀 快速開始：直接下載資料快照</h2>
+<p><strong>不想花 10+ 小時自己跑回補腳本?</strong> 下載已備好的資料快照,解壓即可使用。</p>
+<h3 id="_3">📦 下載連結</h3>
+<blockquote>
+<p><a href="https://drive.google.com/file/d/1aKMvIJ8Au2RZoS7nTphRZJyCkZX9aFY2/view?usp=drive_link"><strong>gg_stock_data_20260523.tar.gz</strong></a> (39 MB,解壓後約 181 MB)</p>
+</blockquote>
+<p>包含內容:</p>
+<table>
+<thead>
+<tr>
+<th>路徑</th>
+<th>內容</th>
+<th>大小</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>sql/stock/*.db</code></td>
+<td>1966 檔個股 mix_income + revenue (FinMind 已回補 8 季 + 24 月)</td>
+<td>24 MB</td>
+</tr>
+<tr>
+<td><code>sql/stock_data.db</code></td>
+<td>上市股價(到 2026-05-22)</td>
+<td>8 MB</td>
+</tr>
+<tr>
+<td><code>sql/otc_exchange_data.db</code></td>
+<td>上櫃股價</td>
+<td>22 MB</td>
+</tr>
+<tr>
+<td><code>sql/stock_big3.db</code></td>
+<td>三大法人</td>
+<td>2.5 MB</td>
+</tr>
+<tr>
+<td><code>sql/tdcc_dist.db</code></td>
+<td>集保股權分散</td>
+<td>30 MB</td>
+</tr>
+<tr>
+<td><code>data/stock_data/*.csv</code></td>
+<td>個股日K CSV</td>
+<td>~89 MB</td>
+</tr>
+<tr>
+<td><code>data/down_pe_networth_yield/</code></td>
+<td>本益比/淨值比</td>
+<td>(內含)</td>
+</tr>
+<tr>
+<td><code>data/director/final/</code></td>
+<td>董監持股</td>
+<td>(內含)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="_4">🛠 解壓步驟</h3>
+<ol>
+<li>
+<p><strong>下載檔案</strong>:點上方連結 → Google Drive 右上角下載圖示</p>
+</li>
+<li>
+<p><strong>clone repo</strong> (如還沒):<br />
+<code>bash
+   git clone git@github.com:chuckai1224/gg_stock.git
+   cd gg_stock</code></p>
+</li>
+<li>
+<p><strong>把 tar.gz 放到 repo 根目錄</strong>(和 <code>gg_stock.py</code> 同層)</p>
+</li>
+<li>
+<p><strong>解壓</strong>:<br />
+   ```bash<br />
+   # Linux / macOS / WSL<br />
+   tar -xzf gg_stock_data_20260523.tar.gz</p>
+</li>
+</ol>
+<p># Windows PowerShell (內建 tar,Win10+)<br />
+   tar -xzf gg_stock_data_20260523.tar.gz</p>
+<p># Windows 7-Zip / WinRAR 也支援<br />
+   ```</p>
+<ol start="5">
+<li>
+<p><strong>驗證</strong>:<br />
+<code>bash
+   ls sql/stock | wc -l       # 應顯示 1966
+   ls data/stock_data | wc -l # 應顯示 ~2000</code></p>
+</li>
+<li>
+<p><strong>直接跑選股</strong>:<br />
+<code>bash
+   python gg_stock.py fund 20260522
+   python gg_stock.py revenue 20260522
+   python gg_stock.py director 20260522
+   python gg_stock.py pointK 20260522</code></p>
+</li>
+</ol>
+<h3 id="_5">⚠️ 注意事項</h3>
+<ul>
+<li>解壓<strong>會直接覆寫</strong>現有的 <code>sql/</code> 和 <code>data/</code> 目錄,使用前先備份(如有需要)</li>
+<li>快照日期為 <strong>2026-05-23</strong>,之後的每日新資料仍須執行 <code>crawl.py</code> / <code>stock_big3.py</code> / <code>pe_networth_yeild.py</code> 累積(見<a href="#六建議的定期排程cron">第六節</a>)</li>
+<li><code>*.tar.gz</code> 已在 <code>.gitignore</code> 中,不會被 git 追蹤</li>
+</ul>
+<hr />
+<h2 id="_6">一、資料流總覽</h2>
 <div class="codehilite"><pre><span></span><code>各下載腳本 ──&gt; 開放資料 API ──&gt; 本機 SQLite / CSV ──&gt; gg_stock.py 讀取選股
 </code></pre></div>
 
 <p><code>gg_stock.py</code> 的 4 個選股方法都會呼叫 <code>gen_stock_info()</code>,後者需要以下所有資料。<br />
 缺哪一項,該檔個股就會被跳過或欄位留白。</p>
 <hr />
-<h2 id="_3">二、各資料來源一覽</h2>
+<h2 id="_7">二、各資料來源一覽</h2>
 <table>
 <thead>
 <tr>
@@ -609,7 +715,7 @@ mkdir<span class="w"> </span>-p<span class="w"> </span>sql<span class="w"> </spa
 財報等,但<strong>沒有</strong>集保股權分散與董監持股)—— 評估詳見第七節。</p>
 </blockquote>
 <hr />
-<h2 id="_4">四、回補歷史的實際操作</h2>
+<h2 id="_8">四、回補歷史的實際操作</h2>
 <h3 id="1-pointk-k">1. 股價(最重要,<code>pointK</code> 與 K 線欄位都靠它)</h3>
 <div class="codehilite"><pre><span></span><code><span class="c1"># 方式一:完整回補(含 sql/stock_data.db,pointK 需要)— 逐交易日,較慢</span>
 python<span class="w"> </span>crawl.py<span class="w"> </span><span class="m">2026</span><span class="w"> </span><span class="m">5</span><span class="w"> </span><span class="m">19</span><span class="w">      </span><span class="c1"># 跑單日:下載 + exchange2sql + insert_daily_stock_data</span>
@@ -639,7 +745,7 @@ python<span class="w"> </span>crawl.py<span class="w"> </span>-b<span class="w">
 <p>上市 <code>tseYYYYMMDD.csv</code> 會是各日正確資料;上櫃 <code>otcYYYYMMDD.csv</code> 因 API 限制<br />
 一律寫入「最新一日」內容(檔名仍照查詢日期)。</p>
 <hr />
-<h2 id="_5">五、各選股方法需要的資料深度</h2>
+<h2 id="_9">五、各選股方法需要的資料深度</h2>
 <table>
 <thead>
 <tr>
@@ -733,7 +839,7 @@ python<span class="w"> </span>crawl.py<span class="w"> </span>-b<span class="w">
 <h2 id="finmind">七、FinMind 免費版評估(作為歷史資料源)</h2>
 <p><a href="https://finmindtrade.com/">FinMind</a> 是開源台股資料庫,提供<strong>真歷史</strong>資料<br />
 (不像官方開放資料只有最新一期)。2026-05 實測免費版(匿名、未帶 token):</p>
-<h3 id="_6">免費版可取得(真歷史、可指定日期區間,需逐檔查詢)</h3>
+<h3 id="_10">免費版可取得(真歷史、可指定日期區間,需逐檔查詢)</h3>
 <table>
 <thead>
 <tr>
@@ -764,7 +870,7 @@ python<span class="w"> </span>crawl.py<span class="w"> </span>-b<span class="w">
 </tr>
 </tbody>
 </table>
-<h3 id="_7">免費版不能取得</h3>
+<h3 id="_11">免費版不能取得</h3>
 <table>
 <thead>
 <tr>
@@ -787,13 +893,13 @@ python<span class="w"> </span>crawl.py<span class="w"> </span>-b<span class="w">
 </tr>
 </tbody>
 </table>
-<h3 id="_8">限流與回補成本</h3>
+<h3 id="_12">限流與回補成本</h3>
 <ul>
 <li>免費版按小時計(官方約 300–600 requests/hr)</li>
 <li>只能逐檔查 → 回補全市場 ≈ 2000 檔 × 5 種 dataset ≈ <strong>10,000 requests</strong></li>
 <li>→ 一次性回補約 <strong>17–33 小時</strong>(可背景分批跑);之後每日增量很少</li>
 </ul>
-<h3 id="_9">結論:建議「混合架構」,不要當唯一資料源</h3>
+<h3 id="_13">結論:建議「混合架構」,不要當唯一資料源</h3>
 <table>
 <thead>
 <tr>
