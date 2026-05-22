@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>資料來源與歷史資料取得 — gg_stock</title>
+<style>
+  :root {
+    --bg:#1e1e2e; --surface:#27273a; --border:#3b3b52;
+    --text:#cdd6f4; --muted:#a6adc8; --accent:#89b4fa;
+    --green:#a6e3a1; --yellow:#f9e2af; --code-bg:#181825;
+  }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { background:var(--bg); color:var(--text);
+    font-family:"Segoe UI","PingFang TC",sans-serif; font-size:15px; line-height:1.7; }
+  main { max-width:960px; margin:0 auto; padding:40px 48px; }
+  h1 { font-size:1.8em; color:var(--accent); margin:0 0 20px;
+    padding-bottom:8px; border-bottom:1px solid var(--border); }
+  h2 { font-size:1.3em; color:var(--accent); margin:32px 0 12px; }
+  h3 { font-size:1.1em; color:var(--green); margin:24px 0 8px; }
+  h4 { font-size:1em; color:var(--yellow); margin:16px 0 6px; }
+  p { margin:0 0 12px; }
+  a { color:var(--accent); }
+  table { border-collapse:collapse; width:100%; margin:16px 0 20px; font-size:13.5px; }
+  th { background:var(--border); color:var(--text); text-align:left; padding:7px 12px; }
+  td { border-top:1px solid var(--border); padding:6px 12px; color:var(--muted); }
+  tr:hover td { background:rgba(255,255,255,.03); }
+  code { background:var(--code-bg); color:var(--green); padding:1px 5px;
+    border-radius:4px; font-size:.88em; font-family:"Cascadia Code",monospace; }
+  pre { background:var(--code-bg); border:1px solid var(--border); border-radius:6px;
+    padding:14px 16px; overflow-x:auto; margin:12px 0 20px; }
+  pre code { background:none; color:#cdd6f4; padding:0; font-size:.87em; }
+  blockquote { border-left:3px solid var(--accent); padding:4px 16px;
+    margin:12px 0; color:var(--muted); }
+  ul,ol { padding-left:24px; margin:8px 0 12px; }
+  li { margin-bottom:4px; }
+  hr { border:none; border-top:1px solid var(--border); margin:24px 0; }
+  ::-webkit-scrollbar { width:6px; height:6px; }
+  ::-webkit-scrollbar-track { background:var(--bg); }
+  ::-webkit-scrollbar-thumb { background:var(--border); border-radius:3px; }
+  @media (max-width:768px){ main{ padding:20px; } }
+</style>
+</head>
+<body>
+<main>
+<h1 id="_1">資料來源與歷史資料取得</h1>
+<blockquote>
+<p>本文件記錄 <code>gg_stock.py</code> 各資料來源、如何下載/建庫、以及<strong>如何取得歷史資料</strong>。<br />
+2026-05 將所有失效的舊網址改接證交所 / 櫃買中心 / 集保的開放資料 API 後整理。</p>
+</blockquote>
+<hr />
+<h2 id="_2">一、資料流總覽</h2>
+<div class="codehilite"><pre><span></span><code>各下載腳本 ──&gt; 開放資料 API ──&gt; 本機 SQLite / CSV ──&gt; gg_stock.py 讀取選股
+</code></pre></div>
+
+<p><code>gg_stock.py</code> 的 4 個選股方法都會呼叫 <code>gen_stock_info()</code>,後者需要以下所有資料。<br />
+缺哪一項,該檔個股就會被跳過或欄位留白。</p>
+<hr />
+<h2 id="_3">二、各資料來源一覽</h2>
+<table>
+<thead>
+<tr>
+<th>資料項目</th>
+<th>下載腳本</th>
+<th>來源 API</th>
+<th style="text-align: center;">可指定日期</th>
+<th>輸出位置</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>個股股價(日K)</td>
+<td><code>crawl.py</code></td>
+<td>TWSE <code>rwd/zh/afterTrading/MI_INDEX</code><br>TPEX <code>afterTrading/dailyQuotes</code></td>
+<td style="text-align: center;">✅</td>
+<td><code>data/stock_data/*.csv</code><br><code>sql/stock_data.db</code><br><code>sql/{tse,otc}_exchange_data.db</code></td>
+</tr>
+<tr>
+<td>三大法人(投信買超)</td>
+<td><code>stock_big3.py</code></td>
+<td>TWSE <code>rwd/zh/fund/T86</code><br>TPEX <code>insti/dailyTrade</code></td>
+<td style="text-align: center;">✅</td>
+<td><code>sql/stock_big3.db</code></td>
+</tr>
+<tr>
+<td>集保股權分散(TDCC)</td>
+<td><code>tdcc_dist.py</code></td>
+<td>TDCC <code>opendata/getOD.ashx?id=1-5</code></td>
+<td style="text-align: center;">❌ 僅最新一週</td>
+<td><code>sql/tdcc_dist.db</code></td>
+</tr>
+<tr>
+<td>本益比/淨值比/殖利率</td>
+<td><code>pe_networth_yeild.py</code></td>
+<td>上市 TWSE <code>rwd/.../BWIBBU_d</code><br>上櫃 TPEX <code>openapi/.../peratio</code></td>
+<td style="text-align: center;">⚠️ 上市可,上櫃僅最新</td>
+<td><code>data/down_pe_networth_yield/*.csv</code></td>
+</tr>
+<tr>
+<td>月營收</td>
+<td><code>revenue.py</code></td>
+<td>TWSE/TPEX <code>openapi .../t187ap05</code></td>
+<td style="text-align: center;">❌ 僅最新一月</td>
+<td><code>sql/income.db</code><br><code>sql/stock/*.db</code>(<code>revenue</code> 表)</td>
+</tr>
+<tr>
+<td>季財報/EPS</td>
+<td><code>eps.py</code></td>
+<td>TWSE/TPEX <code>openapi .../t187ap06_*_ci</code></td>
+<td style="text-align: center;">❌ 僅最新一季</td>
+<td><code>sql/stock/*.db</code>(<code>mix_income</code> 表)</td>
+</tr>
+<tr>
+<td>董監持股</td>
+<td><code>director.py</code></td>
+<td>TWSE/TPEX <code>openapi .../t187ap11</code></td>
+<td style="text-align: center;">❌ 僅最新一月</td>
+<td><code>data/director/final/*.csv</code></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="vs">三、可回補歷史 vs 僅能往前累積</h2>
+<p>開放資料 API 分兩種:</p>
+<h3 id="a">A. 可指定日期 → 能回補任意歷史</h3>
+<table>
+<thead>
+<tr>
+<th>資料</th>
+<th>回補指令</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>股價</td>
+<td><code>python crawl.py YYYY MM DD</code>(逐日);或 <code>python crawl.py -b YYYY MM DD</code>(快速回補)</td>
+</tr>
+<tr>
+<td>投信買超</td>
+<td><code>python stock_big3.py -d 起始日 結束日</code>(例:<code>-d 20240101 20260519</code>)</td>
+</tr>
+<tr>
+<td>本益比(<strong>上市</strong>)</td>
+<td><code>python pe_networth_yeild.py -d 起始日 結束日</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="b">B. 僅提供「最新一期」→ 無法回補,只能往前累積</h3>
+<p>TDCC、月營收、季財報、董監持股、上櫃本益比 —— 官方開放資料只給<strong>當前最新一筆</strong>。<br />
+<strong>沒有辦法把過去的補回來</strong>,只能從現在開始定期執行,讓資料庫逐月/逐季累積:</p>
+<ul>
+<li><code>sql/income.db</code>、<code>mix_income</code> 表、<code>director/final/</code> 都是「<strong>append 累積</strong>」設計</li>
+<li>例如季財報每跑一次 <code>eps.py</code> 就多存一季,跑滿 8 次(約 2 年)才有完整 8 季可分析</li>
+</ul>
+<blockquote>
+<p>若要回補這幾項的歷史,可改用第三方資料庫 <strong>FinMind</strong>(免費版能補月營收、<br />
+財報等,但<strong>沒有</strong>集保股權分散與董監持股)—— 評估詳見第七節。</p>
+</blockquote>
+<hr />
+<h2 id="_4">四、回補歷史的實際操作</h2>
+<h3 id="1-pointk-k">1. 股價(最重要,<code>pointK</code> 與 K 線欄位都靠它)</h3>
+<div class="codehilite"><pre><span></span><code><span class="c1"># 方式一:完整回補(含 sql/stock_data.db,pointK 需要)— 逐交易日,較慢</span>
+python<span class="w"> </span>crawl.py<span class="w"> </span><span class="m">2026</span><span class="w"> </span><span class="m">5</span><span class="w"> </span><span class="m">19</span><span class="w">      </span><span class="c1"># 跑單日:下載 + exchange2sql + insert_daily_stock_data</span>
+<span class="c1">#  ↑ 對每個要回補的交易日各跑一次</span>
+
+<span class="c1"># 方式二:快速回補(只建 data/stock_data/*.csv,夠畫 K 線 / gen_stock_info 的 kline 欄位)</span>
+python<span class="w"> </span>crawl.py<span class="w"> </span>-b<span class="w"> </span><span class="m">2026</span><span class="w"> </span><span class="m">5</span><span class="w"> </span><span class="m">19</span><span class="w">   </span><span class="c1"># 從指定日往回一路補到 2010-01-01(只做 get_data)</span>
+</code></pre></div>
+
+<ul>
+<li><code>pointK</code> 方法的 <code>check_point_K</code> 需要近 122 個交易日、且讀 <code>sql/stock_data.db</code><br />
+  → 必須用<strong>方式一</strong>逐日補滿約半年。</li>
+<li><code>fund</code>/<code>revenue</code> 輸出裡的週K/日K 欄位讀 <code>data/stock_data/*.csv</code><br />
+  → <strong>方式二</strong> <code>-b</code> 即可。</li>
+<li><strong>K線只需抓「日K」</strong>:週K、月K 不另外下載,<code>kline.resample()</code> 會即時從日K換算;<br />
+  日K 回補得夠長(週K 取 60 根約需 300 個交易日),週K/月K 自然就有。</li>
+</ul>
+<h3 id="2">2. 投信買超(回補)</h3>
+<div class="codehilite"><pre><span></span><code>python<span class="w"> </span>stock_big3.py<span class="w"> </span>-d<span class="w"> </span><span class="m">20240101</span><span class="w"> </span><span class="m">20260519</span>
+</code></pre></div>
+
+<p>逐日下載 T86 / dailyTrade,寫入 <code>sql/stock_big3.db</code>(每日一張表)。已存在的日期會自動略過。</p>
+<h3 id="3">3. 本益比(上市可回補,上櫃只有最新)</h3>
+<div class="codehilite"><pre><span></span><code>python<span class="w"> </span>pe_networth_yeild.py<span class="w"> </span>-d<span class="w"> </span><span class="m">20240101</span><span class="w"> </span><span class="m">20260519</span>
+</code></pre></div>
+
+<p>上市 <code>tseYYYYMMDD.csv</code> 會是各日正確資料;上櫃 <code>otcYYYYMMDD.csv</code> 因 API 限制<br />
+一律寫入「最新一日」內容(檔名仍照查詢日期)。</p>
+<hr />
+<h2 id="_5">五、各選股方法需要的資料深度</h2>
+<table>
+<thead>
+<tr>
+<th>方法</th>
+<th>需要的歷史深度</th>
+<th>現況</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>fund</code> 投信買超</td>
+<td>單一快照即可</td>
+<td>✅ 可直接產出</td>
+</tr>
+<tr>
+<td><code>revenue</code> 月營收</td>
+<td>需 <strong>2 個月</strong>月營收(算月增減)</td>
+<td>累積 2 個月後產出</td>
+</tr>
+<tr>
+<td><code>director</code> 董監持股</td>
+<td>需 <strong>2 個月</strong>董監資料(算持股增減)</td>
+<td>累積 2 個月後產出</td>
+</tr>
+<tr>
+<td><code>pointK</code> 紅K轉強</td>
+<td>需 <strong>約 122 個交易日</strong>股價</td>
+<td>回補股價後可用</td>
+</tr>
+<tr>
+<td>季財報三率/EPS 評分</td>
+<td>需 <strong>約 8 季</strong>(2 年)</td>
+<td>每季累積</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><code>fund</code> 之外的方法,資料深度不夠時會「優雅地回空、不崩潰」,不會產生 <code>final/xxx_good.html</code>。</p>
+</blockquote>
+<hr />
+<h2 id="cron">六、建議的定期排程(cron)</h2>
+<p>開放資料是「最新快照」,要長期使用就靠定時累積:</p>
+<table>
+<thead>
+<tr>
+<th>頻率</th>
+<th>指令</th>
+<th>說明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>每交易日盤後</td>
+<td><code>python crawl.py &lt;今天&gt;</code></td>
+<td>股價</td>
+</tr>
+<tr>
+<td>每交易日盤後</td>
+<td><code>python stock_big3.py</code>(無參數=今天)</td>
+<td>投信買超</td>
+</tr>
+<tr>
+<td>每交易日盤後</td>
+<td><code>python pe_networth_yeild.py</code></td>
+<td>本益比</td>
+</tr>
+<tr>
+<td>每週(集保更新後)</td>
+<td><code>python tdcc_dist.py</code></td>
+<td>TDCC 股權分散</td>
+</tr>
+<tr>
+<td>每月(營收公布後,約 10 號)</td>
+<td><code>python revenue.py</code></td>
+<td>月營收</td>
+</tr>
+<tr>
+<td>每月</td>
+<td><code>python director.py</code></td>
+<td>董監持股</td>
+</tr>
+<tr>
+<td>每季(財報公布後)</td>
+<td><code>python eps.py -d &lt;今天&gt; &lt;今天&gt;</code></td>
+<td>季財報</td>
+</tr>
+</tbody>
+</table>
+<p>跑完上述後再執行 <code>python gg_stock.py gg</code>(或無參數)即可產生 4 種選股清單。</p>
+<hr />
+<h2 id="finmind">七、FinMind 免費版評估(作為歷史資料源)</h2>
+<p><a href="https://finmindtrade.com/">FinMind</a> 是開源台股資料庫,提供<strong>真歷史</strong>資料<br />
+(不像官方開放資料只有最新一期)。2026-05 實測免費版(匿名、未帶 token):</p>
+<h3 id="_6">免費版可取得(真歷史、可指定日期區間,需逐檔查詢)</h3>
+<table>
+<thead>
+<tr>
+<th>gg_stock 需求</th>
+<th>FinMind dataset</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>日K 股價</td>
+<td><code>taiwan_stock_daily</code></td>
+</tr>
+<tr>
+<td>三大法人(投信買超)</td>
+<td><code>taiwan_stock_institutional_investors</code></td>
+</tr>
+<tr>
+<td>月營收</td>
+<td><code>taiwan_stock_month_revenue</code></td>
+</tr>
+<tr>
+<td>季財報(綜合損益表)</td>
+<td><code>taiwan_stock_financial_statement</code></td>
+</tr>
+<tr>
+<td>本益比/淨值比/殖利率</td>
+<td><code>taiwan_stock_per_pbr</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="_7">免費版不能取得</h3>
+<table>
+<thead>
+<tr>
+<th>項目</th>
+<th>狀況</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>集保股權分散</td>
+<td><code>taiwan_stock_holding_shares_per</code> → 需付費升級</td>
+</tr>
+<tr>
+<td>依「日期」查全市場</td>
+<td>需付費 → 免費版只能逐檔(帶 <code>stock_id</code>)查</td>
+</tr>
+<tr>
+<td>董監持股餘額</td>
+<td>FinMind 無此 dataset</td>
+</tr>
+</tbody>
+</table>
+<h3 id="_8">限流與回補成本</h3>
+<ul>
+<li>免費版按小時計(官方約 300–600 requests/hr)</li>
+<li>只能逐檔查 → 回補全市場 ≈ 2000 檔 × 5 種 dataset ≈ <strong>10,000 requests</strong></li>
+<li>→ 一次性回補約 <strong>17–33 小時</strong>(可背景分批跑);之後每日增量很少</li>
+</ul>
+<h3 id="_9">結論:建議「混合架構」,不要當唯一資料源</h3>
+<table>
+<thead>
+<tr>
+<th>用途</th>
+<th>建議來源</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>每日更新</td>
+<td>證交所/櫃買開放資料 API(免費、不限流、一次抓全市場)</td>
+</tr>
+<tr>
+<td>歷史回補(日K/三大法人/月營收/財報/本益比)</td>
+<td>FinMind 免費版逐檔補</td>
+</tr>
+<tr>
+<td>集保股權分散</td>
+<td>TDCC 開放資料(往前累積)或付費</td>
+</tr>
+<tr>
+<td>董監持股</td>
+<td>TWSE <code>t187ap11</code>(往前累積)</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>FinMind 很適合<strong>一次性回補歷史</strong>(補開放資料給不了的過去),<br />
+但因限流 + 逐檔查 + 缺集保/董監,不適合當每日主力。</p>
+</blockquote>
+<p>安裝與用法:</p>
+<div class="codehilite"><pre><span></span><code>pip<span class="w"> </span>install<span class="w"> </span>FinMind<span class="w"> </span>tqdm
+</code></pre></div>
+
+<div class="codehilite"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">FinMind.data</span><span class="w"> </span><span class="kn">import</span> <span class="n">DataLoader</span>
+<span class="n">dl</span> <span class="o">=</span> <span class="n">DataLoader</span><span class="p">()</span>
+<span class="n">df</span> <span class="o">=</span> <span class="n">dl</span><span class="o">.</span><span class="n">taiwan_stock_daily</span><span class="p">(</span><span class="n">stock_id</span><span class="o">=</span><span class="s1">&#39;2330&#39;</span><span class="p">,</span>
+                           <span class="n">start_date</span><span class="o">=</span><span class="s1">&#39;2024-05-20&#39;</span><span class="p">,</span> <span class="n">end_date</span><span class="o">=</span><span class="s1">&#39;2026-05-20&#39;</span><span class="p">)</span>
+</code></pre></div>
+
+<hr />
+<h2 id="2026-05">八、本次修復記錄(2026-05)</h2>
+<p>原本所有下載腳本都接已失效的舊網址,<code>gg_stock.py</code> 完全跑不動。修復後改接開放資料 API:</p>
+<table>
+<thead>
+<tr>
+<th>Commit</th>
+<th>修復內容</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>f4d21da</code></td>
+<td>投信買超 <code>stock_big3.py</code> → TWSE T86 / TPEX dailyTrade JSON</td>
+</tr>
+<tr>
+<td><code>bec439e</code></td>
+<td>集保股權分散 <code>tdcc_dist.py</code> → TDCC 開放資料(並改抓 1~15 持股分級)</td>
+</tr>
+<tr>
+<td><code>869d896</code></td>
+<td><code>np.NaN</code> → <code>np.nan</code>(NumPy 2.0 已移除);<code>get_market_value</code> 加固</td>
+</tr>
+<tr>
+<td><code>8074bfb</code></td>
+<td>股價 <code>crawl.py</code> → TWSE MI_INDEX / TPEX dailyQuotes;<code>datafolder()</code> 修正</td>
+</tr>
+<tr>
+<td><code>e4e8e3a</code></td>
+<td>本益比 <code>pe_networth_yeild.py</code> → TWSE BWIBBU_d / TPEX 開放資料</td>
+</tr>
+<tr>
+<td><code>65944c1</code></td>
+<td>月營收 <code>revenue.py</code> → TWSE/TPEX <code>t187ap05</code> 開放資料</td>
+</tr>
+<tr>
+<td><code>7816112</code></td>
+<td>季財報 <code>eps.py</code> → <code>t187ap06</code> 開放資料;薄資料防呆</td>
+</tr>
+<tr>
+<td><code>0bd6f15</code></td>
+<td>revenue 數值型別修正;董監 <code>director.py</code> → <code>t187ap11</code> 開放資料</td>
+</tr>
+</tbody>
+</table>
+<p>共同問題:<br />
+- 舊網址失效(TWSE/TPEX 改版、MOPS 擋爬蟲)→ 全面改開放資料 API<br />
+- SQLAlchemy 2.0 移除 <code>engine.table_names()</code> → 改 <code>inspect().get_table_names()</code><br />
+- NumPy 2.0 移除 <code>np.NaN</code> → <code>np.nan</code><br />
+- 開放資料多為「最新快照」→ 程式加防呆,薄資料不崩潰(見第五節)</p>
+</main>
+</body>
+</html>

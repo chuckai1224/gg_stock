@@ -104,10 +104,12 @@ def main():
                 break
             except Exception as e:
                 m = repr(e)
+                is_ratelimit = any(k in m.lower() for k in ('banned', 'upper limit', 'reach'))
                 if attempt < 3:
-                    print('[finmind] %s err, backoff 300s -- %s'
-                          % (sid, m[:70]), flush=True)
-                    time.sleep(300)
+                    wait = 3600 if is_ratelimit else 60
+                    print('[finmind] %s err, backoff %ds -- %s'
+                          % (sid, wait, m[:70]), flush=True)
+                    time.sleep(wait)
                 else:
                     print('[finmind] FAIL %s %s' % (sid, m[:90]), flush=True)
                     fail += 1

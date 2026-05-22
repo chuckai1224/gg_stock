@@ -8,6 +8,7 @@
 | `setup.md` | 環境安裝:Python 套件清單、必要資料夾 |
 | `gg_stock_logic.md` | `gg_stock.py` 程式邏輯與流程(4 種選股方法、評分系統) |
 | `data_sources.md` | 各資料來源、開放資料 API、如何取得/回補歷史資料、定期排程 |
+| `run_schedule.md` | 操作排程手冊：何時跑哪支 py、資料寫到哪 |
 | `todo.md` | 待辦清單 |
 
 ## 建議閱讀順序

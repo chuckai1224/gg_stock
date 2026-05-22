@@ -213,7 +213,7 @@ def get_stock_kline_df(stock_no,enddate,month=3):
     df=stock_df.sort_values(by='date', ascending=True)
     df=df.replace('--',np.nan)
     df=df.replace('---',np.nan)
-    df=df[df.close!=np.nan]
+    df=df[df['close'].notna()]
     df.reset_index(inplace=True)
     #print lno(),df['b_pwr']
     try:
@@ -1103,8 +1103,8 @@ def get_sql_stock_df(stock_id,table_name,debug=0):
     except:
         print(lno(),stock_id,table_name,"NG")    
         return pd.DataFrame()
-    d.replace('-',np.nan)
-    d.replace('--',np.nan)
+    d = d.replace('-', np.nan)
+    d = d.replace('--', np.nan)
     if table_name=='mix_income':
         #d['營業收入']=d['營業收入'].astype('float64')
         if debug==1:
@@ -1245,7 +1245,7 @@ def get_stock_season_df(r,debug=0):
     if debug==1:
         print(lno(),d)
     #單位K
-    d.replace('-',np.nan)
+    d = d.replace('-', np.nan)
     try:
         d['單季營收']=d['營業收入']-d['營業收入'].shift(-1)
         d['單季EPS']=d['基本每股盈餘（元）']-d['基本每股盈餘（元）'].shift(-1)

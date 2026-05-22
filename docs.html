@@ -1,0 +1,1751 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>gg_stock 文件</title>
+<style>
+  :root {
+    --bg: #1e1e2e; --surface: #27273a; --border: #3b3b52;
+    --text: #cdd6f4; --muted: #a6adc8; --accent: #89b4fa;
+    --green: #a6e3a1; --red: #f38ba8; --yellow: #f9e2af;
+    --code-bg: #181825;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: "Segoe UI", "PingFang TC", sans-serif; font-size: 15px; line-height: 1.7; }
+
+  /* ── nav ── */
+  nav { position: fixed; top: 0; left: 0; width: 220px; height: 100vh; background: var(--surface); border-right: 1px solid var(--border); overflow-y: auto; padding: 16px 0; z-index: 100; }
+  nav h2 { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); padding: 0 16px 8px; }
+  nav a { display: block; padding: 6px 16px; color: var(--muted); text-decoration: none; font-size: 13px; border-left: 3px solid transparent; }
+  nav a:hover, nav a.active { color: var(--accent); border-left-color: var(--accent); background: rgba(137,180,250,.08); }
+
+  /* ── main ── */
+  main { margin-left: 220px; padding: 40px 48px; max-width: 960px; }
+
+  .doc-section { margin-bottom: 60px; padding-bottom: 40px; border-bottom: 1px solid var(--border); }
+  .doc-section:last-child { border-bottom: none; }
+  .section-label { font-size: 11px; text-transform: uppercase; letter-spacing: 2px; color: var(--muted); margin-bottom: 8px; }
+
+  h1 { font-size: 1.8em; color: var(--accent); margin: 0 0 20px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+  h2 { font-size: 1.3em; color: var(--accent); margin: 32px 0 12px; }
+  h3 { font-size: 1.1em; color: var(--green); margin: 24px 0 8px; }
+  h4 { font-size: 1em; color: var(--yellow); margin: 16px 0 6px; }
+  p { margin: 0 0 12px; }
+  a { color: var(--accent); }
+
+  /* tables */
+  table { border-collapse: collapse; width: 100%; margin: 16px 0 20px; font-size: 13.5px; }
+  th { background: var(--border); color: var(--text); text-align: left; padding: 7px 12px; }
+  td { border-top: 1px solid var(--border); padding: 6px 12px; color: var(--muted); }
+  tr:hover td { background: rgba(255,255,255,.03); }
+
+  /* code */
+  code { background: var(--code-bg); color: var(--green); padding: 1px 5px; border-radius: 4px; font-size: 0.88em; font-family: "Cascadia Code", "Fira Code", monospace; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 6px; padding: 14px 16px; overflow-x: auto; margin: 12px 0 20px; }
+  pre code { background: none; color: #cdd6f4; padding: 0; font-size: 0.87em; }
+
+  blockquote { border-left: 3px solid var(--accent); padding: 4px 16px; margin: 12px 0; color: var(--muted); }
+  ul, ol { padding-left: 24px; margin: 8px 0 12px; }
+  li { margin-bottom: 4px; }
+  hr { border: none; border-top: 1px solid var(--border); margin: 24px 0; }
+
+  /* checklist */
+  li input[type=checkbox] { margin-right: 6px; }
+  li.task-list-item { list-style: none; margin-left: -20px; }
+
+  /* scrollbar */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  @media (max-width: 768px) {
+    nav { display: none; }
+    main { margin-left: 0; padding: 20px; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <h2>gg_stock 文件</h2>
+  <a href="#README-md">總覽 / 評分 SOP</a>
+  <a href="#setup-md">環境安裝</a>
+  <a href="#data_sources-md">資料來源與歷史回補</a>
+  <a href="#run_schedule-md">執行排程手冊</a>
+  <a href="#gg_stock_logic-md">程式邏輯</a>
+  <a href="#todo-md">待辦清單</a>
+</nav>
+
+<main>
+<section class="doc-section" id="README-md"><div class="section-label">README.md</div><h1 id="gg_stock">gg_stock — 台股選股系統</h1>
+<h2 id="_1">文件索引</h2>
+<table>
+<thead>
+<tr>
+<th>文件</th>
+<th>作用</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>README.md</code></td>
+<td>(本檔)選股評分標準 SOP、籌碼面(期貨/選擇權/三大法人)研究筆記</td>
+</tr>
+<tr>
+<td><code>setup.md</code></td>
+<td>環境安裝:Python 套件清單、必要資料夾</td>
+</tr>
+<tr>
+<td><code>gg_stock_logic.md</code></td>
+<td><code>gg_stock.py</code> 程式邏輯與流程(4 種選股方法、評分系統)</td>
+</tr>
+<tr>
+<td><code>data_sources.md</code></td>
+<td>各資料來源、開放資料 API、如何取得/回補歷史資料、定期排程</td>
+</tr>
+<tr>
+<td><code>run_schedule.md</code></td>
+<td>操作排程手冊：何時跑哪支 py、資料寫到哪</td>
+</tr>
+<tr>
+<td><code>todo.md</code></td>
+<td>待辦清單</td>
+</tr>
+</tbody>
+</table>
+<h2 id="_2">建議閱讀順序</h2>
+<ol>
+<li><strong><code>README.md</code></strong> —— (本檔)先看上方文件索引,掌握整體</li>
+<li><strong><code>setup.md</code></strong> —— 安裝 Python 套件、建立必要資料夾</li>
+<li><strong><code>data_sources.md</code></strong> —— 下載/回補資料,了解各資料來源與排程</li>
+<li><strong><code>gg_stock_logic.md</code></strong> —— 了解 <code>gg_stock.py</code> 選股邏輯與評分系統</li>
+<li><strong><code>todo.md</code></strong> —— 待辦清單(選讀)</li>
+</ol>
+<hr />
+<h2 id="0420">0420</h2>
+<ol>
+<li>get_psrs_div_psr3y_score    gg_stock.py<br />
+   psrs/psr 三年低  -1  (-2 &lt;&lt; 2)</li>
+<li></li>
+</ol>
+<h2 id="0419-sop">0419 評分標準sop</h2>
+<h2 id="psrspsr-1-2-2">psrs/psr 三年低  -1  (-2 &lt;&lt; 2)</h2>
+<p>if 0.2-x &gt;2<br />
+  y=2<br />
+elif 0.2-x &lt;-2<br />
+  y=-2<br />
+else<br />
+    y=(0.2-x)*2</p>
+<h2 id="13">淨值比 &lt;1.3</h2>
+<p>(1.3 -x )<br />
+if x&gt;=3.3 <br />
+    y=-2<br />
+elif x&gt;=1.3    <br />
+    y=1.3-x<br />
+else<br />
+    y=(1.3-x)*2</p>
+<h2 id="psrs-075-4-4">psrs &lt;0.75 (-4  ~ 4)</h2>
+<p>if psrs&gt;=3<br />
+    y=-4<br />
+else<br />
+    y=(1.5-psrs)/0.375</p>
+<h2 id="prr15">prr&lt;15</h2>
+<p>if prr&gt;=15<br />
+    y=-2<br />
+elif prr&lt;=0<br />
+    y=-2  <br />
+else <br />
+    y=(15-prr)/7.5</p>
+<h2 id="30-2-2">毛利率 &gt;30 (-2 ~2)</h2>
+<p>if x&lt;10<br />
+    y=-2<br />
+elif x&gt;=60  <br />
+    y=2<br />
+else<br />
+    y=(x-30)/15    </p>
+<h2 id="-2-2">營利率年增 (-2 ~2)</h2>
+<p>x=本季營利率-去年同期營利率<br />
+if x/2.5&lt;-2<br />
+   y=-2<br />
+elif x/2.5&gt;2<br />
+    y=2<br />
+else<br />
+    y=x/2.5    </p>
+<h2 id="20-2-2">營收年增 20%(-2 ~2)</h2>
+<p>x=最新月營收年成長率<br />
+w=本年累計營收年成長率-去年營收年增率<br />
+if (x<em>100-10)</em>0.25/10+w<em>0.25&gt;2<br />
+    y=2<br />
+else<br />
+    y=(x</em>100-10)<em>0.25/10+w</em>0.25   </p>
+<h2 id="80-2-2">營收月增 80%(-2 ~2)</h2>
+<p>if x&gt;0.8<br />
+    y=2<br />
+elif x&lt;-0.8<br />
+    y=-2  <br />
+else<br />
+    y=  x*2.5  </p>
+<h2 id="peg">peg</h2>
+<p>今年eps預估(最新一季eps<em>2+前一季eps+前2季eps)<br />
+(eps預估年成長率)a= (最新一季eps</em>2+前一季eps+前2季eps)/(去年同季eps<em>2+去年前一季eps+去年前2季eps) <br />
+if a&lt;0<br />
+    peg=1.34<br />
+else<br />
+    if 本益比=NA<br />
+        if 今年eps預估&lt;0<br />
+            peg=1.34<br />
+        else<br />
+            peg=股價/今年eps預估/eps預估年成長率/100<br />
+    else      <br />
+        peg=本益比/(eps預估年成長率)/100<br />
+if peg&gt;1.34<br />
+    y=-2<br />
+elif peg &lt;0.66<br />
+    y=2<br />
+else<br />
+    y=(1-peg)</em>2/0.34        </p>
+<p>http://lovecoding.logdown.com/</p>
+<p>外資月 call delta=0.713386<br />
+外資月 put delta =-0.921187<br />
+十大 月 buy call 口數=66357<br />
+十大 月 buy put 口數=98918<br />
+十大約當大台=外資月 call delta<em> 十大 月 buy call 口數 +外資月 put delta</em> 十大 月 buy put 口數 </p>
+<h1 id="stock">stock</h1>
+<h2 id="_3">外資</h2>
+<ol>
+<li>
+<p>期貨 <br />
+預估未來,<br />
+最低點之前,就先建立多單,容易虧損一段時間需配合選擇權</p>
+</li>
+<li>
+<p>op </p>
+<blockquote>
+<p>買方<br />
+口數 :方向性不大,多口數 通常都是避險(小點數)<br />
+契約金額: 配合期貨判斷方向</p>
+</blockquote>
+</li>
+</ol>
+<blockquote>
+<p>賣方<br />
+口數: <br />
+契約金額:<br />
+ 漲多做壓力<br />
+ 高檔區 為盤整 機率高<br />
+ 賣方不太有方向性:<br />
+總結 大台+小台+op約當大台 為方向,參考賣方 契約 看支撐 壓力</p>
+</blockquote>
+<h2 id="_4">自營商</h2>
+<p>1.期貨<br />
+2.op買方</p>
+<blockquote>
+<p>口數:<br />
+契約金額:<br />
+3.op賣方<br />
+口數: 下跌段sell call(做壓力) &gt; sell put(做支撐)<br />
+契約金額: <br />
+賣方的口數 跟  契約金額抓轉折</p>
+</blockquote>
+<h2 id="_5">十大交易人</h2>
+<ol>
+<li>期貨<br />
+    轉倉模式<br />
+    近月減少,所有增加(有機會壓低結算,要觀察 所有 是否增加)</li>
+<li>op<blockquote>
+<p>周選模式:<br />
+十大交易人op buy call ,buy put<br />
+top 10 op only have num , no cash</p>
+</blockquote>
+</li>
+</ol>
+<p>周選 是拿來避險的<br />
+周 buy call &gt; 周 buy put ==&gt;方向明確,暴衝<br />
+                        ==&gt; 如回檔時出現,再走一波機率高<br />
+周 buy put &gt; 周 buy call ==&gt; 如為期指價格漲高,需參考 十大期貨多單,為保險單</p>
+<p>周 sell call 壓力(用綠色)<br />
+周 sell put  支撐 (用紅色)</p>
+<p>賣方 是莊家</p>
+<h1 id="_6">期貨 &gt; 周賣&gt;周買</h1>
+<blockquote>
+<p>月選模式:<br />
+大部分基金都操做月選,周選為避險</p>
+</blockquote>
+<h1 id="buy-buy">月選 buy 比周選 buy 更有方向性</h1>
+<p>再沒有契約金額的狀況下<br />
+賣方的參考性 比 買方高</p>
+<blockquote>
+<p>所有模式:<br />
+買方:<br />
+下跌轉折,buy call &gt;buy put ,漲高之後 以避險為主<br />
+當看好未來行情,有可能出現先布局<br />
+賣方:<br />
+當空方時,不做支撐,只做壓力<br />
+當破底時,出現sell put(做支撐)&gt;sell call (做壓力)</p>
+</blockquote>
+<p>買方一定要參考 外資+自營商 的契約金額<br />
+十大交易人=外資+自營商<br />
+可以參考外資+自營商 的契約金額</p>
+<h2 id="_7">每日多空指標</h2>
+<blockquote>
+<p>0 =1 &lt;<br />
+外資約當大台 &gt;0:1 &lt;0:-1<br />
+外資買賣權金額 (buy call cash -buy put cash) /(buy call cash +buy put cash)<br />
+自營商約當大台 &gt;0:1 &lt;0:-1<br />
+自營商賣方口數 (sell put num -sell call num)/(sell put num +sell call num)<br />
+十大交易人約當大台 &gt;0:1 &lt;0:-1<br />
+十大交易人近月(W)賣方口數 (sell put num -sell call num)/(sell put num +sell call num)<br />
+十大交易人遠月(M)賣方口數 (sell put num -sell call num)/(sell put num +sell call num)</p>
+</blockquote></section>
+<section class="doc-section" id="setup-md"><div class="section-label">setup.md</div><h1 id="_1">環境安裝說明</h1>
+<h2 id="_2">系統需求</h2>
+<ul>
+<li>Python 3.9 ~ 3.11（建議 3.11）</li>
+<li>Windows 10/11 或 Linux</li>
+</ul>
+<hr />
+<h2 id="_3">安裝套件</h2>
+<h3 id="ssl">公司/企業網路 SSL 問題</h3>
+<p>若 pip 出現 <code>SSLError: CERTIFICATE_VERIFY_FAILED</code>，需加 <code>--trusted-host</code> 參數：</p>
+<div class="codehilite"><pre><span></span><code>pip<span class="w"> </span>install<span class="w"> </span>&lt;套件名&gt;<span class="w"> </span>--trusted-host<span class="w"> </span>pypi.org<span class="w"> </span>--trusted-host<span class="w"> </span>files.pythonhosted.org
+</code></pre></div>
+
+<p>以下所有 <code>pip install</code> 指令若有 SSL 問題，請加上此參數。</p>
+<hr />
+<h3 id="gg_stockpy">核心套件（執行 gg_stock.py 必要）</h3>
+<div class="codehilite"><pre><span></span><code>pip<span class="w"> </span>install<span class="w"> </span>python-dateutil<span class="w"> </span>pandas<span class="w"> </span>numpy<span class="w"> </span>scipy<span class="w"> </span>sqlalchemy<span class="w"> </span>beautifulsoup4<span class="w"> </span>lxml<span class="w"> </span>requests<span class="w"> </span>matplotlib<span class="w"> </span>mplfinance<span class="w"> </span>seaborn<span class="w"> </span>kline<span class="w"> </span>Pillow
+</code></pre></div>
+
+<table>
+<thead>
+<tr>
+<th>套件</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>python-dateutil</code></td>
+<td>日期計算（<code>relativedelta</code>）</td>
+</tr>
+<tr>
+<td><code>pandas</code></td>
+<td>資料處理核心</td>
+</tr>
+<tr>
+<td><code>numpy</code></td>
+<td>數值運算</td>
+</tr>
+<tr>
+<td><code>scipy</code></td>
+<td>訊號處理（<code>scipy.signal</code>）</td>
+</tr>
+<tr>
+<td><code>sqlalchemy</code></td>
+<td>SQLite 資料庫存取</td>
+</tr>
+<tr>
+<td><code>beautifulsoup4</code></td>
+<td>HTML 解析（爬蟲）</td>
+</tr>
+<tr>
+<td><code>lxml</code></td>
+<td>HTML/XML 解析器</td>
+</tr>
+<tr>
+<td><code>requests</code></td>
+<td>HTTP 請求（下載資料）</td>
+</tr>
+<tr>
+<td><code>matplotlib</code></td>
+<td>繪圖</td>
+</tr>
+<tr>
+<td><code>mplfinance</code></td>
+<td>K 線圖（<code>candlestick_ohlc</code>）</td>
+</tr>
+<tr>
+<td><code>seaborn</code></td>
+<td>統計視覺化</td>
+</tr>
+<tr>
+<td><code>kline</code></td>
+<td>K 線 resample 工具</td>
+</tr>
+<tr>
+<td><code>Pillow</code></td>
+<td>圖片處理（<code>PIL.Image</code>）</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3 id="ta-libgood_stockpy-stock_commpy">TA-Lib（技術指標，<code>good_stock.py</code> / <code>stock_comm.py</code> 部分功能）</h3>
+<p>TA-Lib 在 Windows 上<strong>無法直接 pip install</strong>，需先安裝 C 函式庫：</p>
+<p><strong>方法一：用非官方 whl（推薦）</strong></p>
+<ol>
+<li>至 https://github.com/cgohlke/talib-build/releases 下載對應版本的 <code>.whl</code><br />
+   - 例如：<code>TA_Lib-0.4.32-cp311-cp311-win_amd64.whl</code>（Python 3.11，64位元）</li>
+<li>安裝：<br />
+<code>bash
+   pip install TA_Lib-0.4.32-cp311-cp311-win_amd64.whl</code></li>
+</ol>
+<p><strong>方法二：conda</strong></p>
+<div class="codehilite"><pre><span></span><code>conda<span class="w"> </span>install<span class="w"> </span>-c<span class="w"> </span>conda-forge<span class="w"> </span>ta-lib
+</code></pre></div>
+
+<blockquote>
+<p>若不需要技術指標功能，可跳過，相關 <code>import talib</code> 在 <code>good_stock.py</code> 中已移除。</p>
+</blockquote>
+<hr />
+<h3 id="seleniumgood_stockpy-morningpy">Selenium（自動化下載，<code>good_stock.py</code> / <code>morning.py</code>）</h3>
+<div class="codehilite"><pre><span></span><code>pip<span class="w"> </span>install<span class="w"> </span>selenium
+</code></pre></div>
+
+<p>需另外安裝瀏覽器驅動：<br />
+- Firefox：下載 <a href="https://github.com/mozilla/geckodriver/releases">geckodriver</a> 並加入 PATH<br />
+- Chrome：<code>pip install webdriver-manager</code></p>
+<hr />
+<h3 id="_4">選用套件（特定功能才需要）</h3>
+<div class="codehilite"><pre><span></span><code><span class="c1"># pyecharts — 互動圖表（all_stock.py，目前大部分已改為 mplfinance）</span>
+pip<span class="w"> </span>install<span class="w"> </span>pyecharts
+
+<span class="c1"># flask — Web API（部分腳本）</span>
+pip<span class="w"> </span>install<span class="w"> </span>flask
+
+<span class="c1"># backtrader — 回測引擎（backtest.py）</span>
+pip<span class="w"> </span>install<span class="w"> </span>backtrader
+
+<span class="c1"># pdfkit — 輸出 PDF（all_stock.py）</span>
+<span class="c1"># 需另安裝 wkhtmltopdf：https://wkhtmltopdf.org/downloads.html</span>
+pip<span class="w"> </span>install<span class="w"> </span>pdfkit
+
+<span class="c1"># pandas-datareader — 抓取外部金融資料</span>
+pip<span class="w"> </span>install<span class="w"> </span>pandas-datareader
+
+<span class="c1"># pygame — 遊戲模式（game.py，非核心）</span>
+pip<span class="w"> </span>install<span class="w"> </span>pygame
+</code></pre></div>
+
+<hr />
+<h2 id="_5">建立必要資料夾</h2>
+<p>首次執行前需建立以下目錄（或直接執行以下指令）：</p>
+<div class="codehilite"><pre><span></span><code>mkdir<span class="w"> </span>sql<span class="w"> </span>data<span class="w"> </span>data<span class="se">\s</span>tock_data<span class="w"> </span>final<span class="w"> </span>error<span class="w"> </span>out
+</code></pre></div>
+
+<table>
+<thead>
+<tr>
+<th>資料夾</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>sql/</code></td>
+<td>SQLite 資料庫（股價、三大法人、集保等）</td>
+</tr>
+<tr>
+<td><code>data/stock_data/</code></td>
+<td>個股日 K CSV（<code>{stock_id}.csv</code>）</td>
+</tr>
+<tr>
+<td><code>data/revenue/</code></td>
+<td>月營收資料（爬蟲下載後存放）</td>
+</tr>
+<tr>
+<td><code>data/director/</code></td>
+<td>董監事持股資料</td>
+</tr>
+<tr>
+<td><code>data/down_pe_networth_yield/</code></td>
+<td>本益比/淨值比資料</td>
+</tr>
+<tr>
+<td><code>final/</code></td>
+<td>選股結果 HTML / CSV 輸出</td>
+</tr>
+<tr>
+<td><code>error/</code></td>
+<td>異常 CSV 紀錄</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="_6">一鍵安裝腳本</h2>
+<div class="codehilite"><pre><span></span><code>pip<span class="w"> </span>install<span class="w"> </span>python-dateutil<span class="w"> </span>pandas<span class="w"> </span>numpy<span class="w"> </span>scipy<span class="w"> </span>sqlalchemy<span class="w"> </span>beautifulsoup4<span class="w"> </span>lxml<span class="w"> </span>requests<span class="w"> </span>matplotlib<span class="w"> </span>mplfinance<span class="w"> </span>seaborn<span class="w"> </span>kline<span class="w"> </span>Pillow<span class="w"> </span>--trusted-host<span class="w"> </span>pypi.org<span class="w"> </span>--trusted-host<span class="w"> </span>files.pythonhosted.org
+
+mkdir<span class="w"> </span>-p<span class="w"> </span>sql<span class="w"> </span>data/stock_data<span class="w"> </span>data/revenue<span class="w"> </span>data/director<span class="w"> </span>data/down_pe_networth_yield<span class="w"> </span>final<span class="w"> </span>error<span class="w"> </span>out
+</code></pre></div>
+
+<hr />
+<h2 id="_7">確認安裝</h2>
+<div class="codehilite"><pre><span></span><code>python<span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;</span>
+<span class="s2">import pandas, numpy, scipy, sqlalchemy, bs4, lxml, requests</span>
+<span class="s2">import matplotlib, mplfinance, seaborn, kline, PIL</span>
+<span class="s2">from dateutil.relativedelta import relativedelta</span>
+<span class="s2">print(&#39;所有核心套件安裝成功&#39;)</span>
+<span class="s2">&quot;</span>
+</code></pre></div>
+
+<hr />
+<h2 id="_8">注意事項</h2>
+<ul>
+<li><code>stock_comm.py</code> 的 <code>datafolder()</code> 在 Windows 上回傳 <code>'data'</code>（相對路徑），執行時需在 <code>D:\gg_stock\</code> 目錄下執行</li>
+<li>系統需先執行各爬蟲腳本（<code>revenue.py</code>、<code>stock_big3.py</code>、<code>tdcc_dist.py</code> 等）下載資料後，<code>gg_stock.py</code> 才能產生有效選股結果</li>
+<li>SQLite DB 檔案（<code>sql/*.db</code>）會在首次執行時自動建立</li>
+</ul></section>
+<section class="doc-section" id="data_sources-md"><div class="section-label">data_sources.md</div><h1 id="_1">資料來源與歷史資料取得</h1>
+<blockquote>
+<p>本文件記錄 <code>gg_stock.py</code> 各資料來源、如何下載/建庫、以及<strong>如何取得歷史資料</strong>。<br />
+2026-05 將所有失效的舊網址改接證交所 / 櫃買中心 / 集保的開放資料 API 後整理。</p>
+</blockquote>
+<hr />
+<h2 id="_2">一、資料流總覽</h2>
+<div class="codehilite"><pre><span></span><code>各下載腳本 ──&gt; 開放資料 API ──&gt; 本機 SQLite / CSV ──&gt; gg_stock.py 讀取選股
+</code></pre></div>
+
+<p><code>gg_stock.py</code> 的 4 個選股方法都會呼叫 <code>gen_stock_info()</code>,後者需要以下所有資料。<br />
+缺哪一項,該檔個股就會被跳過或欄位留白。</p>
+<hr />
+<h2 id="_3">二、各資料來源一覽</h2>
+<table>
+<thead>
+<tr>
+<th>資料項目</th>
+<th>下載腳本</th>
+<th>來源 API</th>
+<th style="text-align: center;">可指定日期</th>
+<th>輸出位置</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>個股股價(日K)</td>
+<td><code>crawl.py</code></td>
+<td>TWSE <code>rwd/zh/afterTrading/MI_INDEX</code><br>TPEX <code>afterTrading/dailyQuotes</code></td>
+<td style="text-align: center;">✅</td>
+<td><code>data/stock_data/*.csv</code><br><code>sql/stock_data.db</code><br><code>sql/{tse,otc}_exchange_data.db</code></td>
+</tr>
+<tr>
+<td>三大法人(投信買超)</td>
+<td><code>stock_big3.py</code></td>
+<td>TWSE <code>rwd/zh/fund/T86</code><br>TPEX <code>insti/dailyTrade</code></td>
+<td style="text-align: center;">✅</td>
+<td><code>sql/stock_big3.db</code></td>
+</tr>
+<tr>
+<td>集保股權分散(TDCC)</td>
+<td><code>tdcc_dist.py</code></td>
+<td>TDCC <code>opendata/getOD.ashx?id=1-5</code></td>
+<td style="text-align: center;">❌ 僅最新一週</td>
+<td><code>sql/tdcc_dist.db</code></td>
+</tr>
+<tr>
+<td>本益比/淨值比/殖利率</td>
+<td><code>pe_networth_yeild.py</code></td>
+<td>上市 TWSE <code>rwd/.../BWIBBU_d</code><br>上櫃 TPEX <code>openapi/.../peratio</code></td>
+<td style="text-align: center;">⚠️ 上市可,上櫃僅最新</td>
+<td><code>data/down_pe_networth_yield/*.csv</code></td>
+</tr>
+<tr>
+<td>月營收</td>
+<td><code>revenue.py</code></td>
+<td>TWSE/TPEX <code>openapi .../t187ap05</code></td>
+<td style="text-align: center;">❌ 僅最新一月</td>
+<td><code>sql/income.db</code><br><code>sql/stock/*.db</code>(<code>revenue</code> 表)</td>
+</tr>
+<tr>
+<td>季財報/EPS</td>
+<td><code>eps.py</code></td>
+<td>TWSE/TPEX <code>openapi .../t187ap06_*_ci</code></td>
+<td style="text-align: center;">❌ 僅最新一季</td>
+<td><code>sql/stock/*.db</code>(<code>mix_income</code> 表)</td>
+</tr>
+<tr>
+<td>董監持股</td>
+<td><code>director.py</code></td>
+<td>TWSE/TPEX <code>openapi .../t187ap11</code></td>
+<td style="text-align: center;">❌ 僅最新一月</td>
+<td><code>data/director/final/*.csv</code></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="vs">三、可回補歷史 vs 僅能往前累積</h2>
+<p>開放資料 API 分兩種:</p>
+<h3 id="a">A. 可指定日期 → 能回補任意歷史</h3>
+<table>
+<thead>
+<tr>
+<th>資料</th>
+<th>回補指令</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>股價</td>
+<td><code>python crawl.py YYYY MM DD</code>(逐日);或 <code>python crawl.py -b YYYY MM DD</code>(快速回補)</td>
+</tr>
+<tr>
+<td>投信買超</td>
+<td><code>python stock_big3.py -d 起始日 結束日</code>(例:<code>-d 20240101 20260519</code>)</td>
+</tr>
+<tr>
+<td>本益比(<strong>上市</strong>)</td>
+<td><code>python pe_networth_yeild.py -d 起始日 結束日</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="b">B. 僅提供「最新一期」→ 無法回補,只能往前累積</h3>
+<p>TDCC、月營收、季財報、董監持股、上櫃本益比 —— 官方開放資料只給<strong>當前最新一筆</strong>。<br />
+<strong>沒有辦法把過去的補回來</strong>,只能從現在開始定期執行,讓資料庫逐月/逐季累積:</p>
+<ul>
+<li><code>sql/income.db</code>、<code>mix_income</code> 表、<code>director/final/</code> 都是「<strong>append 累積</strong>」設計</li>
+<li>例如季財報每跑一次 <code>eps.py</code> 就多存一季,跑滿 8 次(約 2 年)才有完整 8 季可分析</li>
+</ul>
+<blockquote>
+<p>若要回補這幾項的歷史,可改用第三方資料庫 <strong>FinMind</strong>(免費版能補月營收、<br />
+財報等,但<strong>沒有</strong>集保股權分散與董監持股)—— 評估詳見第七節。</p>
+</blockquote>
+<hr />
+<h2 id="_4">四、回補歷史的實際操作</h2>
+<h3 id="1-pointk-k">1. 股價(最重要,<code>pointK</code> 與 K 線欄位都靠它)</h3>
+<div class="codehilite"><pre><span></span><code><span class="c1"># 方式一:完整回補(含 sql/stock_data.db,pointK 需要)— 逐交易日,較慢</span>
+python<span class="w"> </span>crawl.py<span class="w"> </span><span class="m">2026</span><span class="w"> </span><span class="m">5</span><span class="w"> </span><span class="m">19</span><span class="w">      </span><span class="c1"># 跑單日:下載 + exchange2sql + insert_daily_stock_data</span>
+<span class="c1">#  ↑ 對每個要回補的交易日各跑一次</span>
+
+<span class="c1"># 方式二:快速回補(只建 data/stock_data/*.csv,夠畫 K 線 / gen_stock_info 的 kline 欄位)</span>
+python<span class="w"> </span>crawl.py<span class="w"> </span>-b<span class="w"> </span><span class="m">2026</span><span class="w"> </span><span class="m">5</span><span class="w"> </span><span class="m">19</span><span class="w">   </span><span class="c1"># 從指定日往回一路補到 2010-01-01(只做 get_data)</span>
+</code></pre></div>
+
+<ul>
+<li><code>pointK</code> 方法的 <code>check_point_K</code> 需要近 122 個交易日、且讀 <code>sql/stock_data.db</code><br />
+  → 必須用<strong>方式一</strong>逐日補滿約半年。</li>
+<li><code>fund</code>/<code>revenue</code> 輸出裡的週K/日K 欄位讀 <code>data/stock_data/*.csv</code><br />
+  → <strong>方式二</strong> <code>-b</code> 即可。</li>
+<li><strong>K線只需抓「日K」</strong>:週K、月K 不另外下載,<code>kline.resample()</code> 會即時從日K換算;<br />
+  日K 回補得夠長(週K 取 60 根約需 300 個交易日),週K/月K 自然就有。</li>
+</ul>
+<h3 id="2">2. 投信買超(回補)</h3>
+<div class="codehilite"><pre><span></span><code>python<span class="w"> </span>stock_big3.py<span class="w"> </span>-d<span class="w"> </span><span class="m">20240101</span><span class="w"> </span><span class="m">20260519</span>
+</code></pre></div>
+
+<p>逐日下載 T86 / dailyTrade,寫入 <code>sql/stock_big3.db</code>(每日一張表)。已存在的日期會自動略過。</p>
+<h3 id="3">3. 本益比(上市可回補,上櫃只有最新)</h3>
+<div class="codehilite"><pre><span></span><code>python<span class="w"> </span>pe_networth_yeild.py<span class="w"> </span>-d<span class="w"> </span><span class="m">20240101</span><span class="w"> </span><span class="m">20260519</span>
+</code></pre></div>
+
+<p>上市 <code>tseYYYYMMDD.csv</code> 會是各日正確資料;上櫃 <code>otcYYYYMMDD.csv</code> 因 API 限制<br />
+一律寫入「最新一日」內容(檔名仍照查詢日期)。</p>
+<hr />
+<h2 id="_5">五、各選股方法需要的資料深度</h2>
+<table>
+<thead>
+<tr>
+<th>方法</th>
+<th>需要的歷史深度</th>
+<th>現況</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>fund</code> 投信買超</td>
+<td>單一快照即可</td>
+<td>✅ 可直接產出</td>
+</tr>
+<tr>
+<td><code>revenue</code> 月營收</td>
+<td>需 <strong>2 個月</strong>月營收(算月增減)</td>
+<td>累積 2 個月後產出</td>
+</tr>
+<tr>
+<td><code>director</code> 董監持股</td>
+<td>需 <strong>2 個月</strong>董監資料(算持股增減)</td>
+<td>累積 2 個月後產出</td>
+</tr>
+<tr>
+<td><code>pointK</code> 紅K轉強</td>
+<td>需 <strong>約 122 個交易日</strong>股價</td>
+<td>回補股價後可用</td>
+</tr>
+<tr>
+<td>季財報三率/EPS 評分</td>
+<td>需 <strong>約 8 季</strong>(2 年)</td>
+<td>每季累積</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><code>fund</code> 之外的方法,資料深度不夠時會「優雅地回空、不崩潰」,不會產生 <code>final/xxx_good.html</code>。</p>
+</blockquote>
+<hr />
+<h2 id="cron">六、建議的定期排程(cron)</h2>
+<p>開放資料是「最新快照」,要長期使用就靠定時累積:</p>
+<table>
+<thead>
+<tr>
+<th>頻率</th>
+<th>指令</th>
+<th>說明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>每交易日盤後</td>
+<td><code>python crawl.py &lt;今天&gt;</code></td>
+<td>股價</td>
+</tr>
+<tr>
+<td>每交易日盤後</td>
+<td><code>python stock_big3.py</code>(無參數=今天)</td>
+<td>投信買超</td>
+</tr>
+<tr>
+<td>每交易日盤後</td>
+<td><code>python pe_networth_yeild.py</code></td>
+<td>本益比</td>
+</tr>
+<tr>
+<td>每週(集保更新後)</td>
+<td><code>python tdcc_dist.py</code></td>
+<td>TDCC 股權分散</td>
+</tr>
+<tr>
+<td>每月(營收公布後,約 10 號)</td>
+<td><code>python revenue.py</code></td>
+<td>月營收</td>
+</tr>
+<tr>
+<td>每月</td>
+<td><code>python director.py</code></td>
+<td>董監持股</td>
+</tr>
+<tr>
+<td>每季(財報公布後)</td>
+<td><code>python eps.py -d &lt;今天&gt; &lt;今天&gt;</code></td>
+<td>季財報</td>
+</tr>
+</tbody>
+</table>
+<p>跑完上述後再執行 <code>python gg_stock.py gg</code>(或無參數)即可產生 4 種選股清單。</p>
+<hr />
+<h2 id="finmind">七、FinMind 免費版評估(作為歷史資料源)</h2>
+<p><a href="https://finmindtrade.com/">FinMind</a> 是開源台股資料庫,提供<strong>真歷史</strong>資料<br />
+(不像官方開放資料只有最新一期)。2026-05 實測免費版(匿名、未帶 token):</p>
+<h3 id="_6">免費版可取得(真歷史、可指定日期區間,需逐檔查詢)</h3>
+<table>
+<thead>
+<tr>
+<th>gg_stock 需求</th>
+<th>FinMind dataset</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>日K 股價</td>
+<td><code>taiwan_stock_daily</code></td>
+</tr>
+<tr>
+<td>三大法人(投信買超)</td>
+<td><code>taiwan_stock_institutional_investors</code></td>
+</tr>
+<tr>
+<td>月營收</td>
+<td><code>taiwan_stock_month_revenue</code></td>
+</tr>
+<tr>
+<td>季財報(綜合損益表)</td>
+<td><code>taiwan_stock_financial_statement</code></td>
+</tr>
+<tr>
+<td>本益比/淨值比/殖利率</td>
+<td><code>taiwan_stock_per_pbr</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="_7">免費版不能取得</h3>
+<table>
+<thead>
+<tr>
+<th>項目</th>
+<th>狀況</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>集保股權分散</td>
+<td><code>taiwan_stock_holding_shares_per</code> → 需付費升級</td>
+</tr>
+<tr>
+<td>依「日期」查全市場</td>
+<td>需付費 → 免費版只能逐檔(帶 <code>stock_id</code>)查</td>
+</tr>
+<tr>
+<td>董監持股餘額</td>
+<td>FinMind 無此 dataset</td>
+</tr>
+</tbody>
+</table>
+<h3 id="_8">限流與回補成本</h3>
+<ul>
+<li>免費版按小時計(官方約 300–600 requests/hr)</li>
+<li>只能逐檔查 → 回補全市場 ≈ 2000 檔 × 5 種 dataset ≈ <strong>10,000 requests</strong></li>
+<li>→ 一次性回補約 <strong>17–33 小時</strong>(可背景分批跑);之後每日增量很少</li>
+</ul>
+<h3 id="_9">結論:建議「混合架構」,不要當唯一資料源</h3>
+<table>
+<thead>
+<tr>
+<th>用途</th>
+<th>建議來源</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>每日更新</td>
+<td>證交所/櫃買開放資料 API(免費、不限流、一次抓全市場)</td>
+</tr>
+<tr>
+<td>歷史回補(日K/三大法人/月營收/財報/本益比)</td>
+<td>FinMind 免費版逐檔補</td>
+</tr>
+<tr>
+<td>集保股權分散</td>
+<td>TDCC 開放資料(往前累積)或付費</td>
+</tr>
+<tr>
+<td>董監持股</td>
+<td>TWSE <code>t187ap11</code>(往前累積)</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>FinMind 很適合<strong>一次性回補歷史</strong>(補開放資料給不了的過去),<br />
+但因限流 + 逐檔查 + 缺集保/董監,不適合當每日主力。</p>
+</blockquote>
+<p>安裝與用法:</p>
+<div class="codehilite"><pre><span></span><code>pip<span class="w"> </span>install<span class="w"> </span>FinMind<span class="w"> </span>tqdm
+</code></pre></div>
+
+<div class="codehilite"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">FinMind.data</span><span class="w"> </span><span class="kn">import</span> <span class="n">DataLoader</span>
+<span class="n">dl</span> <span class="o">=</span> <span class="n">DataLoader</span><span class="p">()</span>
+<span class="n">df</span> <span class="o">=</span> <span class="n">dl</span><span class="o">.</span><span class="n">taiwan_stock_daily</span><span class="p">(</span><span class="n">stock_id</span><span class="o">=</span><span class="s1">&#39;2330&#39;</span><span class="p">,</span>
+                           <span class="n">start_date</span><span class="o">=</span><span class="s1">&#39;2024-05-20&#39;</span><span class="p">,</span> <span class="n">end_date</span><span class="o">=</span><span class="s1">&#39;2026-05-20&#39;</span><span class="p">)</span>
+</code></pre></div>
+
+<hr />
+<h2 id="2026-05">八、本次修復記錄(2026-05)</h2>
+<p>原本所有下載腳本都接已失效的舊網址,<code>gg_stock.py</code> 完全跑不動。修復後改接開放資料 API:</p>
+<table>
+<thead>
+<tr>
+<th>Commit</th>
+<th>修復內容</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>f4d21da</code></td>
+<td>投信買超 <code>stock_big3.py</code> → TWSE T86 / TPEX dailyTrade JSON</td>
+</tr>
+<tr>
+<td><code>bec439e</code></td>
+<td>集保股權分散 <code>tdcc_dist.py</code> → TDCC 開放資料(並改抓 1~15 持股分級)</td>
+</tr>
+<tr>
+<td><code>869d896</code></td>
+<td><code>np.NaN</code> → <code>np.nan</code>(NumPy 2.0 已移除);<code>get_market_value</code> 加固</td>
+</tr>
+<tr>
+<td><code>8074bfb</code></td>
+<td>股價 <code>crawl.py</code> → TWSE MI_INDEX / TPEX dailyQuotes;<code>datafolder()</code> 修正</td>
+</tr>
+<tr>
+<td><code>e4e8e3a</code></td>
+<td>本益比 <code>pe_networth_yeild.py</code> → TWSE BWIBBU_d / TPEX 開放資料</td>
+</tr>
+<tr>
+<td><code>65944c1</code></td>
+<td>月營收 <code>revenue.py</code> → TWSE/TPEX <code>t187ap05</code> 開放資料</td>
+</tr>
+<tr>
+<td><code>7816112</code></td>
+<td>季財報 <code>eps.py</code> → <code>t187ap06</code> 開放資料;薄資料防呆</td>
+</tr>
+<tr>
+<td><code>0bd6f15</code></td>
+<td>revenue 數值型別修正;董監 <code>director.py</code> → <code>t187ap11</code> 開放資料</td>
+</tr>
+</tbody>
+</table>
+<p>共同問題:<br />
+- 舊網址失效(TWSE/TPEX 改版、MOPS 擋爬蟲)→ 全面改開放資料 API<br />
+- SQLAlchemy 2.0 移除 <code>engine.table_names()</code> → 改 <code>inspect().get_table_names()</code><br />
+- NumPy 2.0 移除 <code>np.NaN</code> → <code>np.nan</code><br />
+- 開放資料多為「最新快照」→ 程式加防呆,薄資料不崩潰(見第五節)</p></section>
+<section class="doc-section" id="run_schedule-md"><div class="section-label">run_schedule.md</div><h1 id="py">執行排程手冊 — 何時跑哪支 py、資料寫到哪</h1>
+<blockquote>
+<p>詳細 API 來源與歷史回補說明見 <code>data_sources.md</code>。<br />
+本文件聚焦在「<strong>操作節奏</strong>」：誰、何時跑、產出什麼。</p>
+</blockquote>
+<hr />
+<h2 id="_1">一、全貌速查表</h2>
+<table>
+<thead>
+<tr>
+<th>頻率</th>
+<th>腳本</th>
+<th>指令（無日期=今天）</th>
+<th>資料產出</th>
+<th>寫入位置</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>每交易日盤後</strong></td>
+<td><code>crawl.py</code></td>
+<td><code>python crawl.py</code></td>
+<td>個股日K、大盤指數</td>
+<td><code>data/stock_data/{id}.csv</code><br><code>sql/stock_data.db</code><br><code>sql/tse_exchange_data.db</code><br><code>sql/otc_exchange_data.db</code></td>
+</tr>
+<tr>
+<td><strong>每交易日盤後</strong></td>
+<td><code>stock_big3.py</code></td>
+<td><code>python stock_big3.py</code></td>
+<td>三大法人買賣超</td>
+<td><code>sql/stock_big3.db</code><br><code>csv/stock_big3/json/{date}.json</code></td>
+</tr>
+<tr>
+<td><strong>每交易日盤後</strong></td>
+<td><code>pe_networth_yeild.py</code></td>
+<td><code>python pe_networth_yeild.py</code></td>
+<td>本益比 / 淨值比 / 殖利率</td>
+<td><code>data/down_pe_networth_yield/tse{date}.csv</code><br><code>data/down_pe_networth_yield/otc{date}.csv</code></td>
+</tr>
+<tr>
+<td><strong>每週</strong>（集保更新後，約週四）</td>
+<td><code>tdcc_get.py</code></td>
+<td><code>python tdcc_get.py</code></td>
+<td>集保股權分散（大戶/散戶比例）</td>
+<td><code>sql/tdcc_dist.db</code>（每檔一 table）</td>
+</tr>
+<tr>
+<td><strong>每月</strong>（10 號後，營收公布）</td>
+<td><code>revenue.py</code></td>
+<td><code>python revenue.py</code></td>
+<td>月營收（含年增率/月增率）</td>
+<td><code>sql/stock/{id}.db</code> → <code>revenue</code> table</td>
+</tr>
+<tr>
+<td><strong>每月</strong></td>
+<td><code>director.py</code></td>
+<td><code>python director.py</code></td>
+<td>董監事持股餘額</td>
+<td><code>data/director/final/{id}.csv</code></td>
+</tr>
+<tr>
+<td><strong>每季</strong>（財報公布後）</td>
+<td><code>eps.py</code></td>
+<td><code>python eps.py</code></td>
+<td>季損益表 EPS / 毛利 / 營利 / 淨利（<strong>累計值</strong>）</td>
+<td><code>sql/stock/{id}.db</code> → <code>mix_income</code> table</td>
+</tr>
+<tr>
+<td><strong>選股輸出（隨時）</strong></td>
+<td><code>gg_stock.py</code></td>
+<td><code>python gg_stock.py fund 20260521</code><br><code>python gg_stock.py revenue 20260521</code><br><code>python gg_stock.py director 20260521</code><br><code>python gg_stock.py pointK 20260521</code></td>
+<td>選股排行 HTML + CSV</td>
+<td><code>final/{method}_good.html</code><br><code>final/{method}_good_{date}.csv</code></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="_2">二、每交易日盤後流程（依序執行）</h2>
+<div class="codehilite"><pre><span></span><code><span class="nv">DATE</span><span class="o">=</span><span class="k">$(</span>date<span class="w"> </span>+%Y%m%d<span class="k">)</span><span class="w">   </span><span class="c1"># 或手動填 20260521</span>
+
+<span class="c1"># 1. 股價日K（最重要，其他腳本可能依賴它）</span>
+python<span class="w"> </span>crawl.py
+
+<span class="c1"># 2. 三大法人</span>
+python<span class="w"> </span>stock_big3.py
+
+<span class="c1"># 3. 本益比/淨值比/殖利率</span>
+python<span class="w"> </span>pe_networth_yeild.py
+
+<span class="c1"># 4. 產出當日選股清單</span>
+python<span class="w"> </span>gg_stock.py<span class="w"> </span>fund<span class="w"> </span><span class="nv">$DATE</span>
+python<span class="w"> </span>gg_stock.py<span class="w"> </span>revenue<span class="w"> </span><span class="nv">$DATE</span>
+python<span class="w"> </span>gg_stock.py<span class="w"> </span>director<span class="w"> </span><span class="nv">$DATE</span>
+python<span class="w"> </span>gg_stock.py<span class="w"> </span>pointK<span class="w"> </span><span class="nv">$DATE</span>
+</code></pre></div>
+
+<blockquote>
+<p><code>gg_stock.py</code> 無參數也可，預設取今天，但 <code>comm.get_date()</code> 讀 <code>sys.argv[1]</code>，<br />
+搭配子命令時需明確帶日期，例如 <code>python gg_stock.py fund 20260521</code>。</p>
+</blockquote>
+<hr />
+<h2 id="10">三、每月排程（營收公布後，通常每月 10 號後）</h2>
+<div class="codehilite"><pre><span></span><code><span class="c1"># 月營收（上個月的，自動偵測當月日期 &lt;= 12 才下載上月）</span>
+python<span class="w"> </span>revenue.py
+
+<span class="c1"># 董監持股</span>
+python<span class="w"> </span>director.py
+</code></pre></div>
+
+<hr />
+<h2 id="_3">四、每季排程（財報公布後）</h2>
+<table>
+<thead>
+<tr>
+<th>季別</th>
+<th>公布期限</th>
+<th>建議執行時間</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Q1（1~3月）</td>
+<td>5/15 前</td>
+<td>5 月中旬</td>
+</tr>
+<tr>
+<td>Q2（4~6月）</td>
+<td>8/14 前</td>
+<td>8 月中旬</td>
+</tr>
+<tr>
+<td>Q3（7~9月）</td>
+<td>11/14 前</td>
+<td>11 月中旬</td>
+</tr>
+<tr>
+<td>Q4（全年）</td>
+<td>3/31 前</td>
+<td>4 月初</td>
+</tr>
+</tbody>
+</table>
+<div class="codehilite"><pre><span></span><code><span class="c1"># 季財報（EPS / 毛利率 / 營利率 / 淨利率）</span>
+python<span class="w"> </span>eps.py
+</code></pre></div>
+
+<p>寫入 <code>sql/stock/{id}.db</code> 的 <code>mix_income</code> 表，每季 append 一筆，<br />
+<code>get_stock_season_df()</code> 相減算出<strong>單季值</strong>，需累積 <strong>8 季以上</strong>分析才完整。</p>
+<hr />
+<h2 id="_4">五、每週排程（集保更新後，約週四）</h2>
+<div class="codehilite"><pre><span></span><code>python<span class="w"> </span>tdcc_get.py
+</code></pre></div>
+
+<p>TDCC 開放資料每週更新一次（週三收盤後），下載後寫入 <code>sql/tdcc_dist.db</code>。<br />
+<code>gen_stock_info()</code> 用此計算大戶 / 散戶近一週、近一月增減比。</p>
+<hr />
+<h2 id="_5">六、一次性歷史回補（已完成項目）</h2>
+<table>
+<thead>
+<tr>
+<th>腳本</th>
+<th>指令</th>
+<th>說明</th>
+<th>完成狀態</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>finmind_backfill.py</code></td>
+<td><code>python finmind_backfill.py</code></td>
+<td>FinMind 日K 回補 2 年（1975 檔）</td>
+<td>✅ 2026-05-21 完成</td>
+</tr>
+<tr>
+<td><code>finmind_backfill_fundament.py</code></td>
+<td><code>python finmind_backfill_fundament.py</code></td>
+<td>FinMind 月營收 + 季財報回補 2 年（8 季）</td>
+<td>⏳ 執行中</td>
+</tr>
+<tr>
+<td><code>stock_big3.py -d</code></td>
+<td><code>python stock_big3.py -d 20240101 20260519</code></td>
+<td>三大法人歷史回補</td>
+<td>視需要</td>
+</tr>
+<tr>
+<td><code>pe_networth_yeild.py -d</code></td>
+<td><code>python pe_networth_yeild.py -d 20240101 20260519</code></td>
+<td>本益比歷史回補（上市可，上櫃僅最新）</td>
+<td>視需要</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="_6">七、各選股方法的資料依賴</h2>
+<p><code>gg_stock.py</code> 的 4 種方法都會呼叫 <code>gen_stock_info()</code>，任何一項缺資料只會讓該股跳過，不崩潰。</p>
+<table>
+<thead>
+<tr>
+<th>資料</th>
+<th>讀取位置</th>
+<th>影響的欄位/評分</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>日K 股價</td>
+<td><code>data/stock_data/{id}.csv</code></td>
+<td>收盤價、市值、週K/日K、pointK 判斷</td>
+</tr>
+<tr>
+<td>三大法人</td>
+<td><code>sql/stock_big3.db</code></td>
+<td>外資/投信/自營商買賣超（最近10日）</td>
+</tr>
+<tr>
+<td>集保分散</td>
+<td><code>sql/tdcc_dist.db</code></td>
+<td>大戶近一月增加比、散戶近一月增加比</td>
+</tr>
+<tr>
+<td>本益比</td>
+<td><code>data/down_pe_networth_yield/*.csv</code></td>
+<td>本益比、股價淨值比、殖利率</td>
+</tr>
+<tr>
+<td>月營收</td>
+<td><code>sql/stock/{id}.db</code> → <code>revenue</code></td>
+<td>最新單月年增率、月增率、本年累計年增率</td>
+</tr>
+<tr>
+<td>季財報</td>
+<td><code>sql/stock/{id}.db</code> → <code>mix_income</code></td>
+<td>8 季 EPS、毛利率、營利率、淨利率、psr 計算</td>
+</tr>
+<tr>
+<td>董監持股</td>
+<td><code>data/director/final/{id}.csv</code></td>
+<td>董監持股增減（近 6 月）</td>
+</tr>
+</tbody>
+</table>
+<h3 id="_7">各選股方法額外資料</h3>
+<table>
+<thead>
+<tr>
+<th>方法</th>
+<th>額外使用</th>
+<th>資料來源</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>fund</code></td>
+<td>投信買賣超股數</td>
+<td><code>sql/stock_big3.db</code></td>
+</tr>
+<tr>
+<td><code>revenue</code></td>
+<td>月營收篩選</td>
+<td><code>sql/stock/{id}.db</code> → <code>revenue</code></td>
+</tr>
+<tr>
+<td><code>director</code></td>
+<td>董監買超篩選</td>
+<td><code>data/director/final/{id}.csv</code></td>
+</tr>
+<tr>
+<td><code>pointK</code></td>
+<td>近 122 日收盤、紅K 強度</td>
+<td><code>sql/stock_data.db</code></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="_8">八、資料深度對選股的影響</h2>
+<table>
+<thead>
+<tr>
+<th>資料深度不足</th>
+<th>結果</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>mix_income</code> &lt; 5 季</td>
+<td><code>psrs/psr三年低</code>、PEG、三率年增 無法計算（NaN）</td>
+</tr>
+<tr>
+<td><code>mix_income</code> &lt; 8 季</td>
+<td><code>前4~7季EPS</code> 缺，PEG 計算退化</td>
+</tr>
+<tr>
+<td><code>revenue</code> 只有 1 筆</td>
+<td>月增率、年增率 皆 NaN（評分 0）</td>
+</tr>
+<tr>
+<td><code>tdcc_dist</code> &lt; 4 週</td>
+<td>大戶/散戶近一月增加比 NaN</td>
+</tr>
+<tr>
+<td><code>sql/stock_data.db</code> &lt; 122 日</td>
+<td><code>pointK</code> 方法無法判斷，該股跳過</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="mix_income-ys">九、<code>mix_income</code> ys 欄位說明</h2>
+<p><code>ys = 民國年 × 4 + (季 − 1)</code>，例如：</p>
+<table>
+<thead>
+<tr>
+<th>ys</th>
+<th>民國年/季</th>
+<th>西元</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>452</td>
+<td>113Q1</td>
+<td>2024 Q1</td>
+</tr>
+<tr>
+<td>453</td>
+<td>113Q2</td>
+<td>2024 Q2</td>
+</tr>
+<tr>
+<td>454</td>
+<td>113Q3</td>
+<td>2024 Q3</td>
+</tr>
+<tr>
+<td>455</td>
+<td>113Q4</td>
+<td>2024 Q4</td>
+</tr>
+<tr>
+<td>456</td>
+<td>114Q1</td>
+<td>2025 Q1</td>
+</tr>
+<tr>
+<td>460</td>
+<td>115Q1</td>
+<td>2026 Q1</td>
+</tr>
+</tbody>
+</table>
+<p>存的是<strong>累計值</strong>（YTD），<code>get_stock_season_df()</code> 用相鄰季相減得出單季值；<br />
+Q1（ys%4==0）直接等於單季值。</p></section>
+<section class="doc-section" id="gg_stock_logic-md"><div class="section-label">gg_stock_logic.md</div><h1 id="gg_stockpy">gg_stock.py 程式邏輯與流程說明</h1>
+<h2 id="_1">一、用途總覽</h2>
+<p><code>gg_stock.py</code> 是一支<strong>台股選股 / 評分工具</strong>。它依照不同的「選股入口」(method) 先篩出候選清單,<br />
+再為每一檔股票蒐集基本面、籌碼面、技術面資料,計算一個 <strong>9 項加總的「總分」</strong>,<br />
+最後輸出排序後的 HTML 與 CSV 報表。</p>
+<p>支援 4 種選股入口:</p>
+<table>
+<thead>
+<tr>
+<th>method</th>
+<th>候選來源</th>
+<th>排序依據</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>pointK</code></td>
+<td>當日「紅 K 強度」進前 10 名的個股</td>
+<td>總分</td>
+</tr>
+<tr>
+<td><code>revenue</code></td>
+<td>月營收成長優選清單 (<code>revenue</code> 模組)</td>
+<td>總分</td>
+</tr>
+<tr>
+<td><code>director</code></td>
+<td>董監持股變動優選清單 (<code>director</code> 模組)</td>
+<td>總分</td>
+</tr>
+<tr>
+<td><code>fund</code></td>
+<td>投信買超的個股</td>
+<td>投本比</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="_2">二、外部相依模組</h2>
+<table>
+<thead>
+<tr>
+<th>模組</th>
+<th>角色</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>pandas</code> / <code>numpy</code></td>
+<td>資料處理</td>
+</tr>
+<tr>
+<td><code>datetime</code> / <code>dateutil</code></td>
+<td>日期運算</td>
+</tr>
+<tr>
+<td><code>kline</code></td>
+<td>K 線重新取樣 (日 → 週)</td>
+</tr>
+<tr>
+<td><code>stock_comm</code> (別名 <code>comm</code>)</td>
+<td>共用資料存取層:股價、股本、本益比、營收、財報、股權分散…</td>
+</tr>
+<tr>
+<td><code>stock_big3</code></td>
+<td>三大法人買賣超資料</td>
+</tr>
+<tr>
+<td><code>revenue</code></td>
+<td>月營收選股清單</td>
+</tr>
+<tr>
+<td><code>director</code></td>
+<td>董監持股選股清單與董監持股明細</td>
+</tr>
+<tr>
+<td><code>seaborn</code> / <code>matplotlib</code></td>
+<td>繪圖樣式 / 中文字型設定</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="__main__">三、程式進入點與主流程 (<code>__main__</code>)</h2>
+<div class="codehilite"><pre><span></span><code><span class="n">啟動</span>
+<span class="w"> </span><span class="err">│</span>
+<span class="w"> </span><span class="err">├─</span><span class="w"> </span><span class="n">設定</span><span class="w"> </span><span class="n">seaborn</span><span class="w"> </span><span class="n">樣式</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">matplotlib</span><span class="w"> </span><span class="n">中文字型</span><span class="w"> </span><span class="p">(</span><span class="n">simhei</span><span class="p">)</span>
+<span class="w"> </span><span class="err">│</span>
+<span class="w"> </span><span class="err">├─</span><span class="w"> </span><span class="n">解析命令列參數</span><span class="w"> </span><span class="n">sys</span><span class="p">.</span><span class="n">argv</span>
+<span class="w"> </span><span class="err">│</span><span class="w">   </span><span class="err">├─</span><span class="w"> </span><span class="n">無參數</span><span class="w">            </span><span class="err">→</span><span class="w"> </span><span class="mi">4</span><span class="w"> </span><span class="n">種</span><span class="w"> </span><span class="k">method</span><span class="w"> </span><span class="n">全跑</span><span class="w"> </span><span class="p">(</span><span class="n">pointK</span><span class="p">,</span><span class="w"> </span><span class="n">revenue</span><span class="p">,</span><span class="w"> </span><span class="n">director</span><span class="p">,</span><span class="w"> </span><span class="n">fund</span><span class="p">)</span>
+<span class="w"> </span><span class="err">│</span><span class="w">   </span><span class="err">├─</span><span class="w"> </span><span class="ss">&quot;gg&quot;</span><span class="w">  </span><span class="o">[</span><span class="n">date</span><span class="o">]</span><span class="w"> </span><span class="o">[</span><span class="n">rev</span><span class="o">]</span><span class="err">→</span><span class="w"> </span><span class="mi">4</span><span class="w"> </span><span class="n">種</span><span class="w"> </span><span class="k">method</span><span class="w"> </span><span class="n">全跑</span>
+<span class="w"> </span><span class="err">│</span><span class="w">   </span><span class="err">├─</span><span class="w"> </span><span class="ss">&quot;director&quot;</span><span class="w"> </span><span class="o">[</span><span class="n">...</span><span class="o">]</span><span class="w">  </span><span class="err">→</span><span class="w"> </span><span class="n">只跑</span><span class="w"> </span><span class="n">director</span>
+<span class="w"> </span><span class="err">│</span><span class="w">   </span><span class="err">├─</span><span class="w"> </span><span class="ss">&quot;fund&quot;</span><span class="w"> </span><span class="o">[</span><span class="n">...</span><span class="o">]</span><span class="w">      </span><span class="err">→</span><span class="w"> </span><span class="n">只跑</span><span class="w"> </span><span class="n">fund</span>
+<span class="w"> </span><span class="err">│</span><span class="w">   </span><span class="err">└─</span><span class="w"> </span><span class="ss">&quot;revenue&quot;</span><span class="w"> </span><span class="o">[</span><span class="n">...</span><span class="o">]</span><span class="w">   </span><span class="err">→</span><span class="w"> </span><span class="n">只跑</span><span class="w"> </span><span class="n">revenue</span>
+<span class="w"> </span><span class="err">│</span>
+<span class="w"> </span><span class="err">├─</span><span class="w"> </span><span class="n">nowdate</span><span class="w">  </span><span class="err">:</span><span class="w"> </span><span class="n">第</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="n">個參數</span><span class="w"> </span><span class="p">(</span><span class="n">YYYYMMDD</span><span class="p">),</span><span class="n">失敗則用</span><span class="w"> </span><span class="n">comm</span><span class="p">.</span><span class="n">get_date</span><span class="p">()</span>
+<span class="w"> </span><span class="err">├─</span><span class="w"> </span><span class="n">rev_date</span><span class="w"> </span><span class="err">:</span><span class="w"> </span><span class="n">第</span><span class="w"> </span><span class="mi">3</span><span class="w"> </span><span class="n">個參數</span><span class="w"> </span><span class="p">(</span><span class="n">YYYYMMDD</span><span class="p">),</span><span class="n">失敗則用</span><span class="w"> </span><span class="n">nowdate</span><span class="w"> </span><span class="n">往前推</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="n">個月</span>
+<span class="w"> </span><span class="err">│</span>
+<span class="w"> </span><span class="err">└─</span><span class="w"> </span><span class="n">呼叫</span><span class="w"> </span><span class="n">gen_gg_buy_list</span><span class="p">(</span><span class="n">nowdate</span><span class="p">,</span><span class="w"> </span><span class="n">rev_date</span><span class="p">,</span><span class="w"> </span><span class="k">method</span><span class="p">)</span>
+</code></pre></div>
+
+<p>執行方式範例:</p>
+<div class="codehilite"><pre><span></span><code>python<span class="w"> </span>gg_stock.py<span class="w">                       </span><span class="c1"># 全部 method,日期自動</span>
+python<span class="w"> </span>gg_stock.py<span class="w"> </span>gg<span class="w"> </span><span class="m">20260520</span><span class="w">            </span><span class="c1"># 全部 method,指定日期</span>
+python<span class="w"> </span>gg_stock.py<span class="w"> </span>fund<span class="w"> </span><span class="m">20260520</span><span class="w"> </span><span class="m">20260430</span><span class="w"> </span><span class="c1"># 只跑 fund</span>
+</code></pre></div>
+
+<hr />
+<h2 id="gen_gg_buy_listdate-rev_date-method">四、核心流程:<code>gen_gg_buy_list(date, rev_date, method)</code></h2>
+<p>這是整支程式的主控函式。</p>
+<div class="codehilite"><pre><span></span><code>gen_gg_buy_list(date, rev_date, method)
+ │
+ ① 依 method 取得候選清單 d1
+ │     revenue  → revenue.gen_revenue_good_list(rev_date)
+ │     pointK   → gen_pointK_list(date)
+ │     fund     → gen_fund_ratio_list(date)
+ │     其他      → director.gen_director_good_list(rev_date)
+ │     (空清單 → 直接 return)
+ │
+ ② 補上 date 欄;以 get_market_value 算出 [收盤價, 股本, 市值]
+ │
+ ③ 市值過濾
+ │     市值 &gt;= 3000 (百萬)            ← 共用門檻
+ │     fund 以外:市值 &lt;= 15000        ← 排除過大型股
+ │
+ ④ 逐檔處理 (for 迴圈)
+ │     ├─ 股號開頭為 25/28/55/58 → 跳過 (金融/保險類)
+ │     ├─ d = gen_stock_info(該檔)   ← 蒐集所有資料 + 評分
+ │     ├─ d 為空 → 跳過
+ │     └─ fund:額外計算「投本比」= 投信買賣超股數 / (股本 × 100000)
+ │
+ ⑤ 全部結果 concat 成 out
+ │
+ ⑥ 排序
+ │     fund 以外 → 依「總分」由大到小
+ │     fund     → 依「投本比」由大到小,並把該欄移到第 16 欄
+ │
+ └─ ⑦ 輸出到 final/ 目錄
+        final/{method}_good.html
+        final/{method}_good_{YYYYMMDD}.csv
+</code></pre></div>
+
+<hr />
+<h2 id="_3">五、候選清單產生器</h2>
+<h3 id="gen_pointk_listdate-k"><code>gen_pointK_list(date)</code> — 紅 K 強度選股</h3>
+<ol>
+<li>取當日所有上市櫃個股 <code>comm.get_tse_otc_stock_df_by_date</code>。</li>
+<li><code>check_skip_stock</code> 過濾:股號需 4 碼、排除 <code>00*</code>/<code>25*</code>/<code>28*</code>/<code>55*</code>/<code>58*</code>、成交金額需 ≥ 300 萬。</li>
+<li><code>check_point_K</code> 判斷:取近 122 日資料 (需 ≥ 90 筆),計算每日 <code>red_K_ratio</code>,<br />
+   若最新一日的紅 K 強度 ≥ 歷史第 10 高 → 標記 <code>point_K = 1</code>。</li>
+<li>回傳 <code>point_K &gt;= 1</code> 的個股。</li>
+</ol>
+<blockquote>
+<p><code>red_K_ratio_calc</code>:開盤價高於昨收 → <code>(收 − 昨收)/昨收</code>;否則 → <code>(收 − 開)/昨收</code>。</p>
+</blockquote>
+<h3 id="gen_fund_ratio_listdate"><code>gen_fund_ratio_list(date)</code> — 投信買超選股</h3>
+<ol>
+<li>取當日三大法人資料 <code>stock_big3.get_stock_big3_date_df</code>。</li>
+<li>過濾:股號 4 碼、排除 <code>00*</code>、且「投信買賣超股數 &gt; 0」。</li>
+<li>回傳 <code>stock_id / stock_name / 投信買賣超股數 / date / market</code>。</li>
+</ol>
+<h3 id="revenue-director"><code>revenue</code> / <code>director</code></h3>
+<p>直接呼叫對應模組的 <code>gen_revenue_good_list</code> / <code>gen_director_good_list</code>。</p>
+<hr />
+<h2 id="gen_stock_infor">六、單一個股資料蒐集:<code>gen_stock_info(r)</code></h2>
+<p>針對一檔股票建立一個單列 DataFrame <code>d</code>(欄位由 <code>cols</code> 清單定義,涵蓋約 100 欄),<br />
+依序填入各面向資料:</p>
+<div class="codehilite"><pre><span></span><code>gen_stock_info(r)
+ │
+ ├─ 基本:date / stock_id / stock_name / market(tse 或 otc)
+ ├─ 收盤價、股數(萬張)、市值(百萬) = 收盤價 × 股數 × 10
+ │
+ ├─ get_stock_director(d)            董監持股 (前 0~5 月、增減、日期明細)
+ ├─ get_stock_tdcc_dist(d)           股權分散 → 大戶/散戶持股比、近周/近月增加比
+ ├─ get_stock_pe_networth_yield(d)   本益比、股價淨值比、殖利率、股利年度
+ │       └─ 取不到資料 → 回傳空 DataFrame (該檔放棄)
+ ├─ get_stock_industry_status(d)     產業 / 細產業 / 產業地位
+ ├─ get_stock_revenue(d)             本年累計營收年增率、單月年增率、月增率、備註
+ ├─ get_stock_season_composite_income_sheet(d)
+ │       3 年 EPS/營收、psrS、psr 三年高低、近 8 季三率與升降
+ │       └─ 取不到資料 → 回傳空 DataFrame (該檔放棄)
+ ├─ get_stock_prr(d)                 prr = 市值 / 研發費用
+ │
+ ├─ 計算 9 項分數 (見第七節),總分 = 9 項加總
+ │
+ ├─ 近 300 日股價 → 週 K (kline.resample &#39;W-FRI&#39;, 60 根)
+ │       週 K 需 &gt;= 60 根才填入,否則留空
+ ├─ 近 60 日日 K
+ ├─ stock_big3.get_stock_3big  近 10 筆外資/投信/自營商買賣超
+ │
+ └─ 回傳依 cols 排序好的單列 DataFrame d
+</code></pre></div>
+
+<hr />
+<h2 id="9">七、評分系統(總分 = 9 項相加)</h2>
+<p><code>gen_stock_info</code> 會呼叫 9 個 <code>*_score</code> 函式,各自輸出一個分數,加總成「總分」。</p>
+<table>
+<thead>
+<tr>
+<th>分數欄位</th>
+<th>函式</th>
+<th>衡量重點</th>
+<th>分數區間</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>分數:psrs/psr(3)-1</td>
+<td><code>get_psrs_div_psr3y_score</code></td>
+<td>psrS 相對三年最低 PSR 的位置</td>
+<td>−2 ~ +2</td>
+</tr>
+<tr>
+<td>分數:淨值比</td>
+<td><code>get_networth_score</code></td>
+<td>股價淨值比越低越好</td>
+<td>≤ +? ~ −2</td>
+</tr>
+<tr>
+<td>分數:psrs</td>
+<td><code>get_psrs_score</code></td>
+<td>市值/營收比 (PSR),越低越好</td>
+<td>−4 ~ +4</td>
+</tr>
+<tr>
+<td>分數:prr</td>
+<td><code>get_prr_score</code></td>
+<td>市值/研發費用比,越低越好</td>
+<td>−2 ~ +2</td>
+</tr>
+<tr>
+<td>分數:毛利率</td>
+<td><code>get_Gross_margin_score</code></td>
+<td>本季毛利率越高越好</td>
+<td>−2 ~ +2</td>
+</tr>
+<tr>
+<td>分數:營利率年增</td>
+<td><code>get_Operating_Profit_margin_score</code></td>
+<td>本季 vs 前 4 季營利率變化</td>
+<td>−2 ~ +2</td>
+</tr>
+<tr>
+<td>分數:營收年增20%</td>
+<td><code>get_revenue_year_20_score</code></td>
+<td>單月營收年增率 + 累計年增加速</td>
+<td>−2 ~ +2</td>
+</tr>
+<tr>
+<td>分數:營收月增80%</td>
+<td><code>get_revenue_month_80_score</code></td>
+<td>單月營收月增率</td>
+<td>−2 ~ +2</td>
+</tr>
+<tr>
+<td>分數:peg</td>
+<td><code>get_peg_score</code></td>
+<td>PEG (本益成長比),越低越好</td>
+<td>−2 ~ +2</td>
+</tr>
+</tbody>
+</table>
+<h3 id="_4">評分邏輯細節</h3>
+<ul>
+<li><strong>psrs/psr(3)-1</strong>:<code>x = psrs/psr三年最低-1</code>,分數 <code>= (0.2 − x) × 2</code>,夾限 ±2。</li>
+<li><strong>淨值比</strong>:<code>x ≥ 3.3 → −2</code>;<code>1.3 ≤ x &lt; 3.3 → 1.3 − x</code>;<code>x &lt; 1.3 → (1.3 − x) × 2</code>。</li>
+<li><strong>psrs</strong>:<code>psrs ≥ 3 → −4</code>;否則 <code>(1.5 − psrs)/0.375</code>,夾限 ±4。</li>
+<li><strong>prr</strong>:<code>prr ≥ 15 或 ≤ 0 → −2</code>;否則 <code>(15 − prr)/7.5</code>。</li>
+<li><strong>毛利率</strong>:<code>&lt; 10 → −2</code>;<code>≥ 60 → +2</code>;否則 <code>(x − 30)/15</code>。</li>
+<li><strong>營利率年增</strong>:<code>x = 本季營利率 − 前4季營利率</code>,分數 <code>= x/2.5</code>,夾限 ±2。</li>
+<li><strong>營收年增20%</strong>:結合單月年增率 (<code>x</code>) 與「累計年增率 − 去年營收年增率」(<code>w</code>),<br />
+<code>y = (x×100 − 10)×0.025 + w×0.25</code>,夾限 ±2。</li>
+<li><strong>營收月增80%</strong>:<code>月增率 &gt; 0.8 → +2</code>;<code>&lt; −0.8 → −2</code>;否則 <code>月增率 × 2.5</code>。</li>
+<li><strong>peg</strong>:由近 8 季 EPS 推估「今年 EPS」與「去年 EPS」算出成長率與 PEG;<br />
+<code>peg &gt; 1.34 → −2</code>;<code>peg &lt; 0.66 → +2</code>;否則 <code>(1 − peg) × 2/0.34</code>。</li>
+</ul>
+<blockquote>
+<p>設計理念:偏好<strong>低估值</strong>(低 PSR / 低 PEG / 低淨值比)、<strong>高成長</strong>(營收與三率向上)的個股。</p>
+</blockquote>
+<hr />
+<h2 id="_5">八、輔助函式索引</h2>
+<table>
+<thead>
+<tr>
+<th>函式</th>
+<th>說明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>lno()</code></td>
+<td>回傳「檔名-L(行號)」字串,供 debug 列印定位</td>
+</tr>
+<tr>
+<td><code>check_dst_folder(path)</code></td>
+<td>目錄不存在則建立</td>
+</tr>
+<tr>
+<td><code>time642str(x)</code> / <code>date2str(x)</code></td>
+<td>日期轉 <code>yy-mm-dd</code> 字串</td>
+</tr>
+<tr>
+<td><code>get_market_value(r)</code></td>
+<td>回傳 (收盤價, 股數萬張, 市值百萬)</td>
+</tr>
+<tr>
+<td><code>get_stock_market(r)</code></td>
+<td>判斷個股屬 <code>tse</code> 或 <code>otc</code></td>
+</tr>
+<tr>
+<td><code>check_skip_stock(r)</code></td>
+<td>pointK 用的個股過濾條件</td>
+</tr>
+<tr>
+<td><code>red_K_ratio_calc(r)</code></td>
+<td>計算單日紅 K 強度</td>
+</tr>
+<tr>
+<td><code>check_point_K(r)</code></td>
+<td>判斷最新紅 K 是否進歷史前 10 強</td>
+</tr>
+<tr>
+<td><code>get_gg_income_ratio(r)</code></td>
+<td>(未被主流程使用) 月營收年增率連續轉強的篩選</td>
+</tr>
+<tr>
+<td><code>get_director_change(r)</code></td>
+<td>(未被主流程使用) 近 6 月董監持股增減總和</td>
+</tr>
+<tr>
+<td><code>get_stock_psrS(r)</code></td>
+<td>(未被主流程使用) 以最近一年營收估算 PSR</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>註:<code>get_gg_income_ratio</code> / <code>get_director_change</code> / <code>get_stock_psrS</code> 目前在主流程中未被呼叫,<br />
+屬於保留或實驗性函式。</p>
+</blockquote>
+<hr />
+<h2 id="_6">九、輸入 / 輸出</h2>
+<p><strong>輸入</strong>:透過 <code>stock_comm</code> / <code>stock_big3</code> / <code>revenue</code> / <code>director</code> 模組存取的本地股市資料庫<br />
+(股價、股本、財報、月營收、董監持股、股權分散、三大法人)。</p>
+<p><strong>輸出</strong>(寫入 <code>final/</code> 目錄):</p>
+<table>
+<thead>
+<tr>
+<th>檔案</th>
+<th>內容</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>final/{method}_good.html</code></td>
+<td>排序後的選股結果,HTML 表格(含 K 線等字串欄位)</td>
+</tr>
+<tr>
+<td><code>final/{method}_good_{YYYYMMDD}.csv</code></td>
+<td>同上的 CSV(UTF-8)</td>
+</tr>
+</tbody>
+</table>
+<p>錯誤資料另存於 <code>error/{stock_id}_revenue.csv</code>。</p>
+<hr />
+<h2 id="_7">十、整體資料流圖</h2>
+<div class="codehilite"><pre><span></span><code>命令列參數
+   │
+   ▼
+gen_gg_buy_list(date, rev_date, method)
+   │
+   ├── 候選清單 ── revenue / pointK / fund / director
+   │
+   ├── get_market_value → 市值過濾 (3000 ~ 15000 百萬)
+   │
+   ├── 逐檔 gen_stock_info()
+   │      ├─ 董監持股 / 股權分散 / 本益比淨值比殖利率
+   │      ├─ 產業地位 / 月營收 / 季財報三率 / prr
+   │      ├─ 9 項評分 → 總分
+   │      └─ 週K / 日K / 三大法人
+   │
+   ├── concat → 依 總分(或投本比) 排序
+   │
+   ▼
+final/{method}_good.html  +  final/{method}_good_{date}.csv
+</code></pre></div></section>
+<section class="doc-section" id="todo-md"><div class="section-label">todo.md</div><h1 id="todo">TODO — 系統修復清單</h1>
+<h2 id="crash">🔴 嚴重錯誤（直接 crash）</h2>
+<ul>
+<li>[ ] <strong>1. <code>cm1</code> 模組未 import 但仍被呼叫</strong></li>
+<li><code>good_stock.py:47</code> — <code>from stocktool import comm as cm1</code> 被註解掉</li>
+<li>仍被呼叫的位置：L757 <code>cm1.get_long_red_ratio()</code>、L950/954/958/1552/1556/1560 <code>cm1.calc_profit()</code></li>
+<li>
+<p>修法：找回 stocktool 套件安裝路徑，或將 <code>cm1.get_long_red_ratio</code> / <code>cm1.calc_profit</code> 改用本地實作</p>
+</li>
+<li>
+<p>[ ] <strong>2. <code>pd.np</code> 已在 pandas 2.0 移除</strong></p>
+</li>
+<li><code>all_stock.py:424,489</code></li>
+<li><code>stock_comm.py:252</code></li>
+<li><code>good_stock.py:221,224,244,247</code></li>
+<li><code>fut.py:439,442,462,465</code></li>
+<li><code>tdcc_dist.py:811</code></li>
+<li>
+<p>修法：全部改為 <code>np.nan</code> / <code>np.empty()</code></p>
+</li>
+<li>
+<p>[ ] <strong>3. <code>engine.table_names()</code> 已在 SQLAlchemy 2.0 移除</strong></p>
+</li>
+<li><code>good_stock.py:508,590,858,1033</code></li>
+<li><code>director.py:108</code></li>
+<li><code>stock_big3.py:502,546</code></li>
+<li><code>stock_comm.py:810,932,1068,1084,1099</code></li>
+<li><code>tdcc_dist.py:1177,1228,1280</code></li>
+<li>
+<p>修法：改為 <code>sqlalchemy.inspect(engine).get_table_names()</code></p>
+</li>
+<li>
+<p>[ ] <strong>4. <code>df.append()</code> 已在 pandas 2.0 移除</strong></p>
+</li>
+<li><code>gg_stock.py:798</code> — 主流程輸出 loop <code>out=out.append(d,ignore_index=True)</code></li>
+<li><code>stock_comm.py:1088</code></li>
+<li>修法：改為 <code>pd.concat([out, d], ignore_index=True)</code></li>
+</ul>
+<hr />
+<h2 id="bug">🟠 邏輯 Bug（計算結果錯誤）</h2>
+<ul>
+<li>[ ] <strong>5. <code>calc_spwr()</code> copy-paste 公式錯誤</strong></li>
+<li><code>stock_comm.py:87-88</code> 和 <code>all_stock.py:113-114</code></li>
+<li>
+<p><code>sell_pwr</code> 與 <code>buy_pwr</code> 公式相同（都用 <code>total_buy</code>），<code>sell_pwr</code> 應改為 <code>total_sell</code><br />
+<code>python
+  # 修正前
+  sell_pwr = vol * total_buy / (total_buy + total_sell)
+  # 修正後
+  sell_pwr = vol * total_sell / (total_buy + total_sell)</code></p>
+</li>
+<li>
+<p>[ ] <strong>6. <code>get_revenue_year_20_score()</code> 缺少下限 clamp</strong></p>
+</li>
+<li><code>gg_stock.py:463-466</code></li>
+<li>
+<p>只有上限 <code>&gt;2 → 2</code>，缺少 <code>&lt;-2 → -2</code>，可能輸出超出範圍的負分<br />
+<code>python
+  # 修正後
+  y = (x*100-10)*0.025 + w*0.25
+  y = max(-2, min(2, y))</code></p>
+</li>
+<li>
+<p>[ ] <strong>7. 市值下限過濾遺漏</strong></p>
+</li>
+<li><code>gg_stock.py:772-773</code></li>
+<li>只過濾 <code>市值 ≤ 15000</code>（150億），缺少 <code>≥ 3000</code>（30億）下限<br />
+<code>python
+  # 修正後（fund 方法無上限，但仍需下限）
+  d1 = d1[d1['市值'] &gt;= 3000].reset_index(drop=True)
+  if 'fund' != method:
+      d1 = d1[d1['市值'] &lt;= 15000].reset_index(drop=True)</code></li>
+</ul>
+<hr />
+<h2 id="api-deprecation-warning-crash">🟡 API 過時（deprecation warning 或未來 crash）</h2>
+<ul>
+<li>[ ] <strong>8. <code>rolling(axis=0)</code> 在 pandas 2.1 移除</strong></li>
+<li><code>good_stock.py:915</code></li>
+<li>
+<p>修法：移除 <code>axis=0</code> 參數（預設即為沿 row）</p>
+</li>
+<li>
+<p>[ ] <strong>9. Selenium 4 廢棄 API</strong></p>
+</li>
+<li><code>good_stock.py:89</code> — <code>webdriver.Firefox(firefox_profile=profile)</code> 已棄用<ul>
+<li>修法：改用 <code>Options</code>：<code>options = webdriver.FirefoxOptions(); options.set_preference(...); webdriver.Firefox(options=options)</code></li>
+</ul>
+</li>
+<li>
+<p><code>good_stock.py:93,95,100</code> — <code>find_element_by_id()</code> Selenium 4 已移除</p>
+<ul>
+<li>修法：改為 <code>find_element(By.ID, "...")</code>，並 <code>from selenium.webdriver.common.by import By</code></li>
+</ul>
+</li>
+<li>
+<p>[ ] <strong>10. <code>pd.set_option('display.max_colwidth', -1)</code></strong></p>
+</li>
+<li><code>gg_stock.py:806</code></li>
+<li>pandas 新版 <code>-1</code> 無效，改為 <code>None</code></li>
+</ul>
+<hr />
+<h2 id="_1">🔵 系統完整性</h2>
+<ul>
+<li>[ ] <strong>11. <code>get_psrs_score()</code> 無上限 clamp</strong></li>
+<li>
+<p><code>gg_stock.py:408-412</code> — PSR 極低時分數可超過 +4，HTML 文件說範圍 <code>-4 ~ +4</code><br />
+<code>python
+  y = max(-4, min(4, (1.5 - psrs) / 0.375))</code></p>
+</li>
+<li>
+<p>[ ] <strong>12. <code>final/</code> 資料夾不存在時未自動建立</strong></p>
+</li>
+<li><code>gg_stock.py:808-810</code> — 輸出 HTML/CSV 前無 <code>check_dst_folder</code> 防呼叫，若 <code>final/</code> 不存在會 crash</li>
+<li>修法：在 <code>gen_gg_buy_list()</code> 開頭加 <code>check_dst_folder('final')</code></li>
+</ul></section>
+</main>
+
+<script>
+// 側欄 active highlight
+const sections = document.querySelectorAll('.doc-section');
+const navLinks  = document.querySelectorAll('nav a');
+window.addEventListener('scroll', () => {
+  let cur = '';
+  sections.forEach(s => { if (window.scrollY >= s.offsetTop - 80) cur = s.id; });
+  navLinks.forEach(a => a.classList.toggle('active', a.getAttribute('href') === '#' + cur));
+});
+</script>
+</body>
+</html>

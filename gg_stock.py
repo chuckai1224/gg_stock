@@ -90,7 +90,7 @@ def get_stock_prr(r,debug=1):
         print(lno(),RD_fee)
     if RD_fee==0:
         return 0
-    if RD_fee!=np.nan:
+    if pd.notna(RD_fee):
         market_value=r['市值(百萬)']
         if debug==1:
             print(lno(),r.stock_id)
@@ -313,7 +313,7 @@ def get_stock_season_composite_income_sheet(d,debug=0):
         else:        
             d.at[0,'前{}季EPS'.format(i)]=df.iloc[i]['單季EPS']
     for i in range(0,seasons):
-        print(lno(),df.iloc[i]['單季毛利淨額'],df.iloc[i]['單季營收'])
+        #print(lno(),df.iloc[i]['單季毛利淨額'],df.iloc[i]['單季營收'])
         #d.at[0,'{}.{}Q毛利率'.format(df.iloc[i]['year'],df.iloc[i]['season'])]=df.iloc[i]['單季毛利淨額']/df.iloc[i]['單季營收']*100
         if i==0:
             d.at[0,'本季毛利率']=df.iloc[i]['單季毛利淨額']/df.iloc[i]['單季營收']*100
@@ -569,7 +569,6 @@ def gen_stock_info(r,debug=0):
 
     #get prr
     d.at[0,'prr']=get_stock_prr(d.iloc[0])   
-    print(lno(),d.columns)
     d.at[0,'分數:psrs/psr(3)-1']= get_psrs_div_psr3y_score(d.iloc[0])   
     d.at[0,'分數:淨值比']= get_networth_score(d.iloc[0])   
     d.at[0,'分數:psrs']= get_psrs_score(d.iloc[0])   
@@ -584,7 +583,7 @@ def gen_stock_info(r,debug=0):
     score_cols=['分數:psrs/psr(3)-1','分數:淨值比','分數:psrs','分數:prr','分數:毛利率','分數:營利率年增','分數:營收年增20%','分數:營收月增80%','分數:peg']
     if debug==1:
         print(lno(),d.iloc[0][score_cols].values)
-    d.at[0,'總分']= sum(d.iloc[0][score_cols].values)
+    d.at[0,'總分']= np.nansum(d.iloc[0][score_cols].values)
     df1=comm.get_stock_df_bydate_nums(stock_id,300,date)
     df1['vol']=df1['vol']/1000
     #week_df=kline.resample(df1,'W',60).reset_index(drop=True).copy()
@@ -635,8 +634,8 @@ def gen_stock_info(r,debug=0):
         d.at[0,'外資']=', '.join(map(str,stock_3big_df['外資'].values.tolist()))
         d.at[0,'投信']=', '.join(map(str,stock_3big_df['投信'].values.tolist()))
         d.at[0,'自營商']=', '.join(map(str,stock_3big_df['自營商'].values.tolist()))
-        print(lno(),d.iloc[0][['外資','投信']])
-    else:    
+        #print(lno(),d.iloc[0][['外資','投信']])
+    else:
         d.at[0,'big3 date']=''
         d.at[0,'外資']=' '
         d.at[0,'投信']=' '
@@ -836,16 +835,22 @@ if __name__ == '__main__':
             rev_date=nowdate-relativedelta(months=1)
         gen_gg_buy_list(nowdate,rev_date,"fund")  
     elif sys.argv[1]=='revenue' :
-        ## TODO gg gen_analy_data
-        try:    
+        try:
             nowdate=datetime.strptime(sys.argv[2],'%Y%m%d')
         except:
-            nowdate=comm.get_date()  
-        try:    
+            nowdate=comm.get_date()
+        try:
             rev_date=datetime.strptime(sys.argv[3],'%Y%m%d')
         except:
             rev_date=nowdate-relativedelta(months=1)
-        gen_gg_buy_list(nowdate,rev_date,"revenue")                          
+        gen_gg_buy_list(nowdate,rev_date,"revenue")
+    elif sys.argv[1]=='pointK' :
+        try:
+            nowdate=datetime.strptime(sys.argv[2],'%Y%m%d')
+        except:
+            nowdate=comm.get_date()
+        rev_date=nowdate-relativedelta(months=1)
+        gen_gg_buy_list(nowdate,rev_date,"pointK")
     else:
-        pass    
+        pass
     
