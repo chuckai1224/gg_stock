@@ -5,19 +5,18 @@
 | 文件 | 作用 |
 |------|------|
 | `README.md` | (本檔)選股評分標準 SOP、籌碼面(期貨/選擇權/三大法人)研究筆記 |
-| `setup.md` | 環境安裝:Python 套件清單、必要資料夾 |
+| `user_guide.md` | **使用者操作手冊：從安裝到每日操作（從這裡開始）** |
+| `setup.md` | 環境安裝詳細參考（套件清單、TA-Lib、Selenium） |
 | `gg_stock_logic.md` | `gg_stock.py` 程式邏輯與流程(4 種選股方法、評分系統) |
-| `data_sources.md` | 各資料來源、開放資料 API、如何取得/回補歷史資料、定期排程 |
+| `data_sources.md` | 各資料來源、開放資料 API、如何取得/回補歷史資料 |
 | `run_schedule.md` | 操作排程手冊：何時跑哪支 py、資料寫到哪 |
 | `todo.md` | 待辦清單 |
 
 ## 建議閱讀順序
 
-1. **`README.md`** —— (本檔)先看上方文件索引,掌握整體
-2. **`setup.md`** —— 安裝 Python 套件、建立必要資料夾
-3. **`data_sources.md`** —— 下載/回補資料,了解各資料來源與排程
-4. **`gg_stock_logic.md`** —— 了解 `gg_stock.py` 選股邏輯與評分系統
-5. **`todo.md`** —— 待辦清單(選讀)
+1. **`user_guide.md`** —— 安裝環境、補資料、每日操作（一份搞定）
+2. **`data_sources.md`** —— 了解各資料來源與歷史回補
+3. **`gg_stock_logic.md`** —— 了解 `gg_stock.py` 選股邏輯與評分系統（選讀）
 
 ---
 
