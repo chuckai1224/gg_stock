@@ -1,30 +1,48 @@
-# 環境安裝說明
-
-## 系統需求
-
-- Python 3.9+（建議 3.11 / 3.12）
-- Windows 10/11 或 Linux
+# 環境安裝說明（Windows）
 
 ---
 
-## 安裝套件
+## 一、安裝 Python
 
-### 公司/企業網路 SSL 問題
+1. 前往 [https://www.python.org/downloads/](https://www.python.org/downloads/) 下載 **Python 3.11**（建議，3.9+ 皆可）
+2. 執行安裝程式，**勾選「Add Python to PATH」**，再按 Install Now
+3. 安裝完成後，開啟 **命令提示字元（CMD）** 確認版本：
 
-若 pip 出現 `SSLError: CERTIFICATE_VERIFY_FAILED`，需加 `--trusted-host` 參數：
-
-```bash
-pip install <套件名> --trusted-host pypi.org --trusted-host files.pythonhosted.org
+```cmd
+python --version
 ```
 
-以下所有 `pip install` 指令若有 SSL 問題，請加上此參數。
+應顯示 `Python 3.11.x`。
 
 ---
 
-### 核心套件（執行 gg_stock.py 必要）
+## 二、建立虛擬環境（venv）
 
-```bash
-pip install python-dateutil pandas numpy scipy sqlalchemy beautifulsoup4 lxml requests matplotlib mplfinance seaborn kline Pillow
+在 `D:\gg_stock` 目錄下建立獨立環境，避免影響系統 Python：
+
+```cmd
+cd D:\gg_stock
+python -m venv venv
+```
+
+啟動虛擬環境：
+
+```cmd
+.\venv\Scripts\activate
+```
+
+提示字元前面出現 `(venv)` 表示成功。
+
+> 之後每次開新視窗要操作都需要先 activate，或直接用 `.\venv\Scripts\python.exe` 完整路徑執行。
+
+---
+
+## 三、安裝核心套件
+
+確認已在 venv 環境內（或使用完整路徑 `.\venv\Scripts\pip.exe`）：
+
+```cmd
+pip install python-dateutil pandas numpy scipy sqlalchemy beautifulsoup4 lxml requests matplotlib mplfinance seaborn kline Pillow flask
 ```
 
 | 套件 | 用途 |
@@ -38,38 +56,68 @@ pip install python-dateutil pandas numpy scipy sqlalchemy beautifulsoup4 lxml re
 | `lxml` | HTML/XML 解析器 |
 | `requests` | HTTP 請求（下載資料） |
 | `matplotlib` | 繪圖 |
-| `mplfinance` | K 線圖（`candlestick_ohlc`） |
+| `mplfinance` | K 線圖 |
 | `seaborn` | 統計視覺化 |
 | `kline` | K 線 resample 工具 |
-| `Pillow` | 圖片處理（`PIL.Image`） |
+| `Pillow` | 圖片處理 |
+| `flask` | 網頁控制台（`online.py`） |
 
 ---
 
-### TA-Lib（技術指標，`good_stock.py` / `stock_comm.py` 部分功能）
+## 四、建立必要資料夾
 
-TA-Lib 在 Windows 上**無法直接 pip install**，需先安裝 C 函式庫：
-
-**方法一：用非官方 whl（推薦）**
-
-1. 至 https://github.com/cgohlke/talib-build/releases 下載對應版本的 `.whl`
-   - 例如：`TA_Lib-0.4.32-cp311-cp311-win_amd64.whl`（Python 3.11，64位元）
-2. 安裝：
-   ```bash
-   pip install TA_Lib-0.4.32-cp311-cp311-win_amd64.whl
-   ```
-
-**方法二：conda**
-```bash
-conda install -c conda-forge ta-lib
+```cmd
+cd D:\gg_stock
+mkdir sql
+mkdir data\stock_data
+mkdir data\revenue
+mkdir data\director
+mkdir data\down_pe_networth_yield
+mkdir final
+mkdir error
+mkdir out
+mkdir log
 ```
 
-> 若不需要技術指標功能，可跳過，相關 `import talib` 在 `good_stock.py` 中已移除。
+| 資料夾 | 用途 |
+|--------|------|
+| `sql/` | SQLite 資料庫（股價、三大法人、集保等） |
+| `data/stock_data/` | 個股日 K CSV |
+| `data/revenue/` | 月營收資料 |
+| `data/director/` | 董監事持股資料 |
+| `data/down_pe_networth_yield/` | 本益比/淨值比資料 |
+| `final/` | 選股結果 HTML / CSV 輸出 |
+| `error/` | 異常 CSV 紀錄 |
+| `log/` | 網頁控制台執行日誌 |
 
 ---
 
-### Selenium（自動化下載，`good_stock.py` / `morning.py`）
+## 五、確認安裝
 
-```bash
+```cmd
+.\venv\Scripts\python.exe -c "import pandas, numpy, scipy, sqlalchemy, bs4, lxml, requests, matplotlib, mplfinance, seaborn, kline, PIL, flask; from dateutil.relativedelta import relativedelta; print('所有核心套件安裝成功')"
+```
+
+---
+
+## 六、選用套件（非核心，視需要安裝）
+
+### TA-Lib（技術指標）
+
+Windows 上**無法直接 pip install**，需先裝 C 函式庫：
+
+1. 至 [https://github.com/cgohlke/talib-build/releases](https://github.com/cgohlke/talib-build/releases) 下載對應版本的 `.whl`
+   - 例如：`TA_Lib-0.4.32-cp311-cp311-win_amd64.whl`（Python 3.11，64 位元）
+2. 安裝：
+   ```cmd
+   .\venv\Scripts\pip.exe install TA_Lib-0.4.32-cp311-cp311-win_amd64.whl
+   ```
+
+> `good_stock.py` 中 `import talib` 已移除，目前可跳過。
+
+### Selenium（自動化下載）
+
+```cmd
 pip install selenium
 ```
 
@@ -77,78 +125,33 @@ pip install selenium
 - Firefox：下載 [geckodriver](https://github.com/mozilla/geckodriver/releases) 並加入 PATH
 - Chrome：`pip install webdriver-manager`
 
----
+### 其他
 
-### 選用套件（特定功能才需要）
-
-```bash
-# pyecharts — 互動圖表（all_stock.py，目前大部分已改為 mplfinance）
-pip install pyecharts
-
-# flask — Web API（部分腳本）
-pip install flask
-
-# backtrader — 回測引擎（backtest.py）
-pip install backtrader
-
-# pdfkit — 輸出 PDF（all_stock.py）
-# 需另安裝 wkhtmltopdf：https://wkhtmltopdf.org/downloads.html
-pip install pdfkit
-
-# pandas-datareader — 抓取外部金融資料
+```cmd
+pip install pyecharts        # 互動圖表（all_stock.py）
+pip install backtrader       # 回測引擎（backtest.py）
 pip install pandas-datareader
-
-# pygame — 遊戲模式（game.py，非核心）
-pip install pygame
 ```
 
 ---
 
-## 建立必要資料夾
+## 七、企業/公司網路 SSL 問題
 
-首次執行前需建立以下目錄（或直接執行以下指令）：
+若 pip 出現 `SSLError: CERTIFICATE_VERIFY_FAILED`，所有 pip 指令加上：
 
-```bash
-mkdir sql data data\stock_data final error out
+```cmd
+--trusted-host pypi.org --trusted-host files.pythonhosted.org
 ```
 
-| 資料夾 | 用途 |
-|--------|------|
-| `sql/` | SQLite 資料庫（股價、三大法人、集保等） |
-| `data/stock_data/` | 個股日 K CSV（`{stock_id}.csv`） |
-| `data/revenue/` | 月營收資料（爬蟲下載後存放） |
-| `data/director/` | 董監事持股資料 |
-| `data/down_pe_networth_yield/` | 本益比/淨值比資料 |
-| `final/` | 選股結果 HTML / CSV 輸出 |
-| `error/` | 異常 CSV 紀錄 |
-
----
-
-## 一鍵安裝腳本
-
-```bash
-pip install python-dateutil pandas numpy scipy sqlalchemy beautifulsoup4 lxml requests matplotlib mplfinance seaborn kline Pillow --trusted-host pypi.org --trusted-host files.pythonhosted.org
-
-mkdir -p sql data/stock_data data/revenue data/director data/down_pe_networth_yield final error out
+範例：
+```cmd
+pip install flask --trusted-host pypi.org --trusted-host files.pythonhosted.org
 ```
 
 ---
 
-## 確認安裝
+## 八、注意事項
 
-```bash
-python -c "
-import pandas, numpy, scipy, sqlalchemy, bs4, lxml, requests
-import matplotlib, mplfinance, seaborn, kline, PIL
-from dateutil.relativedelta import relativedelta
-print('所有核心套件安裝成功')
-"
-```
-
----
-
-## 注意事項
-
-- `stock_comm.py` 的 `datafolder()` 在 Windows 上回傳 `'data'`（相對路徑），執行時需在 `D:\gg_stock\` 目錄下執行
-- 系統需先執行各爬蟲腳本（`revenue.py`、`stock_big3.py`、`tdcc_dist.py` 等）下載資料後，`gg_stock.py` 才能產生有效選股結果
-- SQLite DB 檔案（`sql/*.db`）會在首次執行時自動建立
+- 所有腳本需在 `D:\gg_stock\` 目錄下執行（`stock_comm.py` 的資料路徑為相對路徑）
+- 首次使用建議先下載資料快照（見 `data_sources.md`），省去數小時的歷史回補
+- SQLite DB 檔案（`sql/*.db`）會在首次爬取時自動建立
