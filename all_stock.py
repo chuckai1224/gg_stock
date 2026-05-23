@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 #import grs
 import csv
 import os
@@ -878,9 +878,9 @@ def generate_stock_kline_html_v1(stock_no,title,begindate,html_filen,practice=0)
     
 
     new_df=sample_df.set_index('date').join(dist_df.set_index('date'))
-    new_df['t_persons'].fillna(method='ffill', inplace=True)
-    new_df['>1000_percents'].fillna(method='ffill', inplace=True)
-    new_df['>400_percents'].fillna(method='ffill', inplace=True)
+    new_df['t_persons'] = new_df['t_persons'].ffill()
+    new_df['>1000_percents'] = new_df['>1000_percents'].ffill()
+    new_df['>400_percents'] = new_df['>400_percents'].ffill()
     #print (lno(),new_df.tail(1))
    
     fin_df=new_df.tail(300)

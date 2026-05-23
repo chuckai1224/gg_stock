@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 #from __future__ import unicode_literals
 import io
 import csv
@@ -698,7 +698,7 @@ def get_stock_tse_df(stock_id,df):
     df1=df1.replace('--',np.nan)
     df1=df1.replace('---',np.nan)
     df1=df1.replace('NaN',np.nan)
-    df1=df1.fillna(method='ffill') 
+    df1=df1.ffill() 
     try:
         df1['close'].astype('float64')
     except:

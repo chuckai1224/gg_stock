@@ -151,3 +151,36 @@ TDCC 開放資料每週更新一次（週三收盤後），下載後寫入 `sql/
 
 存的是**累計值**（YTD），`get_stock_season_df()` 用相鄰季相減得出單季值；
 Q1（ys%4==0）直接等於單季值。
+
+---
+
+## 十、Web 控制台使用說明 (Web Control Dashboard)
+
+本系統提供一個視覺化的網頁控制面板（Flask 實作），讓使用者可以直接透過瀏覽器執行各項資料爬蟲與選股腳本，不需手動輸入命令列。
+
+### 1. 啟動方式
+於專案根目錄下，在虛擬環境中啟動 `online.py`：
+```bash
+.\venv\Scripts\python.exe online.py
+```
+啟動後，使用瀏覽器開啟以下網址即可進入控制台：
+```
+http://127.0.0.1:5000/online/
+```
+
+### 2. 功能面板介紹
+*   **執行選股腳本 (gg_stock.py)**：輸入日期並選擇選股模式（gg / fund / pointK / revenue / director），點擊「執行選股」即可產出。
+*   **每日盤後數據爬取 (Daily Post-Market)**：
+    *   **抓取個股日K (crawl.py)**：輸入特定日期（例如 `20260522`），自動解析成 `YYYY MM DD` 執行。
+    *   **抓取三大法人 (stock_big3.py)**：支援連動日期輸入框，執行 `stock_big3.py -d 20260522 20260522`。
+    *   **抓取本益比淨值比 (pe_networth_yeild.py)**：支援連動日期輸入框，執行 `pe_networth_yeild.py -d 20260522 20260522`。
+*   **下載資料快照庫**：一鍵下載解壓縮包裝好的完整歷史數據快照檔。
+*   **特定指標數據爬取**：
+    *   抓取集保股權 (TDCC) (`tdcc_get.py`)：每週更新。
+    *   抓取月營收 (Revenue) (`revenue.py`)：每月更新。
+    *   抓取董監持股 (Director) (`director.py`)：每月更新。
+    *   抓取單季盈餘 (EPS) (`eps.py`)：每季更新。日期欄位會自動換算為民國年/季（例如 `20260522` → 民國115年Q2）。
+
+### 3. 日誌與結果
+*   右側的**執行終端日誌**會即時以 AJAX 輪詢串流顯示後台爬蟲與選股的詳細執行過程，若有錯誤會印在日誌中。
+*   下方提供產出結果的靜態 HTML 選股報表直達連結（如 `pointK_good.html` / `revenue_good.html` / `director_good.html` / `fund_good.html`），可直接點擊在瀏覽器中預覽。

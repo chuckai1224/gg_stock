@@ -92,3 +92,7 @@
 - [ ] **12. `final/` 資料夾不存在時未自動建立**
   - `gg_stock.py:808-810` — 輸出 HTML/CSV 前無 `check_dst_folder` 防呼叫，若 `final/` 不存在會 crash
   - 修法：在 `gen_gg_buy_list()` 開頭加 `check_dst_folder('final')`
+
+- [ ] **13. `outdf['date']` 轉成 object dtype 後排序不可靠**
+  - `stock_comm.py` `get_stock_df_bydate_nums()` — `outdf['date']` 被 cast 成 object dtype，填入 datetime64 scalar 後呼叫 `sort_values(by='date')`；object dtype 欄位的排序語義跨 pandas 版本不穩定，若有 NaN 殘留會觸發 TypeError
+  - 修法：填完資料後改回 `outdf['date'] = pd.to_datetime(outdf['date'])`，再 sort

@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 #from __future__ import unicode_literals
 import csv
 import os
@@ -466,7 +466,7 @@ def generate_stock_week_kline(stock_no,enddate,outf,df_in=pd.DataFrame()):
     dist_df=tdcc_dist.get_tdcc_dist_df_bydate_num(stock_no,enddate,61)
     df1=df1.set_index('date').join(dist_df.set_index('date'))
     df1=df1.reset_index()
-    df1=df1.fillna(method='ffill')
+    df1=df1.ffill()
     #print(lno(),len(df1))
     df1['str_date']=[comm.str_Ymd2md(x) for x in df1['date'] ]
     df1['date']=pd.to_datetime(df1['date'])

@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 import os
 import sys
 from datetime import datetime
@@ -232,6 +232,18 @@ def get_stock_revenue(d):
             #raise
     else:
         d.at[0,'本益比']=np.nan
+def calc_ratio(num, den):
+    try:
+        if num is None or pd.isna(num) or den is None or pd.isna(den):
+            return np.nan
+        num_f = float(num)
+        den_f = float(den)
+        if den_f == 0:
+            return np.nan
+        return num_f / den_f * 100
+    except (TypeError, ValueError):
+        return np.nan
+
 def get_stock_season_composite_income_sheet(d,debug=0):
     df=comm.get_stock_season_df(d.iloc[0],debug=0) 
     if len(df)==0:
@@ -316,29 +328,29 @@ def get_stock_season_composite_income_sheet(d,debug=0):
         #print(lno(),df.iloc[i]['單季毛利淨額'],df.iloc[i]['單季營收'])
         #d.at[0,'{}.{}Q毛利率'.format(df.iloc[i]['year'],df.iloc[i]['season'])]=df.iloc[i]['單季毛利淨額']/df.iloc[i]['單季營收']*100
         if i==0:
-            d.at[0,'本季毛利率']=df.iloc[i]['單季毛利淨額']/df.iloc[i]['單季營收']*100
+            d.at[0,'本季毛利率']=calc_ratio(df.iloc[i]['單季毛利淨額'], df.iloc[i]['單季營收'])
         else:        
-            d.at[0,'前{}季毛利率'.format(i)]=df.iloc[i]['單季毛利淨額']/df.iloc[i]['單季營收']*100
+            d.at[0,'前{}季毛利率'.format(i)]=calc_ratio(df.iloc[i]['單季毛利淨額'], df.iloc[i]['單季營收'])
     for i in range(0,seasons):
         #d.at[0,'{}.{}Q營利率'.format(df.iloc[i]['year'],df.iloc[i]['season'])]=df.iloc[i]['單季營業利益淨額']/df.iloc[i]['單季營收']*100
         if i==0:
-            d.at[0,'本季營利率']=df.iloc[i]['單季營業利益淨額']/df.iloc[i]['單季營收']*100
+            d.at[0,'本季營利率']=calc_ratio(df.iloc[i]['單季營業利益淨額'], df.iloc[i]['單季營收'])
         else:        
-            d.at[0,'前{}季營利率'.format(i)]=df.iloc[i]['單季營業利益淨額']/df.iloc[i]['單季營收']*100
+            d.at[0,'前{}季營利率'.format(i)]=calc_ratio(df.iloc[i]['單季營業利益淨額'], df.iloc[i]['單季營收'])
     for i in range(0,seasons):
         #d.at[0,'{}.{}Q淨利率'.format(df.iloc[i]['year'],df.iloc[i]['season'])]=df.iloc[i]['單季綜合損益總額']/df.iloc[i]['單季營收']*100    
         if i==0:
-            d.at[0,'本季淨利率']=df.iloc[i]['單季綜合損益總額']/df.iloc[i]['單季營收']*100    
+            d.at[0,'本季淨利率']=calc_ratio(df.iloc[i]['單季綜合損益總額'], df.iloc[i]['單季營收'])
         else:        
-            d.at[0,'前{}季淨利率'.format(i)]=df.iloc[i]['單季綜合損益總額']/df.iloc[i]['單季營收']*100    
+            d.at[0,'前{}季淨利率'.format(i)]=calc_ratio(df.iloc[i]['單季綜合損益總額'], df.iloc[i]['單季營收'])
     try:
-        d.at[0,'近一季毛利率升降(年)']=df.iloc[0]['單季毛利淨額']/df.iloc[0]['單季營收']*100 -df.iloc[4]['單季毛利淨額']/df.iloc[4]['單季營收']*100                
-        d.at[0,'近一季營利率升降(年)']=df.iloc[0]['單季營業利益淨額']/df.iloc[0]['單季營收']*100 -df.iloc[4]['單季營業利益淨額']/df.iloc[4]['單季營收']*100                
-        d.at[0,'近一季淨利率升降(年)']=df.iloc[0]['單季綜合損益總額']/df.iloc[0]['單季營收']*100 -df.iloc[4]['單季綜合損益總額']/df.iloc[4]['單季營收']*100                
-        d.at[0,'近一季毛利率升降(季)']=df.iloc[0]['單季毛利淨額']/df.iloc[0]['單季營收']*100 -df.iloc[1]['單季毛利淨額']/df.iloc[1]['單季營收']*100                
-        d.at[0,'近一季營利率升降(季)']=df.iloc[0]['單季營業利益淨額']/df.iloc[0]['單季營收']*100 -df.iloc[1]['單季營業利益淨額']/df.iloc[1]['單季營收']*100                
-        d.at[0,'近一季淨利率升降(季)']=df.iloc[0]['單季綜合損益總額']/df.iloc[0]['單季營收']*100 -df.iloc[1]['單季綜合損益總額']/df.iloc[1]['單季營收']*100        
-    except:
+        d.at[0,'近一季毛利率升降(年)']=calc_ratio(df.iloc[0]['單季毛利淨額'], df.iloc[0]['單季營收']) - calc_ratio(df.iloc[4]['單季毛利淨額'], df.iloc[4]['單季營收'])
+        d.at[0,'近一季營利率升降(年)']=calc_ratio(df.iloc[0]['單季營業利益淨額'], df.iloc[0]['單季營收']) - calc_ratio(df.iloc[4]['單季營業利益淨額'], df.iloc[4]['單季營收'])
+        d.at[0,'近一季淨利率升降(年)']=calc_ratio(df.iloc[0]['單季綜合損益總額'], df.iloc[0]['單季營收']) - calc_ratio(df.iloc[4]['單季綜合損益總額'], df.iloc[4]['單季營收'])
+        d.at[0,'近一季毛利率升降(季)']=calc_ratio(df.iloc[0]['單季毛利淨額'], df.iloc[0]['單季營收']) - calc_ratio(df.iloc[1]['單季毛利淨額'], df.iloc[1]['單季營收'])
+        d.at[0,'近一季營利率升降(季)']=calc_ratio(df.iloc[0]['單季營業利益淨額'], df.iloc[0]['單季營收']) - calc_ratio(df.iloc[1]['單季營業利益淨額'], df.iloc[1]['單季營收'])
+        d.at[0,'近一季淨利率升降(季)']=calc_ratio(df.iloc[0]['單季綜合損益總額'], df.iloc[0]['單季營收']) - calc_ratio(df.iloc[1]['單季綜合損益總額'], df.iloc[1]['單季營收'])
+    except (IndexError, KeyError):
         pass
     if debug==1:
         print(lno(),d1)
@@ -528,6 +540,7 @@ def gen_stock_info(r,debug=0):
         'week kline vol','day kline vol']
     for i in str_col_list:
         d[i]=d[i].astype('str')
+    d['date']=d['date'].astype('object')
 
     d.at[0,'date']=date
     d.at[0,'stock_id']=stock_id

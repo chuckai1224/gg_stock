@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GG Stock 數據控制台</title>
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0b0f19;
+            --panel-bg: rgba(22, 28, 45, 0.6);
+            --border-color: rgba(255, 255, 255, 0.08);
+            --text-color: #f3f4f6;
+            --text-muted: #9ca3af;
+            --primary: #00f2fe;
+            --secondary: #4facfe;
+            --success: #10b981;
+            --error: #ef4444;
+            --warning: #f59e0b;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', -apple-system, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(0, 242, 254, 0.1) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(79, 172, 254, 0.1) 0px, transparent 50%);
+            min-height: 100vh;
+            padding: 2rem;
+            display: flex;
+            justify-content: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1200px;
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 2rem;
+        }
+
+        /* Header */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.5rem;
+            background: var(--panel-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.5px;
+        }
+
+        .status-badge {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.875rem;
+            font-weight: 600;
+            padding: 0.5rem 1rem;
+            border-radius: 9999px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            transition: all 0.3s ease;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--text-muted);
+            box-shadow: 0 0 8px var(--text-muted);
+            transition: all 0.3s ease;
+        }
+
+        /* Dashboard Grid */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 2rem;
+        }
+
+        @media (max-width: 900px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Card panels */
+        .panel {
+            background: var(--panel-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 1.5rem;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .panel-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 0.75rem;
+            color: #fff;
+        }
+
+        /* Control Card item */
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            background: rgba(255, 255, 255, 0.02);
+            padding: 1rem;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.03);
+            transition: transform 0.2s ease, border-color 0.2s ease;
+        }
+
+        .control-group:hover {
+            border-color: rgba(255, 255, 255, 0.08);
+            transform: translateY(-2px);
+        }
+
+        .control-label {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #fff;
+        }
+
+        .control-desc {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            line-height: 1.4;
+        }
+
+        /* Inputs & Buttons */
+        .input-row {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        input, select {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border-color);
+            padding: 0.6rem 0.8rem;
+            border-radius: 8px;
+            color: #fff;
+            font-size: 0.9rem;
+            outline: none;
+            width: 100%;
+            transition: border-color 0.2s;
+        }
+
+        input:focus, select:focus {
+            border-color: var(--primary);
+        }
+
+        .btn {
+            background: linear-gradient(135deg, var(--secondary), var(--primary));
+            color: #0b0f19;
+            border: none;
+            padding: 0.6rem 1.2rem;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            white-space: nowrap;
+        }
+
+        .btn:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+            box-shadow: 0 0 12px rgba(0, 242, 254, 0.3);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn:disabled {
+            background: #374151;
+            color: #9ca3af;
+            cursor: not-allowed;
+            box-shadow: none;
+            transform: none;
+            opacity: 0.5;
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #f43f5e, #e11d48);
+            color: #fff;
+        }
+
+        .btn-danger:hover {
+            box-shadow: 0 0 12px rgba(225, 29, 72, 0.3);
+        }
+
+        /* Console Console log output */
+        .console-panel {
+            display: flex;
+            flex-direction: column;
+            height: 600px;
+        }
+
+        .console-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .console-screen {
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1rem;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.85rem;
+            color: #34d399;
+            overflow-y: auto;
+            flex-grow: 1;
+            white-space: pre-wrap;
+            line-height: 1.5;
+            box-shadow: inset 0 4px 12px rgba(0,0,0,0.5);
+        }
+
+        /* Progress Bar indicator */
+        .progress-bar-container {
+            width: 100%;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 2px;
+            overflow: hidden;
+            display: none;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, var(--secondary), var(--primary));
+            animation: loading-anim 2s infinite linear;
+            transform-origin: 0% 50%;
+        }
+
+        @keyframes loading-anim {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        /* Status colors */
+        .status-running {
+            background: rgba(245, 158, 11, 0.1);
+            color: var(--warning);
+            border-color: rgba(245, 158, 11, 0.3);
+        }
+        .status-running .status-dot {
+            background: var(--warning);
+            box-shadow: 0 0 8px var(--warning);
+            animation: pulse-dot 1.5s infinite ease-in-out;
+        }
+
+        .status-completed {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--success);
+            border-color: rgba(16, 185, 129, 0.3);
+        }
+        .status-completed .status-dot {
+            background: var(--success);
+            box-shadow: 0 0 8px var(--success);
+        }
+
+        .status-failed {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--error);
+            border-color: rgba(239, 68, 68, 0.3);
+        }
+        .status-failed .status-dot {
+            background: var(--error);
+            box-shadow: 0 0 8px var(--error);
+        }
+
+        @keyframes pulse-dot {
+            0% { transform: scale(0.9); opacity: 0.6; }
+            50% { transform: scale(1.2); opacity: 1; }
+            100% { transform: scale(0.9); opacity: 0.6; }
+        }
+
+        /* Result File Link section */
+        .results-panel {
+            background: rgba(255, 255, 255, 0.01);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .results-title {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .results-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 0.75rem;
+        }
+
+        .result-link {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.75rem;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--primary);
+            text-decoration: none;
+            font-size: 0.85rem;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .result-link:hover {
+            background: rgba(255, 255, 255, 0.07);
+            border-color: var(--primary);
+            box-shadow: 0 0 8px rgba(0, 242, 254, 0.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header>
+            <h1>GG Stock 數據控制台</h1>
+            <div id="main-status" class="status-badge">
+                <span class="status-dot"></span>
+                <span id="status-text">閒置中</span>
+            </div>
+        </header>
+
+        <!-- Main dashboard content -->
+        <div class="dashboard-grid">
+            <!-- Left panel: Controls -->
+            <div class="panel">
+                <h2 class="panel-title">操作面板</h2>
+
+                <!-- Control 1: Run Stock Picker -->
+                <div class="control-group">
+                    <span class="control-label">執行選股腳本 (gg_stock.py)</span>
+                    <span class="control-desc">篩選出強勢股、投信股、董監持股增加或營收暴增股。</span>
+                    <div class="input-row" style="margin-top: 0.5rem;">
+                        <input type="text" id="picker-date" value="20260522" placeholder="日期格式 YYYYMMDD" style="flex: 2;">
+                        <select id="picker-mode" style="flex: 1.5;">
+                            <option value="gg">全部 (gg)</option>
+                            <option value="fund">投信 (fund)</option>
+                            <option value="pointK">技術 (pointK)</option>
+                            <option value="revenue">營收 (revenue)</option>
+                            <option value="director">董監 (director)</option>
+                        </select>
+                    </div>
+                    <button id="btn-picker" class="btn" onclick="startTask('picker')">執行選股</button>
+                </div>
+
+                <!-- Control 2: Daily Post-Market Crawlers -->
+                <div class="control-group">
+                    <span class="control-label">每日盤後數據爬取 (Daily Post-Market)</span>
+                    <span class="control-desc">交易日盤後執行，獲取股價、三大法人與本益比資料：</span>
+                    <div style="display: flex; flex-direction: column; gap: 0.8rem; margin-top: 0.5rem;">
+                        <button id="btn-crawl" class="btn" onclick="startTask('crawl')">1. 抓取個股日K (crawl.py)</button>
+                        <button id="btn-big3" class="btn" onclick="startTask('big3')">2. 抓取三大法人 (stock_big3.py)</button>
+                        <button id="btn-pe" class="btn" onclick="startTask('pe')">3. 抓取本益比淨值比 (pe_networth_yeild.py)</button>
+                    </div>
+                </div>
+
+                <!-- Control 3: Download Snapshot -->
+                <div class="control-group">
+                    <span class="control-label">下載資料快照庫</span>
+                    <span class="control-desc">從雲端下載已包裝好的完整歷史數據快照檔。</span>
+                    <button id="btn-snapshot" class="btn" onclick="startTask('snapshot')" style="margin-top: 0.5rem;">下載快照</button>
+                </div>
+
+                <!-- Control 4: Specialized Data Crawlers -->
+                <div class="control-group">
+                    <span class="control-label">特定指標數據爬取</span>
+                    <span class="control-desc">請依照各數據公告時間進行更新：</span>
+                    <div style="display: flex; flex-direction: column; gap: 0.8rem; margin-top: 0.5rem;">
+                        <div style="display: flex; flex-direction: column; gap: 0.2rem;">
+                            <button id="btn-tdcc" class="btn" onclick="startTask('tdcc')">抓取集保股權 (TDCC)</button>
+                            <span style="font-size: 0.75rem; color: var(--warning); text-align: center;">📅 建議：每週五晚上 19:00 後 或 週六 (每週更新)</span>
+                        </div>
+                        <div style="display: flex; flex-direction: column; gap: 0.2rem;">
+                            <button id="btn-revenue" class="btn" onclick="startTask('revenue')">抓取月營收 (Revenue)</button>
+                            <span style="font-size: 0.75rem; color: var(--warning); text-align: center;">📅 建議：每月 10 ~ 12 號 (每月更新)</span>
+                        </div>
+                        <div style="display: flex; flex-direction: column; gap: 0.2rem;">
+                            <button id="btn-director" class="btn" onclick="startTask('director')">抓取董監持股 (Director)</button>
+                            <span style="font-size: 0.75rem; color: var(--warning); text-align: center;">📅 建議：每月 15 ~ 17 號 (每月更新)</span>
+                        </div>
+                        <div style="display: flex; flex-direction: column; gap: 0.2rem;">
+                            <button id="btn-eps" class="btn" onclick="startTask('eps')">抓取單季盈餘 (EPS)</button>
+                            <span style="font-size: 0.75rem; color: var(--warning); text-align: center;">📅 建議：每季財報截止日後 (3/31, 5/15, 8/14, 11/14)</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right panel: Console & Logs -->
+            <div class="panel console-panel">
+                <div class="console-actions">
+                    <h2 class="panel-title" style="border: none; padding: 0;">執行終端日誌</h2>
+                    <button id="btn-stop" class="btn btn-danger" onclick="stopTask()" disabled>中斷任務</button>
+                </div>
+                <div class="progress-bar-container" id="progress-container">
+                    <div class="progress-bar"></div>
+                </div>
+                <div class="console-screen" id="console-screen">等待操作中...</div>
+            </div>
+        </div>
+
+        <!-- Result Links -->
+        <div class="results-panel">
+            <div class="results-title">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                <span>選股結果檔案 (HTML 報表)</span>
+            </div>
+            <div class="results-list">
+                <a href="/static/final/pointK_good.html" target="_blank" class="result-link">
+                    <span>技術分析好股 (pointK)</span>
+                    <span>→</span>
+                </a>
+                <a href="/static/final/revenue_good.html" target="_blank" class="result-link">
+                    <span>營收強勢好股 (revenue)</span>
+                    <span>→</span>
+                </a>
+                <a href="/static/final/director_good.html" target="_blank" class="result-link">
+                    <span>董監持股好股 (director)</span>
+                    <span>→</span>
+                </a>
+                <a href="/static/final/fund_good.html" target="_blank" class="result-link">
+                    <span>投信追蹤好股 (fund)</span>
+                    <span>→</span>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let pollInterval = null;
+
+        function updateStatusUI(status) {
+            const badge = document.getElementById('main-status');
+            const txt = document.getElementById('status-text');
+            const progress = document.getElementById('progress-container');
+            const stopBtn = document.getElementById('btn-stop');
+            
+            // Enable/disable execution buttons
+            const actionButtons = ['btn-picker', 'btn-crawl', 'btn-snapshot', 'btn-tdcc', 'btn-revenue', 'btn-director', 'btn-eps', 'btn-big3', 'btn-pe'];
+            
+            badge.className = 'status-badge';
+            
+            if (status === 'running') {
+                badge.classList.add('status-running');
+                txt.innerText = '執行中';
+                progress.style.display = 'block';
+                stopBtn.disabled = false;
+                actionButtons.forEach(id => document.getElementById(id).disabled = true);
+            } else {
+                progress.style.display = 'none';
+                stopBtn.disabled = true;
+                actionButtons.forEach(id => document.getElementById(id).disabled = false);
+                
+                if (status === 'completed') {
+                    badge.classList.add('status-completed');
+                    txt.innerText = '任務完成';
+                } else if (status === 'failed') {
+                    badge.classList.add('status-failed');
+                    txt.innerText = '執行失敗';
+                } else {
+                    txt.innerText = '閒置中';
+                }
+            }
+        }
+
+        function scrollConsole() {
+            const scr = document.getElementById('console-screen');
+            scr.scrollTop = scr.scrollHeight;
+        }
+
+        async function fetchLogs() {
+            try {
+                const res = await fetch('/online/log');
+                const data = await res.json();
+                document.getElementById('console-screen').innerText = data.log || '無日誌輸出';
+                scrollConsole();
+            } catch (err) {
+                console.error("Failed to fetch logs:", err);
+            }
+        }
+
+        async function checkStatus() {
+            try {
+                const res = await fetch('/online/status');
+                const data = await res.json();
+                updateStatusUI(data.status);
+                
+                if (data.status === 'running') {
+                    if (!pollInterval) {
+                        pollInterval = setInterval(() => {
+                            fetchLogs();
+                            checkStatus();
+                        }, 1000);
+                    }
+                } else {
+                    if (pollInterval) {
+                        clearInterval(pollInterval);
+                        pollInterval = null;
+                        // Fetch one last time to capture final log
+                        fetchLogs();
+                    }
+                }
+            } catch (err) {
+                console.error("Failed to check status:", err);
+            }
+        }
+
+        async function startTask(action) {
+            const dateInput = document.getElementById('picker-date').value;
+            const modeInput = document.getElementById('picker-mode').value;
+            
+            document.getElementById('console-screen').innerText = "啟動任務中...";
+            updateStatusUI('running');
+
+            try {
+                const res = await fetch('/online/run', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: action,
+                        date: dateInput,
+                        mode: modeInput
+                    })
+                });
+                const data = await res.json();
+                if (!data.success) {
+                    document.getElementById('console-screen').innerText = "啟動失敗: " + data.message;
+                    updateStatusUI('failed');
+                } else {
+                    checkStatus();
+                }
+            } catch (err) {
+                document.getElementById('console-screen').innerText = "啟動發生異常錯誤。";
+                updateStatusUI('failed');
+            }
+        }
+
+        async function stopTask() {
+            try {
+                const res = await fetch('/online/stop', { method: 'POST' });
+                const data = await res.json();
+                if (data.success) {
+                    document.getElementById('console-screen').innerText += "\n[系統: 任務已被使用者手動中斷。]\n";
+                    updateStatusUI('idle');
+                }
+            } catch (err) {
+                console.error("Failed to stop task:", err);
+            }
+        }
+
+        // Initial check on load
+        checkStatus();
+        fetchLogs();
+    </script>
+</body>
+</html>

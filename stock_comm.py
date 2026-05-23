@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 #import grs
 import csv
 import os
@@ -143,7 +143,7 @@ def get_stock_df(stock_no):
     df = pd.read_csv(dstpath,encoding = 'utf-8',parse_dates=['date'], date_parser=dateparse,dtype=dtypes)
     #df.drop('cash', axis=1, inplace = True)
     #df.drop('Tnumber', axis=1, inplace = True)
-    df=df.fillna(method='ffill')
+    df=df.ffill()
     """
     df.dropna(axis=1,how='all',inplace=True)
     df.dropna(inplace=True)
@@ -151,7 +151,7 @@ def get_stock_df(stock_no):
     df=df.replace('--',np.nan)
     df=df.replace('---',np.nan)
     df=df.replace('----',np.nan)
-    df=df.fillna(method='ffill')
+    df=df.ffill()
     df=df.dropna(how='any',axis=0)
     
     df['date']=[twdate2datetime64(x) for x in df['date'] ]
@@ -175,7 +175,7 @@ def get_stock_df_old(stock_no):
     df=df.replace('--',np.nan)
     df=df.replace('---',np.nan)
     df=df.replace('----',np.nan)
-    df=df.fillna(method='ffill')
+    df=df.ffill()
     df=df.dropna(how='any',axis=0)
     #print(lno(),df.dtypes)
     #df['date']=[twdate2datetime64(x) for x in df['date'] ]
@@ -473,13 +473,14 @@ def get_stock_df_bydate_nums(stock_no,nums,date):
     outcols=['date','open', 'high','low','close','diff','vol']
     df=df.replace('--',np.nan)
     df=df.replace('---',np.nan)
-    df.fillna(method='ffill',inplace=True)
+    df = df.ffill()
     df=df.reset_index(drop=True)    
     lendf=len(df)
     #print  (lno(),df.tail(5))
     #print  (lno(),stock_no,date,lendf)  
     try :
         outdf = pd.DataFrame(np.empty(( lendf, len(outcols))) * np.nan, columns = outcols)
+        outdf['date'] = outdf['date'].astype('object')
     except: 
         print  (lno(),stock_no,date,lendf)      
     #tokline_type(df)
@@ -536,7 +537,7 @@ def get_stock_df_bydate_nums(stock_no,nums,date):
             j=j+1
             if j>nums+10:
                 break
-    outdf.fillna(method='ffill')                
+    outdf = outdf.ffill()                
     outdf=outdf.dropna(how='any',axis=0)
     outdf=outdf.sort_values(by='date', ascending=True).drop_duplicates(subset='date',keep='last')
     outdf=outdf.reset_index(drop=True)
@@ -939,7 +940,7 @@ class stock_data:
             #df = pd.read_sql('select * from "{}" where date < "{}" ORDER BY date DESC'.format(stock_id,date), con=self.con, parse_dates=['date'])
             df = pd.read_sql('select * from "{}"'.format(stock_id), con=self.con, parse_dates=['date'])
             #df=pd.read_sql(stock_id, self.engine, parse_dates=['date'])  
-            df=df.sort_values('date').fillna(method='ffill')
+            df=df.sort_values('date').ffill()
             #print(lno(),df.head())
             #df['date']=df['date'].apply(date_sub2time64)
             return df
@@ -956,7 +957,7 @@ class stock_data:
             cmd='SELECT * FROM "{}" WHERE date >= "{}" and date < "{}"'.format(stock_id,startdate,enddate)
             df = pd.read_sql(cmd, con=self.con, parse_dates=['date'])
             #df=pd.read_sql(stock_id, self.engine, parse_dates=['date'])  
-            df=df.sort_values('date').fillna(method='ffill')
+            df=df.sort_values('date').ffill()
             #print(lno(),df.head())
             #df['date']=df['date'].apply(date_sub2time64)
             return df
@@ -974,7 +975,7 @@ class stock_data:
             #cmd='SELECT * FROM "{}" WHERE date <= "{}" ORDER BY "date" DESC limit {} '.format(stock_id,date,num)
             df = pd.read_sql(cmd, con=self.con, parse_dates=['date'])
             #df=df.sort_values(by=['date'], ascending=True).reset_index(drop=True)
-            df=df.sort_values('date').fillna(method='ffill')
+            df=df.sort_values('date').ffill()
             df=df.tail(num).reset_index(drop=True)
             #print(lno(),df.head())
             return df
@@ -986,7 +987,7 @@ class stock_data:
             cmd='SELECT * FROM "{}" WHERE date >= "{}" and date < "{}"'.format(stock_id,startdate,enddate)
             df = pd.read_sql(cmd, con=self.con, parse_dates=['date'])
             #df=pd.read_sql(stock_id, self.engine, parse_dates=['date'])  
-            df=df.sort_values('date').fillna(method='ffill')
+            df=df.sort_values('date').ffill()
             #print(lno(),df.head())
             #df['date']=df['date'].apply(date_sub2time64)
             return df
@@ -1089,11 +1090,14 @@ def stock_df_to_sql_append_querydate(stock_id,table_name,df):
         #print(lno(),df.iloc[0])    
         df.to_sql(name=table_name, con=con, if_exists='replace',  index= False,dtype={'date': Date()},chunksize=10)        
 def tofloat64(x):
-    if type(x)==str and '-' == x:
+    if x is None or pd.isna(x):
         return np.nan
-    if type(x)==str and '--' == x:
+    if type(x) == str and x.strip() in ('-', '--', '---', '----', ''):
         return np.nan
-    return float(x)
+    try:
+        return float(x)
+    except:
+        return np.nan
 def get_sql_stock_df(stock_id,table_name,debug=0):
     engine=get_stock_sql_engine(stock_id)
     con = engine.connect()

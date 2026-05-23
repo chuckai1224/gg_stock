@@ -555,6 +555,7 @@ def down_stock_composite_income(stock_id,download=1,debug=1):
         df=dfs[2]
         outcols=df[0]
         d= pd.DataFrame(np.empty(( len(df.columns), len(outcols))) * np.nan, columns = outcols)
+        d=d.astype('object')
         #print(lno(),df[1])
         for i in range(1,len(df.columns)):
             d.iloc[i-1]=df[i].tolist()
