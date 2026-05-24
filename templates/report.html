@@ -564,10 +564,10 @@
                 }
             });
 
-            // 4.5 Format numbers (總分, psrS) to 2 decimal places (exclude '增加比' columns as they are handled below)
+            // 4.5 Format numbers (總分) to 2 decimal places (exclude '增加比', 'psrS', 'prr' columns as they are handled below)
             const formatIndices = [];
             Object.keys(colMap).forEach(name => {
-                if ((name === '總分' || name === 'psrS') && !name.includes('增加比')) {
+                if (name === '總分') {
                     formatIndices.push(colMap[name]);
                 }
             });
@@ -603,6 +603,42 @@
                     }
                 });
             }
+
+            // 4.65 Format and style "psrS" and "prr" (psrS <= 0.75 for Red, prr > 0 and <= 15 for Red)
+            const psrsIdx = colMap['psrS'];
+            const prrIdx = colMap['prr'];
+
+            rows.forEach(row => {
+                if (psrsIdx !== undefined) {
+                    const cell = row.cells[psrsIdx + 1];
+                    if (cell) {
+                        const val = parseFloat(cell.textContent.trim());
+                        if (!isNaN(val)) {
+                            const formattedText = val.toFixed(2);
+                            if (val <= 0.75) {
+                                cell.innerHTML = `<span style="color: #ef4444; font-weight: 700; padding: 0.2rem 0.5rem; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 6px; display: inline-block; min-width: 65px; text-align: center;">${formattedText}</span>`;
+                            } else {
+                                cell.textContent = formattedText;
+                            }
+                        }
+                    }
+                }
+
+                if (prrIdx !== undefined) {
+                    const cell = row.cells[prrIdx + 1];
+                    if (cell) {
+                        const val = parseFloat(cell.textContent.trim());
+                        if (!isNaN(val)) {
+                            const formattedText = val.toFixed(2);
+                            if (val > 0 && val <= 15) {
+                                cell.innerHTML = `<span style="color: #ef4444; font-weight: 700; padding: 0.2rem 0.5rem; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 6px; display: inline-block; min-width: 65px; text-align: center;">${formattedText}</span>`;
+                            } else {
+                                cell.textContent = formattedText;
+                            }
+                        }
+                    }
+                }
+            });
 
             // 4.7 Format and style "大戶近一月增加比", "大戶近一周增加比", "散戶近一月增加比"
             const largeMonthIdx = colMap['大戶近一月增加比'];
