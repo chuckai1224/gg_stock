@@ -170,28 +170,63 @@ def db_status():
     import sqlite3, os, glob
     result = {}
 
-    checks = [
-        ("stock_data",   "sql/stock_data.db",   "SELECT MAX(date) FROM tse"),
-        ("stock_big3",   "sql/stock_big3.db",    "SELECT MAX(date) FROM stock_big3"),
-        ("tdcc_dist",    "sql/tdcc_dist.db",     None),
-    ]
-    for name, path, sql in checks:
-        if not os.path.exists(path):
-            result[name] = {"error": "檔案不存在"}
-            continue
+    # stock_data: get latest date from table "2330" (or fallback to first table)
+    path = "sql/stock_data.db"
+    if not os.path.exists(path):
+        result["stock_data"] = {"error": "檔案不存在"}
+    else:
         size_mb = round(os.path.getsize(path) / 1024 / 1024, 1)
         try:
             con = sqlite3.connect(path)
-            if sql:
-                row = con.execute(sql).fetchone()
+            tables = con.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='2330'").fetchall()
+            if tables:
+                row = con.execute('SELECT MAX(date) FROM "2330"').fetchone()
                 latest = row[0] if row else "no data"
             else:
-                tables = con.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()
-                latest = f"{len(tables)} tables"
+                first = con.execute("SELECT name FROM sqlite_master WHERE type='table' LIMIT 1").fetchone()
+                if first:
+                    row = con.execute(f'SELECT MAX(date) FROM "{first[0]}"').fetchone()
+                    latest = row[0] if row else "no data"
+                else:
+                    latest = "no tables"
             con.close()
-            result[name] = {"latest": latest, "size_mb": size_mb}
+            result["stock_data"] = {"latest": latest, "size_mb": size_mb}
         except Exception as e:
-            result[name] = {"error": str(e)}
+            result["stock_data"] = {"error": str(e)}
+
+    # stock_big3: table names are dates like YYYYMMDD
+    path = "sql/stock_big3.db"
+    if not os.path.exists(path):
+        result["stock_big3"] = {"error": "檔案不存在"}
+    else:
+        size_mb = round(os.path.getsize(path) / 1024 / 1024, 1)
+        try:
+            con = sqlite3.connect(path)
+            tables = con.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()
+            if tables:
+                table_dates = [t[0] for t in tables if t[0].isdigit() and len(t[0]) == 8]
+                latest = max(table_dates) if table_dates else f"{len(tables)} tables"
+            else:
+                latest = "no tables"
+            con.close()
+            result["stock_big3"] = {"latest": latest, "size_mb": size_mb}
+        except Exception as e:
+            result["stock_big3"] = {"error": str(e)}
+
+    # tdcc_dist: tables are stock IDs
+    path = "sql/tdcc_dist.db"
+    if not os.path.exists(path):
+        result["tdcc_dist"] = {"error": "檔案不存在"}
+    else:
+        size_mb = round(os.path.getsize(path) / 1024 / 1024, 1)
+        try:
+            con = sqlite3.connect(path)
+            tables = con.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()
+            latest = f"{len(tables)} tables"
+            con.close()
+            result["tdcc_dist"] = {"latest": latest, "size_mb": size_mb}
+        except Exception as e:
+            result["tdcc_dist"] = {"error": str(e)}
 
     # pe_networth_yield: count CSV files
     pe_files = sorted(glob.glob("data/down_pe_networth_yield/tse*.csv"))
