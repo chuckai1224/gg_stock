@@ -21,11 +21,12 @@ from datetime import datetime
 # ── 設定 ─────────────────────────────────────────────────────────────────────
 
 INCLUDE_PATHS = [
-    'sql',
-    'data/stock_data',
-    'data/down_pe_networth_yield',
-    'data/director/final',
-    'data/revenue',       # 若不存在會自動略過
+    'sql',                           # stock_data.db, stock_big3.db, tdcc_dist.db,
+                                     # income.db, stock/*.db (含 mix_income + revenue)
+    'data/stock_data',               # 個股日K CSV
+    'data/down_pe_networth_yield',   # 本益比/淨值比
+    'data/director/final',           # 董監持股
+    # data/revenue/ 為舊路徑，實際資料在 sql/income.db，不另外打包
 ]
 
 DOWNLOAD_SCRIPT = 'download_snapshot.py'
