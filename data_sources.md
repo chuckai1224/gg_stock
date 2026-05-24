@@ -69,6 +69,27 @@
 - 快照日期為 **2026-05-23**,之後的每日新資料仍須執行 `crawl.py` / `stock_big3.py` / `pe_networth_yeild.py` 累積(見[第六節](#六建議的定期排程cron))
 - `*.tar.gz` 已在 `.gitignore` 中,不會被 git 追蹤
 
+### 🔧 更新快照（給維護者）
+
+當資料累積到值得重新發布時,執行以下流程：
+
+```cmd
+:: 步驟 1：打包（生成 gg_stock_data_YYYYMMDD.tar.gz，約 1~2 分鐘）
+.\venv\Scripts\python.exe make_snapshot.py
+
+:: 步驟 2：手動上傳 .tar.gz 到 Google Drive
+::   上傳後開啟「取得連結」，從 URL 複製 file_id
+::   格式：https://drive.google.com/file/d/<file_id>/view
+
+:: 步驟 3：自動更新 download_snapshot.py 與本文件的連結
+.\venv\Scripts\python.exe make_snapshot.py --update <file_id>
+
+:: 步驟 4：提交
+git add download_snapshot.py data_sources.md
+git commit -m "snapshot: update to YYYYMMDD"
+git push
+```
+
 ---
 
 ## 一、資料流總覽
