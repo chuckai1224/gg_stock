@@ -60,6 +60,6 @@ def save_response_content(response, destination):
                 f.write(chunk)
 
 if __name__ == '__main__':
-    file_id = "1aKMvIJ8Au2RZoS7nTphRZJyCkZX9aFY2"
-    destination = "gg_stock_data_20260523.tar.gz"
+    file_id = "1cR1XEHJoLpbATuGrT8bgE2rnVf12kjiA"
+    destination = "gg_stock_data_20260524.tar.gz"
     download_file_from_google_drive(file_id, destination)
