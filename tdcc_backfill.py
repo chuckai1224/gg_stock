@@ -91,6 +91,11 @@ def query_stock(sess, stock_no, sca_date, retries=2):
             r = sess.post(PORTAL_URL, data=data, timeout=20)
             if r.status_code != 200:
                 return None
+            # Server rotates CSRF token after every POST — must update before next request
+            new_token = re.search(r'name="SYNCHRONIZER_TOKEN" value="([^"]+)"', r.text)
+            if new_token:
+                sess._csrf_token = new_token.group(1)
+                data['SYNCHRONIZER_TOKEN'] = sess._csrf_token
             # Response has 2 tables: [0]=search form, [1]=results data
             all_tables = re.findall(r'<table[^>]*>(.*?)</table>', r.text, re.DOTALL)
             # Pick the table with 15+ rows (distribution data)
@@ -137,6 +142,36 @@ def get_db_dates(engine, stock_id):
         return set()
 
 
+def build_missing_pairs(db_path, stocks, target_dates):
+    """
+    用 sqlite3 快速掃描，回傳缺少的 (date_str, stock_id) pairs 的 dict:
+        { date_str: [stock_id, ...] }
+    比逐檔呼叫 get_db_dates 快很多（一次讀完每檔的 date 欄）。
+    """
+    import sqlite3 as _sqlite3
+    con = _sqlite3.connect(db_path)
+    target_set = set(target_dates)
+    missing = {d: [] for d in target_dates}
+    tables = set(r[0] for r in con.execute("SELECT name FROM sqlite_master WHERE type='table'"))
+    for sid in stocks:
+        if sid not in tables:
+            # 股票根本還沒有資料 → 所有目標日期都缺
+            for d in target_dates:
+                missing[d].append(sid)
+            continue
+        rows = con.execute(f'SELECT date FROM "{sid}"').fetchall()
+        # SQLite stores datetime as string "YYYY-MM-DD HH:MM:SS"
+        existing = set()
+        for (dval,) in rows:
+            if dval:
+                existing.add(str(dval)[:10].replace('-', ''))
+        for d in target_dates:
+            if d not in existing:
+                missing[d].append(sid)
+    con.close()
+    return missing
+
+
 def save_to_db(engine, stock_id, sca_date, rows):
     """將 15 列資料寫入 tdcc_dist.db（columns 0~44）。"""
     人數  = [r[0] for r in rows]
@@ -162,13 +197,12 @@ def main():
     if not stocks:
         print('tdcc_dist.db 中沒有股票資料，請先執行 tdcc_get.py。')
         return
-
     print(f'DB 中共有 {len(stocks)} 檔股票')
 
-    # 取得 portal 可用日期
+    # ── 第一步：從 portal 取得可用日期（快，秒完） ─────────────────────────
     print('連線 TDCC portal，取得可用日期清單…')
-    sess = new_session()
-    available = get_available_dates(sess)
+    _sess_init = new_session()
+    available = get_available_dates(_sess_init)
     print(f'Portal 提供 {len(available)} 個日期（{available[-1]} ~ {available[0]}）')
 
     # 決定要補哪些日期
@@ -180,7 +214,6 @@ def main():
         if invalid:
             print(f'忽略無效參數：{invalid}')
     else:
-        # 預設：最近 2 個月（約 9 週）
         cutoff = datetime.today() - timedelta(days=60)
         target_dates = [d for d in available if datetime.strptime(d, '%Y%m%d') >= cutoff]
 
@@ -189,35 +222,44 @@ def main():
         return
     print(f'目標日期：{target_dates}')
 
-    total_saved = 0
-    total_skipped = 0
-    total_fail = 0
-    session_req_count = 0   # 每 500 req 換一次 session
+    # ── 第二步：掃描 DB，找出所有缺漏的 (日期, 股票) 組合（可能較慢，但純本地）──
+    print('掃描 DB 中缺少的資料…')
+    missing = build_missing_pairs(DB_PATH, stocks, target_dates)
+    total_pairs = sum(len(v) for v in missing.values())
+    for d in target_dates:
+        print(f'  {d}: 需補 {len(missing[d])} 檔')
+    if total_pairs == 0:
+        print('所有資料已是最新，無需補抓。')
+        return
+    print(f'共需補 {total_pairs} 筆。')
+
+    # ── 第三步：建立新 session，立刻開始網路請求 ───────────────────────────
+    print('建立 session，開始抓取…')
+    sess = new_session()
+    get_available_dates(sess)   # refresh CSRF token from latest page GET
+
+    total_saved  = 0
+    total_fail   = 0
+    req_count    = 0   # 每 400 req 換一次 session
 
     for date_str in target_dates:
-        date_dt = datetime.strptime(date_str, '%Y%m%d')
-        # 只補 DB 裡已有的股票（避免查不到的新股）
-        todo_stocks = []
-        for sid in stocks:
-            if date_dt not in get_db_dates(engine, sid):
-                todo_stocks.append(sid)
-
+        todo_stocks = missing[date_str]
         if not todo_stocks:
-            print(f'{date_str}: 全部已有，略過')
+            print(f'{date_str}: 略過（已有）')
             continue
 
-        print(f'{date_str}: 需補 {len(todo_stocks)} 檔…')
         date_saved = 0
         date_fail  = 0
 
         for i, sid in enumerate(todo_stocks):
-            # 定期更新 session（CSRF token 有效期有限）
-            if session_req_count > 0 and session_req_count % 500 == 0:
+            # 定期更新 session（CSRF token / JSESSIONID 有效期有限）
+            if req_count > 0 and req_count % 400 == 0:
                 print('  更新 session…')
                 sess = new_session()
+                get_available_dates(sess)
 
             rows = query_stock(sess, sid, date_str)
-            session_req_count += 1
+            req_count += 1
 
             if rows:
                 try:
@@ -229,17 +271,18 @@ def main():
             else:
                 date_fail += 1
 
-            if (i + 1) % 100 == 0:
-                print(f'  進度: {i+1}/{len(todo_stocks)}, 已存={date_saved}, 失敗={date_fail}')
+            if (i + 1) % 200 == 0:
+                pct = (i + 1) / len(todo_stocks) * 100
+                print(f'  {date_str}: {i+1}/{len(todo_stocks)} ({pct:.0f}%), '
+                      f'已存={date_saved}, 失敗={date_fail}')
 
             time.sleep(SLEEP_SEC)
 
         print(f'{date_str}: 完成，已存={date_saved}, 失敗={date_fail}')
-        total_saved   += date_saved
-        total_skipped += (len(stocks) - len(todo_stocks))
-        total_fail    += date_fail
+        total_saved += date_saved
+        total_fail  += date_fail
 
-    print(f'\n全部完成。總共存入={total_saved}, 略過={total_skipped}, 失敗={total_fail}')
+    print(f'\n全部完成。總共存入={total_saved}, 失敗={total_fail}')
 
 
 if __name__ == '__main__':
