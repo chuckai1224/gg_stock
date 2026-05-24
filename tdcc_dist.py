@@ -1123,9 +1123,9 @@ class tdcc_dist():
             'date': DateTime()
             }
     def get_df(self,stock_id):
-        df=pd.read_sql(stock_id, self.engine, parse_dates=['date']) 
+        df=pd.read_sql(f'SELECT * FROM "{stock_id}" ORDER BY date', self.engine, parse_dates=['date'])
+        df = df.drop_duplicates(subset=['date'], keep='last')
         return df
-        pass
     def get_total_stock_num(self,stock_id,date):
         ## return 股數 not 張數
         enddate=date+relativedelta(days=7)
