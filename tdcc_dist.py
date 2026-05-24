@@ -310,7 +310,7 @@ def update_tdcc_from_opendata(download=1):
     寫入 sql/tdcc_dist.db。每檔一張表,date 為索引,
     欄位 0~44 = 持股分級 1~15 級的 人數/股數/比例。
     開放資料現為 17 級(16=差異數調整、17=合計),只取 1~15 級。"""
-    url = 'https://smart.tdcc.com.tw/opendata/getOD.ashx?id=1-5'
+    url = 'https://opendata.tdcc.com.tw/getOD.ashx?id=1-5'
     check_dst_folder('download')
     csv_path = 'download/TDCC_OD_1-5.csv'
     if download == 1:

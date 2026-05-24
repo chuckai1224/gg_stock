@@ -7,6 +7,7 @@ from dateutil.relativedelta import relativedelta
 import pandas as pd
 import numpy as np
 from flask import Flask, render_template, redirect, url_for, jsonify, request, send_from_directory
+from werkzeug.utils import safe_join
 
 app = Flask(__name__)
 
@@ -83,7 +84,7 @@ def run_task():
         log_file.write(f"[System] Starting Stock Picker (gg_stock.py {mode_str} {date_str})...\n")
         cmd = f".\\venv\\Scripts\\python.exe gg_stock.py {mode_str} {date_str}"
     elif action == "snapshot":
-        log_file.write("[System] Starting Database Snapshot Download & Extraction...\n")
+        log_file.write("[System] Starting Database Snapshot Download...\n")
         cmd = ".\\venv\\Scripts\\python.exe download_snapshot.py"
     elif action == "crawl":
         if date_str and len(date_str) == 8 and date_str.isdigit():
@@ -164,9 +165,86 @@ def stop_task():
     except Exception as e:
         return jsonify({"success": False, "message": f"Failed to terminate task: {str(e)}"})
 
+@app.route('/online/db_status')
+def db_status():
+    import sqlite3, os, glob
+    result = {}
+
+    checks = [
+        ("stock_data",   "sql/stock_data.db",   "SELECT MAX(date) FROM tse"),
+        ("stock_big3",   "sql/stock_big3.db",    "SELECT MAX(date) FROM stock_big3"),
+        ("tdcc_dist",    "sql/tdcc_dist.db",     None),
+    ]
+    for name, path, sql in checks:
+        if not os.path.exists(path):
+            result[name] = {"error": "檔案不存在"}
+            continue
+        size_mb = round(os.path.getsize(path) / 1024 / 1024, 1)
+        try:
+            con = sqlite3.connect(path)
+            if sql:
+                row = con.execute(sql).fetchone()
+                latest = row[0] if row else "no data"
+            else:
+                tables = con.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()
+                latest = f"{len(tables)} tables"
+            con.close()
+            result[name] = {"latest": latest, "size_mb": size_mb}
+        except Exception as e:
+            result[name] = {"error": str(e)}
+
+    # pe_networth_yield: count CSV files
+    pe_files = sorted(glob.glob("data/down_pe_networth_yield/tse*.csv"))
+    result["pe_networth"] = {
+        "latest": os.path.basename(pe_files[-1]) if pe_files else "no data",
+        "count": len(pe_files)
+    }
+
+    # tdcc latest date from one known stock
+    if "tdcc_dist" in result and "tables" in str(result["tdcc_dist"].get("latest", "")):
+        try:
+            con = sqlite3.connect("sql/tdcc_dist.db")
+            tables = con.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()
+            if tables:
+                t = tables[0][0]
+                row = con.execute(f'SELECT MAX(date) FROM "{t}"').fetchone()
+                result["tdcc_dist"]["latest_date"] = row[0] if row else "?"
+                result["tdcc_dist"]["table_count"] = len(tables)
+            con.close()
+        except Exception:
+            pass
+
+    return jsonify(result)
+
 @app.route('/static/final/<path:filename>')
 def serve_final_files(filename):
-    return send_from_directory('final', filename)
+    # Strict directory traversal check
+    if '..' in filename or filename.startswith('/') or filename.startswith('\\'):
+        return "Access Denied", 400
+        
+    safe_path = safe_join('final', filename)
+    if not safe_path or not os.path.exists(safe_path):
+        return "File not found", 404
+
+    if filename.endswith('.html'):
+        try:
+            with open(safe_path, 'r', encoding='utf-8') as f:
+                table_html = f.read()
+            report_type = filename.replace('_good.html', '')
+            title_map = {
+                'fund': '投信追蹤好股 (Fund)',
+                'pointK': '技術分析好股 (PointK)',
+                'revenue': '營收強勢好股 (Revenue)',
+                'director': '董監持股好股 (Director)'
+            }
+            title = title_map.get(report_type, report_type.upper() + " 選股報表")
+            return render_template('report.html', table_html=table_html, title=title)
+        except Exception as e:
+            return f"Error reading report: {str(e)}", 500
+            
+    # For static assets like CSVs, serve them securely
+    directory, file = os.path.split(safe_path)
+    return send_from_directory(directory, file)
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)

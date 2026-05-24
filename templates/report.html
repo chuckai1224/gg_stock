@@ -1,0 +1,1135 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }} - GG Stock</title>
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- ApexCharts JS with CDN Fallbacks -->
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+    <script>
+        if (typeof ApexCharts === 'undefined') {
+            document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/apexcharts/3.45.1/apexcharts.min.js"><\/script>');
+        }
+    </script>
+    <style>
+        :root {
+            --bg-color: #0b0f19;
+            --panel-bg: rgba(22, 28, 45, 0.6);
+            --border-color: rgba(255, 255, 255, 0.08);
+            --text-color: #f3f4f6;
+            --text-muted: #9ca3af;
+            --primary: #00f2fe;
+            --secondary: #4facfe;
+            --success: #ef4444; /* Rise is Red in Taiwan */
+            --danger: #10b981;  /* Fall is Green in Taiwan */
+            --warning: #f59e0b;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', -apple-system, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(0, 242, 254, 0.1) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(79, 172, 254, 0.1) 0px, transparent 50%);
+            min-height: 100vh;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1400px;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        /* Header */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.5rem;
+            background: var(--panel-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        }
+
+        h1 {
+            font-size: 1.6rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.5px;
+        }
+
+        .actions {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .btn-back {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            text-decoration: none;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-back:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: var(--primary);
+        }
+
+        .search-box {
+            position: relative;
+        }
+
+        .search-box input {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border-color);
+            padding: 0.5rem 1rem;
+            padding-left: 2.2rem;
+            border-radius: 8px;
+            color: #fff;
+            font-size: 0.9rem;
+            outline: none;
+            width: 250px;
+            transition: all 0.2s;
+        }
+
+        .search-box input:focus {
+            border-color: var(--primary);
+            width: 320px;
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 0.8rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            pointer-events: none;
+        }
+
+        /* Table Card */
+        .table-card {
+            background: var(--panel-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 1.5rem;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+            overflow: hidden;
+        }
+
+        .table-container {
+            overflow-x: auto;
+            max-height: 70vh;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        /* Customize pandas generated table style */
+        table.dataframe {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 0.875rem;
+        }
+
+        table.dataframe th, table.dataframe td {
+            padding: 0.85rem 1rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            white-space: nowrap;
+        }
+
+        table.dataframe th {
+            background-color: rgba(15, 23, 42, 0.8);
+            color: var(--primary);
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            user-select: none;
+        }
+
+        table.dataframe th:hover {
+            color: #fff;
+        }
+
+        table.dataframe tr {
+            transition: all 0.2s;
+        }
+
+        table.dataframe tbody tr:hover {
+            background-color: rgba(255, 255, 255, 0.03);
+            box-shadow: inset 4px 0 0 var(--primary);
+        }
+
+        /* Hide column helper class */
+        .hidden-col {
+            display: none !important;
+        }
+
+        /* Interactive columns indicators */
+        .sort-asc::after { content: " ↑"; font-size: 0.75rem; }
+        .sort-desc::after { content: " ↓"; font-size: 0.75rem; }
+
+        /* Action buttons in table */
+        .btn-chart {
+            background: linear-gradient(135deg, var(--secondary), var(--primary));
+            border: none;
+            color: #0b0f19;
+            padding: 0.35rem 0.7rem;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            transition: all 0.2s;
+        }
+
+        .btn-chart:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 10px rgba(0, 242, 254, 0.4);
+        }
+
+        /* Modal popup overlay */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(8px);
+            z-index: 100;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+            opacity: 1;
+        }
+
+        .modal-content {
+            background: #0f172a;
+            border: 1px solid var(--border-color);
+            width: 90%;
+            max-width: 900px;
+            border-radius: 16px;
+            padding: 1.5rem;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            transform: scale(0.9);
+            transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .modal-overlay.active .modal-content {
+            transform: scale(1);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            padding-bottom: 0.75rem;
+        }
+
+        .modal-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .modal-close {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .modal-close:hover {
+            color: #fff;
+        }
+
+        /* Modal Tabs */
+        .tabs {
+            display: flex;
+            gap: 0.5rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            padding-bottom: 0.5rem;
+        }
+
+        .tab-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            padding: 0.5rem 1.2rem;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
+
+        .tab-btn:hover {
+            color: #fff;
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .tab-btn.active {
+            color: var(--primary);
+            background: rgba(0, 242, 254, 0.08);
+            border: 1px solid rgba(0, 242, 254, 0.15);
+        }
+
+        .tab-content {
+            display: none;
+            min-height: 420px;
+            position: relative;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Chart control row */
+        .chart-controls {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 0.5rem;
+        }
+
+        .toggle-group {
+            display: flex;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border-color);
+            padding: 2px;
+            border-radius: 6px;
+        }
+
+        .toggle-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            font-weight: 600;
+            padding: 0.3rem 0.8rem;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+
+        .toggle-btn.active {
+            background: linear-gradient(135deg, var(--secondary), var(--primary));
+            color: #0b0f19;
+        }
+
+        /* Apexcharts custom container styles */
+        .chart-container {
+            width: 100%;
+        }
+
+        .no-data-msg {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        /* Scrollbar styles */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.01);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header>
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <a href="/online/" class="btn-back">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+                    <span>回主控制台</span>
+                </a>
+                <h1>{{ title }}</h1>
+            </div>
+            <div class="actions">
+                <div class="search-box">
+                    <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    <input type="text" id="table-search" placeholder="搜尋代號或名稱...">
+                </div>
+            </div>
+        </header>
+
+        <!-- Report Table -->
+        <div class="table-card">
+            <div class="table-container">
+                {{ table_html|safe }}
+            </div>
+        </div>
+    </div>
+
+    <!-- Chart detail Modal -->
+    <div class="modal-overlay" id="detail-modal" onclick="closeModal(event)">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <div class="modal-title">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+                    <span id="modal-stock-title">個股技術圖表</span>
+                </div>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+
+            <!-- Tab Buttons -->
+            <div class="tabs">
+                <button class="tab-btn active" data-tab="kline" onclick="switchTab('kline', event)">📈 技術K線</button>
+                <button class="tab-btn" data-tab="chips" onclick="switchTab('chips', event)">👥 籌碼分布</button>
+                <button class="tab-btn" data-tab="inst" onclick="switchTab('inst', event)">🏢 法人動向</button>
+            </div>
+
+            <!-- Tab Content 1: K-Line (Daily & Weekly simultaneously) -->
+            <div class="tab-content active" id="tab-kline">
+                <div style="display: flex; flex-direction: column; gap: 1.5rem; max-height: 60vh; overflow-y: auto; padding-right: 0.5rem;">
+                    <!-- Daily K-line container -->
+                    <div style="background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.04); padding: 1rem; border-radius: 12px;">
+                        <h3 style="font-size: 0.9rem; color: var(--primary); margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem; font-weight: 600;">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                            <span>日 K 線圖與成交量</span>
+                        </h3>
+                        <div class="chart-container">
+                            <div id="chart-kline-candlestick"></div>
+                            <div id="chart-kline-volume" style="margin-top: -10px;"></div>
+                        </div>
+                    </div>
+                    <!-- Weekly K-line container -->
+                    <div style="background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.04); padding: 1rem; border-radius: 12px;">
+                        <h3 style="font-size: 0.9rem; color: var(--secondary); margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem; font-weight: 600;">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                            <span>週 K 線圖與成交量</span>
+                        </h3>
+                        <div class="chart-container">
+                            <div id="chart-kline-candlestick-week"></div>
+                            <div id="chart-kline-volume-week" style="margin-top: -10px;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab Content 2: Shareholders -->
+            <div class="tab-content" id="tab-chips">
+                <div class="chart-container">
+                    <div id="chart-shareholder-trend"></div>
+                </div>
+            </div>
+
+            <!-- Tab Content 3: Institutional Flows -->
+            <div class="tab-content" id="tab-inst">
+                <div class="chart-container">
+                    <div id="chart-institutional-flows"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Track rendered charts to prevent duplicates / memory leaks
+        let activeCharts = {
+            klineDayKline: null,
+            klineDayVolume: null,
+            klineWeekKline: null,
+            klineWeekVolume: null,
+            shareholder: null,
+            institutional: null
+        };
+        
+        let currentStockData = null;
+
+        // Columns definition map
+        let colMap = {};
+
+        // Document ready logic
+        document.addEventListener('DOMContentLoaded', () => {
+            const table = document.querySelector('table.dataframe');
+            if (!table) return;
+
+            // 1. Map columns and find index of K-line / chips data
+            const headers = table.querySelectorAll('thead th');
+            headers.forEach((th, idx) => {
+                const name = th.textContent.trim();
+                colMap[name] = idx;
+            });
+
+            // 2. Identify columns to hide
+            const columnsToHide = [
+                'day kline open', 'day kline high', 'day kline low', 'day kline close', 'day kline date', 'day kline vol',
+                'week kline open', 'week kline high', 'week kline low', 'week kline close', 'week kline date', 'week kline vol',
+                '股權日期', '大戶持股', '散戶持股',
+                'big3 date', '外資', '投信', '自營商', 'market'
+            ];
+
+            const hideIndices = columnsToHide.map(name => colMap[name]).filter(idx => idx !== undefined);
+
+            // 3. Inject Action Column (📊 K線與圖表) in the header
+            const th = document.createElement('th');
+            th.className = 'op-header';
+            th.textContent = '操作';
+            th.style.color = 'var(--primary)';
+            table.querySelector('thead tr').insertBefore(th, table.querySelector('thead tr').firstChild);
+
+            // 4. Update tbody rows: add Action buttons & add hide class to parsed columns
+            const rows = table.querySelectorAll('tbody tr');
+            rows.forEach(row => {
+                // Add action td
+                const td = document.createElement('td');
+                const btn = document.createElement('button');
+                btn.className = 'btn-chart';
+                btn.innerHTML = `
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+                    K線圖
+                `;
+                btn.addEventListener('click', () => openStockModal(row));
+                td.appendChild(btn);
+                row.insertBefore(td, row.firstChild);
+
+                // Add hidden class to data cells
+                hideIndices.forEach(idx => {
+                    // Shift index by 1 since we inserted the action column at index 0
+                    if (row.cells[idx + 1]) {
+                        row.cells[idx + 1].classList.add('hidden-col');
+                    }
+                });
+            });
+
+            // Hide the columns in the header too
+            hideIndices.forEach(idx => {
+                if (headers[idx]) {
+                    headers[idx].classList.add('hidden-col');
+                }
+            });
+
+            // 4.5 Format numbers (總分, psrS, and columns containing '增加比') to 2 decimal places
+            const formatIndices = [];
+            Object.keys(colMap).forEach(name => {
+                if (name === '總分' || name === 'psrS' || name.includes('增加比')) {
+                    formatIndices.push(colMap[name]);
+                }
+            });
+
+            rows.forEach(row => {
+                formatIndices.forEach(idx => {
+                    const cell = row.cells[idx + 1];
+                    if (cell) {
+                        const val = parseFloat(cell.textContent.trim());
+                        if (!isNaN(val)) {
+                            cell.textContent = val.toFixed(2);
+                        }
+                    }
+                });
+            });
+
+            // 4.6 Style the "總分" cell based on its value (>4, >0, <=0) following Taiwan stock market standards (Red rise, Green fall)
+            const scoreIdx = colMap['總分'];
+            if (scoreIdx !== undefined) {
+                rows.forEach(row => {
+                    const cell = row.cells[scoreIdx + 1];
+                    if (cell) {
+                        const val = parseFloat(cell.textContent.trim());
+                        if (!isNaN(val)) {
+                            if (val > 4) {
+                                cell.innerHTML = `<span style="color: #ef4444; font-weight: 700; padding: 0.2rem 0.5rem; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 6px;">${val.toFixed(2)}</span>`;
+                            } else if (val > 0) {
+                                cell.innerHTML = `<span style="color: #f97316; font-weight: 700; padding: 0.2rem 0.5rem; background: rgba(249, 115, 22, 0.15); border: 1px solid rgba(249, 115, 22, 0.3); border-radius: 6px;">${val.toFixed(2)}</span>`;
+                            } else {
+                                cell.innerHTML = `<span style="color: #10b981; font-weight: 500; padding: 0.2rem 0.5rem; background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 6px;">${val.toFixed(2)}</span>`;
+                            }
+                        }
+                    }
+                });
+            }
+
+            // 5. Initialize search and sorting
+            initSearch();
+            initSorting(table);
+        });
+
+        // Search feature
+        function initSearch() {
+            document.getElementById('table-search').addEventListener('input', function(e) {
+                const query = e.target.value.toLowerCase().trim();
+                const rows = document.querySelectorAll('table.dataframe tbody tr');
+                rows.forEach(row => {
+                    // Search in stock_id (usually cell 1) and stock_name (usually cell 2)
+                    const stockId = row.cells[1] ? row.cells[1].textContent.toLowerCase() : '';
+                    const stockName = row.cells[2] ? row.cells[2].textContent.toLowerCase() : '';
+                    if (stockId.includes(query) || stockName.includes(query)) {
+                        row.style.display = '';
+                    } else {
+                        row.style.display = 'none';
+                    }
+                });
+            });
+        }
+
+        // Table Sorting feature
+        function initSorting(table) {
+            const headers = table.querySelectorAll('thead th');
+            headers.forEach((header, index) => {
+                // Skip the "操作" column
+                if (index === 0) return;
+                header.style.cursor = 'pointer';
+                header.addEventListener('click', () => {
+                    const currentOrder = header.dataset.order || 'none';
+                    const newOrder = currentOrder === 'asc' ? 'desc' : 'asc';
+                    
+                    sortTable(table, index, newOrder);
+                    
+                    // Reset labels
+                    headers.forEach(h => {
+                        h.dataset.order = 'none';
+                        h.classList.remove('sort-asc', 'sort-desc');
+                    });
+                    
+                    header.dataset.order = newOrder;
+                    header.classList.add(newOrder === 'asc' ? 'sort-asc' : 'sort-desc');
+                });
+            });
+        }
+
+        function sortTable(table, colIndex, order) {
+            const tbody = table.querySelector('tbody');
+            const rows = Array.from(tbody.querySelectorAll('tr'));
+            
+            rows.sort((a, b) => {
+                const valA = a.cells[colIndex].textContent.trim();
+                const valB = b.cells[colIndex].textContent.trim();
+                
+                // Parse numbers (handling percent, commas, etc)
+                const cleanA = valA.replace(/%|,/g, '');
+                const cleanB = valB.replace(/%|,/g, '');
+                const numA = parseFloat(cleanA);
+                const numB = parseFloat(cleanB);
+                
+                if (!isNaN(numA) && !isNaN(numB)) {
+                    return order === 'asc' ? numA - numB : numB - numA;
+                }
+                
+                // fallback to string comparison
+                return order === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+            });
+            
+            rows.forEach(row => tbody.appendChild(row));
+        }
+
+        // Parse utility functions
+        function parseCsvList(str) {
+            if (!str || str.trim() === '' || str.trim() === 'NaN' || str.trim() === 'None' || str.trim() === 'null') return [];
+            return str.split(',').map(v => v.trim());
+        }
+
+        function parseCsvFloatList(str) {
+            return parseCsvList(str).map(v => {
+                const f = parseFloat(v);
+                return isNaN(f) ? null : f;
+            });
+        }
+
+        function parseDate(dateStr) {
+            if (!dateStr) return 0;
+            const parts = dateStr.trim().split('-');
+            if (parts.length === 3) {
+                let y = parseInt(parts[0]);
+                const m = parseInt(parts[1]) - 1;
+                const d = parseInt(parts[2]);
+                // Convert yy-mm-dd to 20yy-mm-dd
+                const year = y < 100 ? 2000 + y : y;
+                return new Date(year, m, d).getTime();
+            }
+            return new Date(dateStr).getTime();
+        }
+
+        // Open stock detail modal
+        function openStockModal(row) {
+            try {
+                // Extract raw data from row cells (shifted by 1 due to Action col)
+                const getVal = (name) => {
+                    const idx = colMap[name];
+                    if (idx === undefined) return '';
+                    const cell = row.cells[idx + 1];
+                    return cell ? cell.textContent.trim() : '';
+                };
+
+                const stockId = getVal('stock_id');
+                const stockName = getVal('stock_name');
+                const market = getVal('market') || '';
+
+                document.getElementById('modal-stock-title').innerHTML = `
+                    📊 <span>${stockId}</span> ${stockName} <span style="font-size: 0.8rem; color: var(--text-muted); padding: 0.2rem 0.5rem; background: rgba(255,255,255,0.05); border-radius: 4px; border: 1px solid var(--border-color);">${market.toUpperCase()}</span>
+                `;
+
+                // Pack stock data object
+                currentStockData = {
+                    id: stockId,
+                    name: stockName,
+                    market: market,
+                    // Day K-line
+                    dayDates: parseCsvList(getVal('day kline date')),
+                    dayOpen: parseCsvFloatList(getVal('day kline open')),
+                    dayHigh: parseCsvFloatList(getVal('day kline high')),
+                    dayLow: parseCsvFloatList(getVal('day kline low')),
+                    dayClose: parseCsvFloatList(getVal('day kline close')),
+                    dayVol: parseCsvFloatList(getVal('day kline vol')),
+                    // Week K-line
+                    weekDates: parseCsvList(getVal('week kline date')),
+                    weekOpen: parseCsvFloatList(getVal('week kline open')),
+                    weekHigh: parseCsvFloatList(getVal('week kline high')),
+                    weekLow: parseCsvFloatList(getVal('week kline low')),
+                    weekClose: parseCsvFloatList(getVal('week kline close')),
+                    weekVol: parseCsvFloatList(getVal('week kline vol')),
+                    // Shareholders
+                    chipDates: parseCsvList(getVal('股權日期')),
+                    bigHolders: parseCsvFloatList(getVal('大戶持股')),
+                    smallHolders: parseCsvFloatList(getVal('散戶持股')),
+                    // Institutional flows
+                    instDates: parseCsvList(getVal('big3 date')),
+                    foreign: parseCsvFloatList(getVal('外資')),
+                    it: parseCsvFloatList(getVal('投信')),
+                    prop: parseCsvFloatList(getVal('自營商'))
+                };
+
+                // Open modal
+                const modal = document.getElementById('detail-modal');
+                modal.classList.add('active');
+
+                // Trigger default tab (kline)
+                switchTab('kline');
+            } catch (err) {
+                alert("開啟圖表時發生錯誤，請按 F12 打開開發者控制台查看詳細日誌。\n錯誤資訊: " + err.message);
+                console.error("openStockModal execution failed:", err);
+            }
+        }
+
+        function closeModal(e) {
+            const modal = document.getElementById('detail-modal');
+            modal.classList.remove('active');
+            
+            // Clean up charts to avoid resource leaks
+            destroyAllCharts();
+        }
+
+        function destroyAllCharts() {
+            Object.keys(activeCharts).forEach(key => {
+                if (activeCharts[key]) {
+                    activeCharts[key].destroy();
+                    activeCharts[key] = null;
+                }
+            });
+        }
+
+        // Tab selection switching
+        function switchTab(tabName, event) {
+            // Update tab button UI
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // Find and activate button by tab attribute
+            const activeBtn = document.querySelector(`.tab-btn[data-tab="${tabName}"]`);
+            if (activeBtn) {
+                activeBtn.classList.add('active');
+            } else if (event && event.currentTarget) {
+                event.currentTarget.classList.add('active');
+            }
+
+            // Show active content
+            document.querySelectorAll('.tab-content').forEach(c => {
+                c.classList.remove('active');
+            });
+            document.getElementById(`tab-${tabName}`).classList.add('active');
+
+            // Render matching charts
+            setTimeout(() => {
+                if (tabName === 'kline') {
+                    renderKCharts();
+                } else if (tabName === 'chips') {
+                    renderChipCharts();
+                } else if (tabName === 'inst') {
+                    renderInstCharts();
+                }
+            }, 100);
+        }
+
+        // Helper to render a K-line + Volume Chart Group
+        function renderChartGroup(dates, opens, highs, lows, closes, vols, candlestickElId, volumeElId, groupName, activeChartKeyPrefix) {
+            const targetElKline = document.getElementById(candlestickElId);
+            const targetElVol = document.getElementById(volumeElId);
+
+            if (!dates || dates.length === 0 || !opens || opens.length === 0) {
+                targetElKline.innerHTML = `
+                    <div class="no-data-msg" style="position: relative; top: 0; left: 0; transform: none; padding: 2rem;">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                        <span>無足夠的 K 線數據可供繪製。</span>
+                    </div>`;
+                targetElVol.innerHTML = '';
+                return;
+            }
+
+            targetElKline.innerHTML = '';
+            targetElVol.innerHTML = '';
+
+            const ohlcData = [];
+            const volData = [];
+
+            for (let i = 0; i < dates.length; i++) {
+                const ts = parseDate(dates[i]);
+                if (opens[i] !== null && highs[i] !== null && lows[i] !== null && closes[i] !== null) {
+                    ohlcData.push({
+                        x: ts,
+                        y: [opens[i], highs[i], lows[i], closes[i]]
+                    });
+                }
+                if (vols[i] !== null) {
+                    const isUp = closes[i] >= opens[i];
+                    volData.push({
+                        x: ts,
+                        y: Math.round(vols[i]),
+                        fillColor: isUp ? 'rgba(239, 68, 68, 0.7)' : 'rgba(16, 185, 129, 0.7)'
+                    });
+                }
+            }
+
+            const klineOptions = {
+                series: [{
+                    name: 'K線',
+                    data: ohlcData
+                }],
+                chart: {
+                    type: 'candlestick',
+                    height: 220,
+                    id: candlestickElId,
+                    group: groupName,
+                    toolbar: { show: false },
+                    animations: { enabled: false }
+                },
+                plotOptions: {
+                    candlestick: {
+                        colors: {
+                            upward: '#ef4444',
+                            downward: '#10b981'
+                        },
+                        wick: { useFillColor: true }
+                    }
+                },
+                xaxis: {
+                    type: 'datetime',
+                    labels: { show: false, style: { colors: '#9ca3af' } },
+                    axisBorder: { show: false },
+                    axisTicks: { show: false }
+                },
+                yaxis: {
+                    tooltip: { enabled: true },
+                    labels: {
+                        style: { colors: '#9ca3af' },
+                        formatter: val => val.toFixed(1)
+                    }
+                },
+                grid: { borderColor: 'rgba(255,255,255,0.06)' },
+                tooltip: { shared: true, intersect: false, theme: 'dark' }
+            };
+
+            const volOptions = {
+                series: [{
+                    name: '成交量',
+                    data: volData
+                }],
+                chart: {
+                    type: 'bar',
+                    height: 100,
+                    id: volumeElId,
+                    group: groupName,
+                    toolbar: { show: false },
+                    animations: { enabled: false }
+                },
+                dataLabels: {
+                    enabled: false
+                },
+                xaxis: {
+                    type: 'datetime',
+                    labels: { style: { colors: '#9ca3af' } }
+                },
+                yaxis: {
+                    labels: {
+                        style: { colors: '#9ca3af' },
+                        formatter: val => val >= 1000 ? (val / 1000).toFixed(0) + 'K' : val
+                    }
+                },
+                grid: { borderColor: 'rgba(255,255,255,0.06)' },
+                tooltip: { shared: true, intersect: false, theme: 'dark' }
+            };
+
+            if (typeof ApexCharts === 'undefined') {
+                targetElKline.innerHTML = '<div style="color: var(--warning); padding: 1rem;">❌ 無法載入圖表套件，請檢查網路連線。</div>';
+                return;
+            }
+
+            const klineChart = new ApexCharts(targetElKline, klineOptions);
+            const volChart = new ApexCharts(targetElVol, volOptions);
+
+            klineChart.render();
+            volChart.render();
+
+            activeCharts[activeChartKeyPrefix + 'Kline'] = klineChart;
+            activeCharts[activeChartKeyPrefix + 'Volume'] = volChart;
+        }
+
+        // RENDER: Daily and Weekly K-Line & Volume Charts Simultaneously
+        function renderKCharts() {
+            // Clean up previous charts
+            if (activeCharts.klineDayKline) activeCharts.klineDayKline.destroy();
+            if (activeCharts.klineDayVolume) activeCharts.klineDayVolume.destroy();
+            if (activeCharts.klineWeekKline) activeCharts.klineWeekKline.destroy();
+            if (activeCharts.klineWeekVolume) activeCharts.klineWeekVolume.destroy();
+            
+            activeCharts.klineDayKline = null;
+            activeCharts.klineDayVolume = null;
+            activeCharts.klineWeekKline = null;
+            activeCharts.klineWeekVolume = null;
+
+            // Render Day Group
+            renderChartGroup(
+                currentStockData.dayDates,
+                currentStockData.dayOpen,
+                currentStockData.dayHigh,
+                currentStockData.dayLow,
+                currentStockData.dayClose,
+                currentStockData.dayVol,
+                'chart-kline-candlestick',
+                'chart-kline-volume',
+                'day-group',
+                'klineDay'
+            );
+
+            // Render Week Group
+            renderChartGroup(
+                currentStockData.weekDates,
+                currentStockData.weekOpen,
+                currentStockData.weekHigh,
+                currentStockData.weekLow,
+                currentStockData.weekClose,
+                currentStockData.weekVol,
+                'chart-kline-candlestick-week',
+                'chart-kline-volume-week',
+                'week-group',
+                'klineWeek'
+            );
+        }
+
+        // RENDER: Shareholder distribution Line Chart
+        function renderChipCharts() {
+            if (activeCharts.shareholder) activeCharts.shareholder.destroy();
+            activeCharts.shareholder = null;
+
+            const targetEl = document.getElementById('chart-shareholder-trend');
+            const dates = currentStockData.chipDates;
+            const bigs = currentStockData.bigHolders;
+            const smalls = currentStockData.smallHolders;
+
+            if (!dates || dates.length === 0 || !bigs || bigs.length === 0) {
+                targetEl.innerHTML = `
+                    <div class="no-data-msg">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                        <span>無股權分散 (集保籌碼) 數據。</span>
+                    </div>`;
+                return;
+            }
+
+            targetEl.innerHTML = '';
+
+            const bigSeries = [];
+            const smallSeries = [];
+
+            // TDCC data is weekly. Order in python is usually latest to oldest, so let's reverse it to show chronologically
+            const revDates = [...dates].reverse();
+            const revBigs = [...bigs].reverse();
+            const revSmalls = [...smalls].reverse();
+
+            for (let i = 0; i < revDates.length; i++) {
+                const ts = parseDate(revDates[i]);
+                if (revBigs[i] !== null) {
+                    bigSeries.push({ x: ts, y: revBigs[i] });
+                }
+                if (revSmalls[i] !== null) {
+                    smallSeries.push({ x: ts, y: revSmalls[i] });
+                }
+            }
+
+            const options = {
+                series: [
+                    { name: '大戶持股比例 (>1000張)', data: bigSeries },
+                    { name: '散戶持股比例 (<400張)', data: smallSeries }
+                ],
+                chart: {
+                    type: 'line',
+                    height: 380,
+                    toolbar: { show: false },
+                    animations: { enabled: true }
+                },
+                colors: ['#ef4444', '#3b82f6'], // Red & Blue
+                stroke: { width: 3, curve: 'smooth' },
+                xaxis: {
+                    type: 'datetime',
+                    labels: { style: { colors: '#9ca3af' } }
+                },
+                yaxis: {
+                    title: { text: '持股百分比 (%)', style: { color: '#f3f4f6' } },
+                    labels: {
+                        style: { colors: '#9ca3af' },
+                        formatter: val => val.toFixed(2) + '%'
+                    }
+                },
+                grid: { borderColor: 'rgba(255,255,255,0.06)' },
+                tooltip: { theme: 'dark' }
+            };
+
+            activeCharts.shareholder = new ApexCharts(targetEl, options);
+            activeCharts.shareholder.render();
+        }
+
+        // RENDER: Institutional flows Column Chart
+        function renderInstCharts() {
+            if (activeCharts.institutional) activeCharts.institutional.destroy();
+            activeCharts.institutional = null;
+
+            const targetEl = document.getElementById('chart-institutional-flows');
+            const dates = currentStockData.instDates;
+            const foreign = currentStockData.foreign;
+            const it = currentStockData.it;
+            const prop = currentStockData.prop;
+
+            if (!dates || dates.length === 0) {
+                targetEl.innerHTML = `
+                    <div class="no-data-msg">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="9" x2="15" y2="15"></line><line x1="15" y1="9" x2="9" y2="15"></line></svg>
+                        <span>無三大法人買賣超數據。</span>
+                    </div>`;
+                return;
+            }
+
+            targetEl.innerHTML = '';
+
+            // Reverse to show chronologically
+            const revDates = [...dates].reverse();
+            const revForeign = [...foreign].reverse();
+            const revIT = [...it].reverse();
+            const revProp = [...prop].reverse();
+
+            const foreignSeries = [];
+            const itSeries = [];
+            const propSeries = [];
+
+            for (let i = 0; i < revDates.length; i++) {
+                const ts = parseDate(revDates[i]);
+                foreignSeries.push({ x: ts, y: revForeign[i] !== null ? Math.round(revForeign[i] / 1000) : 0 }); // Unit: 張
+                itSeries.push({ x: ts, y: revIT[i] !== null ? Math.round(revIT[i] / 1000) : 0 });
+                propSeries.push({ x: ts, y: revProp[i] !== null ? Math.round(revProp[i] / 1000) : 0 });
+            }
+
+            const options = {
+                series: [
+                    { name: '外資 (張)', data: foreignSeries },
+                    { name: '投信 (張)', data: itSeries },
+                    { name: '自營商 (張)', data: propSeries }
+                ],
+                chart: {
+                    type: 'bar',
+                    height: 380,
+                    toolbar: { show: false }
+                },
+                dataLabels: {
+                    enabled: false
+                },
+                colors: ['#4facfe', '#e11d48', '#f59e0b'], // Blue, Rose/Red, Orange
+                plotOptions: {
+                    bar: {
+                        horizontal: false,
+                        columnWidth: '55%',
+                        endingShape: 'rounded'
+                    }
+                },
+                xaxis: {
+                    type: 'datetime',
+                    labels: { style: { colors: '#9ca3af' } }
+                },
+                yaxis: {
+                    title: { text: '買賣超量 (張)', style: { color: '#f3f4f6' } },
+                    labels: {
+                        style: { colors: '#9ca3af' },
+                        formatter: val => (val > 0 ? '+' : '') + Math.round(val).toLocaleString()
+                    }
+                },
+                grid: { borderColor: 'rgba(255,255,255,0.06)' },
+                tooltip: { theme: 'dark' }
+            };
+
+            activeCharts.institutional = new ApexCharts(targetEl, options);
+            activeCharts.institutional.render();
+        }
+    </script>
+</body>
+</html>

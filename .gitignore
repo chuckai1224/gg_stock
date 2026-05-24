@@ -2,7 +2,7 @@
 __pycache__/
 *.pyc
 
-# 資料 / 資料庫(由下載腳本產生)
+# 資料 / 資料庫 (由下載腳本產生)
 data/
 sql/
 csv/
@@ -16,6 +16,11 @@ log/
 
 # 編輯器 / 環境
 .claude/
+venv/
+.venv/
+.idea/
+.vscode/
+codex_full_access.cmd
 
 # 資料備份打包
 *.tar.gz
