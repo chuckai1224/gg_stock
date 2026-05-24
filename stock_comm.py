@@ -139,8 +139,7 @@ def get_stock_df(stock_no):
         return pd.DataFrame()
  
     dtypes= {'vol':np.int64, 'cash': np.int64,'open':np.float64, 'high': np.float64,'low':np.float64, 'close': np.float64,'diff':np.float64}  
-    dateparse = lambda dates: pd.datetime.strptime(dates,'%Y-%m-%d')
-    df = pd.read_csv(dstpath,encoding = 'utf-8',parse_dates=['date'], date_parser=dateparse,dtype=dtypes)
+    df = pd.read_csv(dstpath,encoding = 'utf-8',parse_dates=['date'],dtype=dtypes)
     #df.drop('cash', axis=1, inplace = True)
     #df.drop('Tnumber', axis=1, inplace = True)
     df=df.ffill()
