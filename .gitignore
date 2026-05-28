@@ -13,6 +13,8 @@ final/
 error/
 out/
 log/
+logs/
+diagnose.py
 
 # 編輯器 / 環境
 .claude/
