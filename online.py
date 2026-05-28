@@ -264,7 +264,7 @@ def serve_final_files(filename):
     if filename.endswith('.html'):
         try:
             with open(safe_path, 'r', encoding='utf-8') as f:
-                table_html = f.read()
+                content = f.read()
             report_type = filename.replace('_good.html', '')
             title_map = {
                 'fund': '投信追蹤好股 (Fund)',
@@ -273,6 +273,14 @@ def serve_final_files(filename):
                 'director': '董監持股好股 (Director)'
             }
             title = title_map.get(report_type, report_type.upper() + " 選股報表")
+            # extract only the <table> if file is already a full rendered page
+            if '<table' in content and '<!DOCTYPE' in content:
+                from bs4 import BeautifulSoup
+                soup = BeautifulSoup(content, 'html.parser')
+                tbl = soup.find('table')
+                table_html = str(tbl) if tbl else content
+            else:
+                table_html = content
             return render_template('report.html', table_html=table_html, title=title)
         except Exception as e:
             return f"Error reading report: {str(e)}", 500

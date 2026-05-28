@@ -766,8 +766,28 @@ def gen_gg_buy_list(date,rev_date,method):
         out.insert(16,'投本比',c)
     check_dst_folder('final')
     pd.set_option('display.max_colwidth', None)
-    out.to_html('final/{}_good.html'.format(method),escape=False,index=False,border=2,index_names=False)
+    table_html = out.to_html(escape=False, index=False, border=2, index_names=False)
     pd.reset_option('display.max_colwidth')
+
+    title_map = {
+        'fund': '投信追蹤好股 (Fund)',
+        'pointK': '技術分析好股 (PointK)',
+        'revenue': '營收強勢好股 (Revenue)',
+        'director': '董監持股好股 (Director)',
+    }
+    title = title_map.get(method, method.upper() + ' 選股報表')
+
+    try:
+        from jinja2 import Environment, FileSystemLoader
+        env = Environment(loader=FileSystemLoader('templates'))
+        tpl = env.get_template('report.html')
+        rendered = tpl.render(table_html=table_html, title=title)
+        with open('final/{}_good.html'.format(method), 'w', encoding='utf-8') as f:
+            f.write(rendered)
+    except Exception:
+        with open('final/{}_good.html'.format(method), 'w', encoding='utf-8') as f:
+            f.write(table_html)
+
     out.to_csv('final/{}_good_{}.csv'.format(method,date.strftime('%Y%m%d')),encoding='utf-8', index=False)
     
     
