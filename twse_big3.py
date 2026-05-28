@@ -173,7 +173,7 @@ def generate_twse_3big(startdate,enddate):
         df_s.dropna(inplace=True)
         #print(lno(),df_s['date'].dtype)
         #print(lno(),res_df['date'].dtype)
-        df_s=df_s.append(res_df,ignore_index=True)
+        df_s=pd.concat([df_s, res_df], ignore_index=True)
         #print(lno(),df_s[['date','自營商total']])
         df_s.drop_duplicates(subset=['date'],keep='first',inplace=True)
         #print(lno(),df_s[['date','外資total','投信total','自營商total']])
@@ -439,7 +439,7 @@ class twse_big3:
             df_prop_self.loc[date]=df.loc['自營商']
             df_sum.loc[date] = df.loc['合計']    
         df_fund.loc[date] = df.loc['投信']
-        df_tt = pd.read_sql('sum', self.engine, index_col='table_index', parse_dates=['table_index'])   
+        df_tt = pd.read_sql('SELECT * FROM "sum"', self.engine, index_col='table_index', parse_dates=['table_index'])
         if date in df_tt.index:
             print(lno(),"repeat",date)
             return

@@ -174,7 +174,7 @@ def generate_otc_3big(startdate,enddate):
         df_s.dropna(inplace=True)
         #print(lno(),df_s['date'].dtype)
         #print(lno(),res_df['date'].dtype)
-        df_s=df_s.append(res_df,ignore_index=True)
+        df_s=pd.concat([df_s, res_df], ignore_index=True)
         #print(lno(),df_s[['date','自營商total']])
         df_s.drop_duplicates(subset=['date'],keep='first',inplace=True)
         #print(lno(),df_s[['date','外資total','投信total','自營商total']])
