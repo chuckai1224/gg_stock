@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 #from __future__ import unicode_literals
 import io
 import csv
@@ -367,8 +367,7 @@ def download_big8():
             df_fin.to_csv(dstpath,encoding='utf-8', index=False)
         #產生 日期,
     else:
-        print(lno(),'8大資料 有問題')
-        input('press key to cont:')  
+        print(lno(),'8大資料 有問題 (跳過)')
             
 
 def get_big8_df():
@@ -439,8 +438,11 @@ class twse_big3:
             df_prop_self.loc[date]=df.loc['自營商']
             df_sum.loc[date] = df.loc['合計']    
         df_fund.loc[date] = df.loc['投信']
-        df_tt = pd.read_sql('SELECT * FROM "sum"', self.engine, index_col='table_index', parse_dates=['table_index'])
-        if date in df_tt.index:
+        try:
+            df_tt = pd.read_sql('SELECT * FROM "sum"', self.engine, index_col='table_index', parse_dates=['table_index'])
+        except Exception:
+            df_tt = pd.DataFrame()
+        if not df_tt.empty and date in df_tt.index:
             print(lno(),"repeat",date)
             return
         print(lno(),df_fini)    
@@ -523,10 +525,78 @@ class twse_big3:
     def get_prop_self_df(self):
         df = pd.read_sql('prop_self', self.engine, index_col='table_index', parse_dates=['table_index'])   
         return df        
+
+    def rebuild_db_from_csv_file(self):
+        csv_file = 'csv/big3/big3_data.csv'
+        if not os.path.exists(csv_file):
+            print("big3_data.csv not found")
+            return
+        df_s = pd.read_csv(csv_file, encoding='utf-8')
+        df_s.dropna(subset=['date'], inplace=True)
+        df_s['date'] = pd.to_datetime(df_s['date'])
+        df_s.set_index('date', inplace=True)
+        
+        def to_int(val):
+            if pd.isna(val):
+                return 0
+            if isinstance(val, str):
+                val = val.replace(',', '').strip()
+            try:
+                return np.int64(float(val))
+            except Exception:
+                return 0
+
+        for col in df_s.columns:
+            df_s[col] = df_s[col].apply(to_int)
+        
+        df_fini = pd.DataFrame(index=df_s.index)
+        df_fini['買進金額'] = df_s['外資buy']
+        df_fini['賣出金額'] = df_s['外資sell']
+        df_fini['買賣差額'] = df_s['外資total']
+        
+        df_fund = pd.DataFrame(index=df_s.index)
+        df_fund['買進金額'] = df_s['投信buy']
+        df_fund['賣出金額'] = df_s['投信sell']
+        df_fund['買賣差額'] = df_s['投信total']
+        
+        df_prop_hedge = pd.DataFrame(index=df_s.index)
+        df_prop_hedge['買進金額'] = df_s['自營商避超buy'] if '自營商避超buy' in df_s.columns else df_s['自營商避險buy']
+        df_prop_hedge['賣出金額'] = df_s['自營商避超sell'] if '自營商避超sell' in df_s.columns else df_s['自營商避險sell']
+        df_prop_hedge['買賣差額'] = df_s['自營商避超total'] if '自營商避超total' in df_s.columns else df_s['自營商避險total']
+        
+        df_prop_self = pd.DataFrame(index=df_s.index)
+        df_prop_self['買進金額'] = df_s['自營商buy']
+        df_prop_self['賣出金額'] = df_s['自營商sell']
+        df_prop_self['買賣差額'] = df_s['自營商total']
+        
+        df_fini_prop = pd.DataFrame(index=df_s.index)
+        df_fini_prop['買進金額'] = df_s['外資自營商buy']
+        df_fini_prop['賣出金額'] = df_s['外資自營商sell']
+        df_fini_prop['買賣差額'] = df_s['外資自營商total']
+        
+        df_sum = pd.DataFrame(index=df_s.index)
+        df_sum['買進金額'] = df_s['總buy']
+        df_sum['賣出金額'] = df_s['總sell']
+        df_sum['買賣差額'] = df_s['總total']
+        
+        df_fini.sort_index(ascending=True, inplace=True)
+        df_fund.sort_index(ascending=True, inplace=True)
+        df_prop_hedge.sort_index(ascending=True, inplace=True)
+        df_prop_self.sort_index(ascending=True, inplace=True)
+        df_fini_prop.sort_index(ascending=True, inplace=True)
+        df_sum.sort_index(ascending=True, inplace=True)
+        
+        df_fini.to_sql('fini', self.engine, if_exists='replace', index_label='table_index', chunksize=10)
+        df_fund.to_sql('fund', self.engine, if_exists='replace', index_label='table_index', chunksize=10)
+        df_prop_hedge.to_sql('prop_hedge', self.engine, if_exists='replace', index_label='table_index', chunksize=10)
+        df_prop_self.to_sql('prop_self', self.engine, if_exists='replace', index_label='table_index', chunksize=10)
+        df_fini_prop.to_sql('fini_prop', self.engine, if_exists='replace', index_label='table_index', chunksize=10)
+        df_sum.to_sql('sum', self.engine, if_exists='replace', index_label='table_index', chunksize=10)
+        print("Successfully rebuilt twse_big3.db from csv/big3/big3_data.csv")
+
 def test_sql():
-    big3=twse_big3()
-    #big3.csv2sql_all()
-    big3.csv2sql_day(datetime(2019, 10, 22))
+    big3 = twse_big3()
+    big3.rebuild_db_from_csv_file()
 def save_sql_day(date):
     big3=twse_big3()
     big3.csv2sql_day(date)
