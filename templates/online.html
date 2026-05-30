@@ -382,7 +382,7 @@
                     <span class="control-label">執行選股腳本 (gg_stock.py)</span>
                     <span class="control-desc">篩選出強勢股、投信股、董監持股增加或營收暴增股。</span>
                     <div class="input-row" style="margin-top: 0.5rem;">
-                        <input type="text" id="picker-date" value="20260522" placeholder="日期格式 YYYYMMDD" style="flex: 2;">
+                        <input type="text" id="picker-date" placeholder="日期格式 YYYYMMDD" style="flex: 2;">
                         <select id="picker-mode" style="flex: 1.5;">
                             <option value="gg">全部 (gg)</option>
                             <option value="fund">投信 (fund)</option>
@@ -479,6 +479,15 @@
 
     <script>
         let pollInterval = null;
+
+        // 預設日期為今天
+        (function() {
+            const d = new Date();
+            const today = d.getFullYear().toString()
+                + String(d.getMonth() + 1).padStart(2, '0')
+                + String(d.getDate()).padStart(2, '0');
+            document.getElementById('picker-date').value = today;
+        })();
 
         function updateStatusUI(status) {
             const badge = document.getElementById('main-status');
