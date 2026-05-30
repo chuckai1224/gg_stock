@@ -788,7 +788,7 @@ def gen_gg_buy_list(date,rev_date,method):
         with open('final/{}_good.html'.format(method), 'w', encoding='utf-8') as f:
             f.write(table_html)
 
-    out.to_csv('final/{}_good_{}.csv'.format(method,date.strftime('%Y%m%d')),encoding='utf-8', index=False)
+    out.to_csv('final/{}_good_{}.csv'.format(method,date.strftime('%Y%m%d')),encoding='utf-8-sig', index=False)
     
     
         
