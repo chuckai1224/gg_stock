@@ -708,7 +708,9 @@ def gen_pointK_list(date):
     return d    
  
 def gen_fund_ratio_list(date):
-    df=stock_big3.get_stock_big3_date_df(date) 
+    df=stock_big3.get_stock_big3_date_df(date)
+    if df.empty:
+        return pd.DataFrame()
     def check_fund_skip_stock(r):
         if len(r['證券代號'])!=4:
             return 0 
