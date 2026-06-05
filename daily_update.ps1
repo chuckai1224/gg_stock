@@ -25,42 +25,42 @@ $log = "logs\daily_$today.log"
 
 Write-Host "[1/5] crawl $today ..."
 if ($isToday) {
-    & $python crawl.py 2>&1 | Tee-Object -Append $log
+    & $python crawl.py 2>&1 | Tee-Object -Append -FilePath $log -Encoding utf8
 } else {
-    & $python crawl.py $y $m $d 2>&1 | Tee-Object -Append $log
+    & $python crawl.py $y $m $d 2>&1 | Tee-Object -Append -FilePath $log -Encoding utf8
 }
 
 Write-Host "[2/5] twse_big3 $today ..."
 if ($isToday) {
-    & $python twse_big3.py 2>&1 | Tee-Object -Append $log
+    & $python twse_big3.py 2>&1 | Tee-Object -Append -FilePath $log -Encoding utf8
 } else {
-    & $python twse_big3.py -d $today 2>&1 | Tee-Object -Append $log
+    & $python twse_big3.py -d $today 2>&1 | Tee-Object -Append -FilePath $log -Encoding utf8
 }
 
 Write-Host "[3/5] otc_big3 $today ..."
 if ($isToday) {
-    & $python otc_big3.py 2>&1 | Tee-Object -Append $log
+    & $python otc_big3.py 2>&1 | Tee-Object -Append -FilePath $log -Encoding utf8
 } else {
-    & $python otc_big3.py -d $today $today 2>&1 | Tee-Object -Append $log
+    & $python otc_big3.py -d $today $today 2>&1 | Tee-Object -Append -FilePath $log -Encoding utf8
 }
 
 Write-Host "[4/5] pe_networth $today ..."
 if ($isToday) {
-    & $python pe_networth_yeild.py 2>&1 | Tee-Object -Append $log
+    & $python pe_networth_yeild.py 2>&1 | Tee-Object -Append -FilePath $log -Encoding utf8
 } else {
-    & $python pe_networth_yeild.py -d $today 2>&1 | Tee-Object -Append $log
+    & $python pe_networth_yeild.py -d $today 2>&1 | Tee-Object -Append -FilePath $log -Encoding utf8
 }
 
 # TDCC: run manually on Fridays
-# & $python tdcc_get.py 2>&1 | Tee-Object -Append $log
+# & $python tdcc_get.py 2>&1 | Tee-Object -Append -FilePath $log -Encoding utf8
 
 Write-Host "[5/5] gg_stock $today ..."
 if ($isToday) {
-    & $python gg_stock.py 2>&1 | Tee-Object -Append $log
+    & $python gg_stock.py 2>&1 | Tee-Object -Append -FilePath $log -Encoding utf8
 } else {
-    & $python gg_stock.py gg $today 2>&1 | Tee-Object -Append $log
+    & $python gg_stock.py gg $today 2>&1 | Tee-Object -Append -FilePath $log -Encoding utf8
 }
 
-"===== done =====" | Tee-Object -Append $log
+"===== done =====" | Tee-Object -Append -FilePath $log -Encoding utf8
 Write-Host "done. log: $log"
 Start-Process "final\revenue_good.html"
