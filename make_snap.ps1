@@ -1,0 +1,1 @@
+.\venv\Scripts\python.exe make_snapshot.py
