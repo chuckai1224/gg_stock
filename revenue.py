@@ -403,25 +403,25 @@ class income:
         if len(df) == 0:
             print(lno(), 'no revenue rows')
             return
-        # 資料年月:民國 YYYMM -> 西元
-        ym = str(df['資料年月'].dropna().iloc[0]).strip()
-        year = int(ym[:-2]) + 1911
-        month = int(ym[-2:])
-        df_out = df[cols].copy()
-        # 數值欄位轉數值,供 gen_revenue_good_list 等比較運算使用
-        for c in ['當月營收', '上月營收', '去年當月營收', '上月比較增減(%)',
-                  '去年同月增減(%)', '當月累計營收', '去年累計營收', '前期比較增減(%)']:
-            df_out[c] = pd.to_numeric(
-                df_out[c].astype(str).str.replace(',', '', regex=False),
-                errors='coerce')
-        table_name = '%d%02d' % (year, month)
-        df_out.to_sql(name=table_name, con=self.con, if_exists='replace',
-                      index=False, chunksize=200)
-        df_out['date'] = datetime(year, month, 1)
-        for i in range(0, len(df_out)):
-            comm.stock_df_to_sql_append_querydate(df_out.iloc[i]['公司代號'],
-                                                  'revenue', df_out[i:i + 1])
-        print(lno(), 'revenue saved', table_name, len(df_out))
+        # 按資料年月分組，TWSE/TPEX 可能在月份交界時各自返回不同月份
+        for ym_str, grp in df.groupby('資料年月'):
+            ym = str(ym_str).strip()
+            year = int(ym[:-2]) + 1911
+            month = int(ym[-2:])
+            df_out = grp[cols].copy()
+            for c in ['當月營收', '上月營收', '去年當月營收', '上月比較增減(%)',
+                      '去年同月增減(%)', '當月累計營收', '去年累計營收', '前期比較增減(%)']:
+                df_out[c] = pd.to_numeric(
+                    df_out[c].astype(str).str.replace(',', '', regex=False),
+                    errors='coerce')
+            table_name = '%d%02d' % (year, month)
+            df_out.to_sql(name=table_name, con=self.con, if_exists='replace',
+                          index=False, chunksize=200)
+            df_out['date'] = datetime(year, month, 1)
+            for i in range(0, len(df_out)):
+                comm.stock_df_to_sql_append_querydate(df_out.iloc[i]['公司代號'],
+                                                      'revenue', df_out[i:i + 1])
+            print(lno(), 'revenue saved', table_name, len(df_out))
 
     def get_by_stockid_date(self,stock_id,date):
         table_name=date.strftime('%Y%m')
