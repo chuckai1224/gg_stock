@@ -594,7 +594,7 @@ if __name__ == '__main__':
     income=income()
     if len(sys.argv)==1:
         now_date=datetime.today().date()
-        if now_date.day <=12:
+        if now_date.day <=20:
             pre_month=datetime(int(now_date.year),int(now_date.month)-1,1)
             income.download(pre_month) #new
         #down_tse_monthly_report(int(startdate.year),int(startdate.month)-1)
