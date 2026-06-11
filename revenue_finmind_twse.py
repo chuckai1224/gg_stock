@@ -64,7 +64,10 @@ def existing_ids(table):
 FM_URL = 'https://api.finmindtrade.com/api/v4/data'
 
 def fetch_revenue(stock_id, start_date):
-    for attempt in range(3):
+    wait = 60
+    attempt = 0
+    while True:
+        attempt += 1
         try:
             r = requests.get(FM_URL, params={
                 'dataset': 'TaiwanStockMonthRevenue',
@@ -76,14 +79,15 @@ def fetch_revenue(stock_id, start_date):
                 return pd.DataFrame(d['data']) if d.get('data') else pd.DataFrame()
             msg = d.get('msg', '')
             if any(k in msg.lower() for k in ('banned', 'upper limit', 'reach')):
-                print(f'  rate limit, wait 60s ...')
-                time.sleep(60)
+                print(f'  rate limit (attempt {attempt}), wait {wait}s ...')
+                time.sleep(wait)
+                wait = min(wait * 2, 600)  # 指數退避，最長 10 分鐘
             else:
+                print(f'  API error {stock_id}: {msg}')
                 return pd.DataFrame()
         except Exception as e:
             print(f'  fetch error {stock_id}: {e}')
             time.sleep(5)
-    return pd.DataFrame()
 
 # ── 計算欄位 ──────────────────────────────────────────────────────────────────
 
