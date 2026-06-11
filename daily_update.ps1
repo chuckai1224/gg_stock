@@ -26,28 +26,35 @@ filter Tee-Utf8 { $_ | Out-File -Append -FilePath $log -Encoding utf8; $_ }
 
 "===== daily_update $today =====" | Out-File $log -Encoding utf8
 
-Write-Host "[1/5] crawl $today ..."
+Write-Host "[1/6] crawl $today ..."
 if ($isToday) {
     & $python crawl.py 2>&1 | Tee-Utf8
 } else {
     & $python crawl.py $y $m $d 2>&1 | Tee-Utf8
 }
 
-Write-Host "[2/5] twse_big3 $today ..."
+Write-Host "[2/6] revenue $today ..."
+if ($isToday) {
+    & $python revenue.py 2>&1 | Tee-Utf8
+} else {
+    & $python revenue.py -d $today 2>&1 | Tee-Utf8
+}
+
+Write-Host "[3/6] twse_big3 $today ..."
 if ($isToday) {
     & $python twse_big3.py 2>&1 | Tee-Utf8
 } else {
     & $python twse_big3.py -d $today 2>&1 | Tee-Utf8
 }
 
-Write-Host "[3/5] otc_big3 $today ..."
+Write-Host "[4/6] otc_big3 $today ..."
 if ($isToday) {
     & $python otc_big3.py 2>&1 | Tee-Utf8
 } else {
     & $python otc_big3.py -d $today $today 2>&1 | Tee-Utf8
 }
 
-Write-Host "[4/5] pe_networth $today ..."
+Write-Host "[5/6] pe_networth $today ..."
 if ($isToday) {
     & $python pe_networth_yeild.py 2>&1 | Tee-Utf8
 } else {
@@ -57,7 +64,7 @@ if ($isToday) {
 # TDCC: run manually on Fridays
 # & $python tdcc_get.py 2>&1 | Tee-Utf8
 
-Write-Host "[5/5] gg_stock $today ..."
+Write-Host "[6/6] gg_stock $today ..."
 if ($isToday) {
     & $python gg_stock.py 2>&1 | Tee-Utf8
 } else {
