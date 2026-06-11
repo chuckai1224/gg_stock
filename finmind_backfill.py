@@ -18,6 +18,8 @@ import time
 import glob
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
+import truststore
+truststore.inject_into_ssl()
 import pandas as pd
 from FinMind.data import DataLoader
 

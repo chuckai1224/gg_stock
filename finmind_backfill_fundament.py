@@ -19,6 +19,9 @@ import glob
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 
+import truststore
+truststore.inject_into_ssl()
+
 import numpy as np
 import pandas as pd
 from sqlalchemy import create_engine
