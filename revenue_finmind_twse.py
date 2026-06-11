@@ -81,7 +81,7 @@ def fetch_revenue(stock_id, start_date):
             if any(k in msg.lower() for k in ('banned', 'upper limit', 'reach')):
                 print(f'  rate limit (attempt {attempt}), wait {wait}s ...')
                 time.sleep(wait)
-                wait = min(wait * 2, 600)  # 指數退避，最長 10 分鐘
+                wait = min(wait * 2, 3600)  # 指數退避，最長 1 小時（日配額限制）
             else:
                 print(f'  API error {stock_id}: {msg}')
                 return pd.DataFrame()
