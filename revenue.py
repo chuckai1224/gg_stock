@@ -7,6 +7,8 @@ import time
 from datetime import datetime
 from datetime import timedelta
 from dateutil.relativedelta import relativedelta
+import truststore
+truststore.inject_into_ssl()
 import pandas as pd
 import numpy as np
 import requests
