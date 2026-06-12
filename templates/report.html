@@ -604,6 +604,27 @@
                 });
             }
 
+            // 4.63 Format and style "董監持股增減" (>0 red, <0 green, integer, no decimal)
+            const dirChgIdx = colMap['董監持股增減'];
+            if (dirChgIdx !== undefined) {
+                rows.forEach(row => {
+                    const cell = row.cells[dirChgIdx + 1];
+                    if (cell) {
+                        const val = parseFloat(cell.textContent.trim());
+                        if (!isNaN(val)) {
+                            const formatted = Math.round(val).toLocaleString();
+                            if (val > 0) {
+                                cell.innerHTML = `<span style="color: #ef4444; font-weight: 700; padding: 0.2rem 0.5rem; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 6px;">${formatted}</span>`;
+                            } else if (val < 0) {
+                                cell.innerHTML = `<span style="color: #10b981; font-weight: 700; padding: 0.2rem 0.5rem; background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 6px;">${formatted}</span>`;
+                            } else {
+                                cell.textContent = formatted;
+                            }
+                        }
+                    }
+                });
+            }
+
             // 4.65 Format and style "psrS" and "prr" (psrS <= 0.75 for Red, prr > 0 and <= 15 for Red)
             const psrsIdx = colMap['psrS'];
             const prrIdx = colMap['prr'];
