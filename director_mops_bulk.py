@@ -156,6 +156,7 @@ def fetch_director(stock_id, market):
 def append_to_mfile(rows):
     df_new = pd.DataFrame(rows, columns=['stock_id', 'stock_name', '全體董監持股合計'])
     os.makedirs('data/director/final', exist_ok=True)
+    # 月彙總檔
     if os.path.exists(mfile):
         df_old = pd.read_csv(mfile, dtype={'stock_id': str})
         df_out = pd.concat([df_old, df_new], ignore_index=True)
@@ -163,6 +164,20 @@ def append_to_mfile(rows):
     else:
         df_out = df_new
     df_out.to_csv(mfile, encoding='utf-8', index=False)
+    # 個股歷史檔（供 get_stock_director 讀取，最新月排最前）
+    date_str = '%d-%02d-01' % (year, month)
+    for _, r in df_new.iterrows():
+        sid = r['stock_id']
+        sfile = 'data/director/final/%s.csv' % sid
+        row = pd.DataFrame([{'date': date_str, 'stock_id': sid,
+                             'stock_name': r['stock_name'],
+                             '全體董監持股合計': r['全體董監持股合計']}])
+        if os.path.exists(sfile):
+            old = pd.read_csv(sfile, encoding='utf-8', dtype={'stock_id': str})
+            if date_str in old['date'].astype(str).tolist():
+                continue
+            row = pd.concat([row, old], ignore_index=True)
+        row.to_csv(sfile, encoding='utf-8', index=False)
 
 # ── 主流程 ────────────────────────────────────────────────────────────────────
 
