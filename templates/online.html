@@ -584,8 +584,14 @@
                 });
                 const data = await res.json();
                 if (!data.success) {
-                    document.getElementById('console-screen').innerText = "啟動失敗: " + data.message;
-                    updateStatusUI('failed');
+                    if (data.message && data.message.includes("already running")) {
+                        document.getElementById('console-screen').innerText = "已有任務執行中，請稍候後再試...";
+                        updateStatusUI('running');
+                        checkStatus();
+                    } else {
+                        document.getElementById('console-screen').innerText = "啟動失敗: " + data.message;
+                        updateStatusUI('failed');
+                    }
                 } else {
                     checkStatus();
                 }

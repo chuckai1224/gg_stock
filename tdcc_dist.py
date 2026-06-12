@@ -338,7 +338,7 @@ def update_tdcc_from_opendata(download=1):
     existed = set(sa_inspect(td.engine).get_table_names())
     saved = 0
     for stock_id, g in df.groupby('stock_id'):
-        if len(stock_id) != 4:
+        if len(stock_id) != 4 or not stock_id.isdigit():
             continue
         g = g.sort_values('level')
         if len(g) != 15:

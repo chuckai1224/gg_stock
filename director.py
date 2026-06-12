@@ -7,6 +7,7 @@ import time
 from datetime import datetime
 from datetime import timedelta
 from dateutil.relativedelta import relativedelta
+import truststore; truststore.inject_into_ssl()
 import pandas as pd
 import numpy as np
 import requests
@@ -560,32 +561,40 @@ def down_director(dw=1):
     df = df[df['公司代號'].str.len() == 4]
     df['目前持股'] = pd.to_numeric(
         df['目前持股'].astype(str).str.replace(',', '', regex=False), errors='coerce')
-    ym = str(df['資料年月'].dropna().iloc[0]).strip()
-    year = int(ym[:-2]) + 1911
-    month = int(ym[-2:])
-    g = df.groupby('公司代號', as_index=False).agg(
-        stock_name=('公司名稱', 'first'),
-        全體董監持股合計=('目前持股', 'sum'))
-    g = g.rename(columns={'公司代號': 'stock_id'})
     check_dst_folder('data/director/final')
-    mfile = 'data/director/final/%d-%d.csv' % (year - 1911, month)
-    g[['stock_id', 'stock_name', '全體董監持股合計']].to_csv(
-        mfile, encoding='utf-8', index=False)
-    # 個股檔:累積、依 date 去重,最新月在最前
-    date_str = '%d-%02d-01' % (year, month)
-    for i in range(0, len(g)):
-        sid = g.iloc[i]['stock_id']
-        sfile = 'data/director/final/%s.csv' % sid
-        row = pd.DataFrame([{'date': date_str, 'stock_id': sid,
-                             'stock_name': g.iloc[i]['stock_name'],
-                             '全體董監持股合計': g.iloc[i]['全體董監持股合計']}])
-        if os.path.exists(sfile):
-            old = pd.read_csv(sfile, encoding='utf-8', dtype={'stock_id': str})
-            if date_str in old['date'].astype(str).tolist():
-                continue
-            row = pd.concat([row, old], ignore_index=True)
-        row.to_csv(sfile, encoding='utf-8', index=False)
-    print(lno(), 'director saved', mfile, len(g), 'stocks')
+    # 按資料年月分組，TWSE/TPEX 可能不同步，各自存到正確月份
+    for ym_str, grp in df.groupby('資料年月'):
+        ym = str(ym_str).strip()
+        year = int(ym[:-2]) + 1911
+        month = int(ym[-2:])
+        # 正確算法（與 MOPS 全體董監持股合計一致）：
+        # 1. 只留「董事|監察人」職稱，排除法人代表人（其個人持股不計，法人本身已計入）
+        # 2. 同一公司內按姓名去重（同一法人擔多席時只計一次）
+        brd = grp[grp['職稱'].str.contains('董事|監察人', na=False) &
+                  ~grp['職稱'].str.contains('法人代表', na=False)]
+        grp_dedup = (brd.groupby(['公司代號', '姓名'], as_index=False)
+                     .agg(股名=('公司名稱', 'first'), 目前持股=('目前持股', 'first')))
+        g = grp_dedup.groupby('公司代號', as_index=False).agg(
+            stock_name=('股名', 'first'),
+            全體董監持股合計=('目前持股', 'sum'))
+        g = g.rename(columns={'公司代號': 'stock_id'})
+        mfile = 'data/director/final/%d-%d.csv' % (year - 1911, month)
+        g[['stock_id', 'stock_name', '全體董監持股合計']].to_csv(
+            mfile, encoding='utf-8', index=False)
+        date_str = '%d-%02d-01' % (year, month)
+        for i in range(0, len(g)):
+            sid = g.iloc[i]['stock_id']
+            sfile = 'data/director/final/%s.csv' % sid
+            row = pd.DataFrame([{'date': date_str, 'stock_id': sid,
+                                 'stock_name': g.iloc[i]['stock_name'],
+                                 '全體董監持股合計': g.iloc[i]['全體董監持股合計']}])
+            if os.path.exists(sfile):
+                old = pd.read_csv(sfile, encoding='utf-8', dtype={'stock_id': str})
+                if date_str in old['date'].astype(str).tolist():
+                    continue
+                row = pd.concat([row, old], ignore_index=True)
+            row.to_csv(sfile, encoding='utf-8', index=False)
+        print(lno(), 'director saved', mfile, len(g), 'stocks')
 
 
 if __name__ == '__main__':
