@@ -1207,9 +1207,9 @@
 
             for (let i = 0; i < revDates.length; i++) {
                 const ts = parseDate(revDates[i]);
-                foreignSeries.push({ x: ts, y: revForeign[i] !== null ? Math.round(revForeign[i] / 1000) : 0 }); // Unit: 張
-                itSeries.push({ x: ts, y: revIT[i] !== null ? Math.round(revIT[i] / 1000) : 0 });
-                propSeries.push({ x: ts, y: revProp[i] !== null ? Math.round(revProp[i] / 1000) : 0 });
+                foreignSeries.push({ x: ts, y: revForeign[i] !== null ? Math.round(revForeign[i]) : 0 });
+                itSeries.push({ x: ts, y: revIT[i] !== null ? Math.round(revIT[i]) : 0 });
+                propSeries.push({ x: ts, y: revProp[i] !== null ? Math.round(revProp[i]) : 0 });
             }
 
             const options = {
