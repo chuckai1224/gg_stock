@@ -100,8 +100,8 @@ def get_stock_prr(r,debug=1):
   
 
 def get_stock_market(r):
-    d1=comm.exchange_data('tse').get_df_date_parse(r.date)           
-    if r.stock_id in d1['stock_id'].tolist():
+    d1=comm.exchange_data('tse').get_df_date_parse(r.date)
+    if 'stock_id' in d1.columns and r.stock_id in d1['stock_id'].tolist():
         return 'tse'
     return 'otc'
 ##get 本益比 淨值比 殖利率 股利年度
@@ -529,7 +529,8 @@ def gen_stock_info(r,debug=0):
     stock_id=r.stock_id
     
     date=r.date
-    tse_stock=comm.exchange_data('tse').get_df_date_parse(date)['stock_id'].tolist()     
+    _tse_df=comm.exchange_data('tse').get_df_date_parse(date)
+    tse_stock=_tse_df['stock_id'].tolist() if 'stock_id' in _tse_df.columns else []
     d=pd.DataFrame(np.empty(( 1, len(cols))) * np.nan, columns = cols)
     str_col_list=[
         'stock_id','stock_name','market','產業地位', '備註','細產業','產業','董監日期','董監持股',
