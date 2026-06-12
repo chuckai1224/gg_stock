@@ -266,9 +266,14 @@ def gen_revenue_good_list(enddate,ver=2,debug=0):
         df_p=df_p.rename(columns={'去年同月增減(%)':'上月去年同月增減(%)'})
         d1=pd.merge(df,df_p, how='left', on='公司代號')
         def check(r):
-            if r['去年同月增減(%)']<20:
+            cur = r['去年同月增減(%)']
+            prev = r['上月去年同月增減(%)']
+            if cur < 20:
                 return 0
-            if r['去年同月增減(%)']>=r['上月去年同月增減(%)']:
+            if cur >= prev:
+                return 1
+            # 兩個月都超過 100%，容許 10pp 以內的微幅回落
+            if cur >= 100 and prev >= 100 and cur >= prev - 10:
                 return 1
             return 0
         d1['res']=d1.apply(check,axis=1)
