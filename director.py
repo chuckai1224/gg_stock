@@ -488,7 +488,7 @@ def gen_director_good_list(date,debug=0,ver=1):
             d_prev=get_mops_month_df(prev_month)
             if len(d_prev):
                 d_prev.columns=['stock_id','stock_name','前1月全體董監持股合計']
-                df_out=pd.merge(d,d_prev)
+                df_out=pd.merge(d, d_prev[['stock_id','前1月全體董監持股合計']], on='stock_id')
                 def calc_director_add(r):
                     try:
                         add= float(r['全體董監持股合計'])-float(r['前1月全體董監持股合計'])
