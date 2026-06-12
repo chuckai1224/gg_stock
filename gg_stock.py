@@ -499,7 +499,7 @@ def time642str(x):
     
 def gen_stock_info(r,debug=0):
     #cols=['date','stock_id']
-    cols=[ 'stock_id', 'stock_name','總分', '董監持股增減','外資','投信','大戶近一月增加比','大戶近一周增加比','散戶近一月增加比',
+    cols=[ 'stock_id', 'stock_name','總分', '董監持股增減','外資增減','投信增減','大戶近一月增加比','大戶近一周增加比','散戶近一月增加比',
        'psrS','prr', '本益比', '股價淨值比', '殖利率(%)',  '收盤價', '股數(萬張)', '市值(百萬)',
        '產業地位', '備註','細產業','產業',
        '本年累計營收年增率', '最新單月營收年增率','最新單月營收月增率', 
@@ -524,7 +524,7 @@ def gen_stock_info(r,debug=0):
        'day kline open', 'day kline high', 'day kline low', 'day kline close', 'day kline date',
        'week kline vol','day kline vol',
        '股權日期','大戶持股','散戶持股',
-       '董監日期','董監持股','big3 date','自營商'
+       '董監日期','董監持股','big3 date','外資','投信','自營商'
        ]
     stock_id=r.stock_id
     
@@ -648,7 +648,12 @@ def gen_stock_info(r,debug=0):
         d.at[0,'外資']=', '.join(map(str,stock_3big_df['外資'].values.tolist()))
         d.at[0,'投信']=', '.join(map(str,stock_3big_df['投信'].values.tolist()))
         d.at[0,'自營商']=', '.join(map(str,stock_3big_df['自營商'].values.tolist()))
-        #print(lno(),d.iloc[0][['外資','投信']])
+        if len(stock_3big_df) >= 2:
+            d.at[0,'外資增減']=round(stock_3big_df.iloc[0]['外資'] - stock_3big_df.iloc[1]['外資'])
+            d.at[0,'投信增減']=round(stock_3big_df.iloc[0]['投信'] - stock_3big_df.iloc[1]['投信'])
+        elif len(stock_3big_df) == 1:
+            d.at[0,'外資增減']=round(stock_3big_df.iloc[0]['外資'])
+            d.at[0,'投信增減']=round(stock_3big_df.iloc[0]['投信'])
     else:
         d.at[0,'big3 date']=''
         d.at[0,'外資']=' '

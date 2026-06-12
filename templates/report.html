@@ -604,6 +604,28 @@
                 });
             }
 
+            // 4.62 Format and style "外資買賣超" / "投信買賣超" (>0 red, <0 green, integer)
+            ['外資增減', '投信增減'].forEach(colName => {
+                const ci = colMap[colName];
+                if (ci === undefined) return;
+                rows.forEach(row => {
+                    const cell = row.cells[ci + 1];
+                    if (cell) {
+                        const val = parseFloat(cell.textContent.trim());
+                        if (!isNaN(val)) {
+                            const formatted = Math.round(val).toLocaleString();
+                            if (val > 0) {
+                                cell.innerHTML = `<span style="color:#ef4444;font-weight:700;padding:0.2rem 0.4rem;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);border-radius:6px;">${formatted}</span>`;
+                            } else if (val < 0) {
+                                cell.innerHTML = `<span style="color:#10b981;font-weight:700;padding:0.2rem 0.4rem;background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.3);border-radius:6px;">${formatted}</span>`;
+                            } else {
+                                cell.textContent = formatted;
+                            }
+                        }
+                    }
+                });
+            });
+
             // 4.63 Format and style "董監持股增減" (>0 red, <0 green, integer, no decimal)
             const dirChgIdx = colMap['董監持股增減'];
             if (dirChgIdx !== undefined) {
