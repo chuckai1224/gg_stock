@@ -31,13 +31,14 @@ INCLUDE_PATHS = [
 
 DOWNLOAD_SCRIPT = 'download_snapshot.py'
 DATA_SOURCES_MD = 'data_sources.md'
+SNAP_NAME = 'gg_stock_data_20260524.tar.gz'   # 固定檔名，每次覆蓋
 
 
 # ── pack ──────────────────────────────────────────────────────────────────────
 
 def pack():
     today = datetime.today().strftime('%Y%m%d')
-    out_name = f'gg_stock_data_{today}.tar.gz'
+    out_name = SNAP_NAME
 
     print(f'打包快照：{out_name}')
     total_files = 0
@@ -69,7 +70,7 @@ def pack():
 
 def update(file_id):
     today = datetime.today().strftime('%Y%m%d')
-    snap_name = f'gg_stock_data_{today}.tar.gz'
+    snap_name = SNAP_NAME
     date_display = f'{today[:4]}-{today[4:6]}-{today[6:]}'  # YYYY-MM-DD
 
     # 計算 tar.gz 大小（若剛打包完就在目錄裡）
