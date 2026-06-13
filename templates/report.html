@@ -103,6 +103,34 @@
             border-color: var(--primary);
         }
 
+        .btn-filter {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .btn-filter:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: var(--warning);
+        }
+
+        .btn-filter.active {
+            background: linear-gradient(135deg, rgba(245,158,11,0.25), rgba(239,68,68,0.25));
+            border-color: var(--warning);
+            color: var(--warning);
+            box-shadow: 0 0 12px rgba(245, 158, 11, 0.3);
+        }
+
         .search-box {
             position: relative;
         }
@@ -411,6 +439,10 @@
                 <h1>{{ title }}</h1>
             </div>
             <div class="actions">
+                <button class="btn-filter" id="btn-chip-filter" onclick="toggleChipFilter()" title="保留：籌碼面6項成立≥4項 且 基本面總分≥0">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
+                    籌碼+基本面篩選
+                </button>
                 <div class="search-box">
                     <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
                     <input type="text" id="table-search" placeholder="搜尋代號或名稱...">
@@ -753,21 +785,74 @@
             initSorting(table);
         });
 
+        // Chip filter state
+        let chipFilterActive = false;
+
+        // Get numeric value from a formatted cell (handles %, commas, span wrappers)
+        function getCellNumVal(row, colName) {
+            const idx = colMap[colName];
+            if (idx === undefined) return NaN;
+            const cell = row.cells[idx + 1];
+            if (!cell) return NaN;
+            return parseFloat(cell.textContent.trim().replace(/%|,/g, ''));
+        }
+
+        // Count how many of the 6 chip conditions are met for a row
+        function getChipScore(row) {
+            let score = 0;
+            if (getCellNumVal(row, '董監持股增減') > 0) score++;
+            if (getCellNumVal(row, '投信增減') > 0) score++;
+            if (getCellNumVal(row, '外資增減') > 0) score++;
+            if (getCellNumVal(row, '大戶近一月增加比') > 0) score++;
+            if (getCellNumVal(row, '大戶近一周增加比') > 0) score++;
+            if (getCellNumVal(row, '散戶近一月增加比') < 0) score++;
+            return score;
+        }
+
+        // Apply all active filters (search + chip filter)
+        function applyAllFilters() {
+            const query = document.getElementById('table-search').value.toLowerCase().trim();
+            const rows = document.querySelectorAll('table.dataframe tbody tr');
+            rows.forEach(row => {
+                const stockId = row.cells[1] ? row.cells[1].textContent.toLowerCase() : '';
+                const stockName = row.cells[2] ? row.cells[2].textContent.toLowerCase() : '';
+                const matchesSearch = !query || stockId.includes(query) || stockName.includes(query);
+
+                let passesChip = true;
+                if (chipFilterActive) {
+                    const chipScore = getChipScore(row);
+                    const fundScore = getCellNumVal(row, '總分');
+                    passesChip = chipScore >= 4 && fundScore >= 0;
+                }
+
+                row.style.display = (matchesSearch && passesChip) ? '' : 'none';
+            });
+        }
+
+        // Toggle chip filter on/off
+        function toggleChipFilter() {
+            chipFilterActive = !chipFilterActive;
+            const btn = document.getElementById('btn-chip-filter');
+            if (chipFilterActive) {
+                btn.classList.add('active');
+                btn.innerHTML = `
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
+                    取消篩選
+                `;
+            } else {
+                btn.classList.remove('active');
+                btn.innerHTML = `
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
+                    籌碼+基本面篩選
+                `;
+            }
+            applyAllFilters();
+        }
+
         // Search feature
         function initSearch() {
-            document.getElementById('table-search').addEventListener('input', function(e) {
-                const query = e.target.value.toLowerCase().trim();
-                const rows = document.querySelectorAll('table.dataframe tbody tr');
-                rows.forEach(row => {
-                    // Search in stock_id (usually cell 1) and stock_name (usually cell 2)
-                    const stockId = row.cells[1] ? row.cells[1].textContent.toLowerCase() : '';
-                    const stockName = row.cells[2] ? row.cells[2].textContent.toLowerCase() : '';
-                    if (stockId.includes(query) || stockName.includes(query)) {
-                        row.style.display = '';
-                    } else {
-                        row.style.display = 'none';
-                    }
-                });
+            document.getElementById('table-search').addEventListener('input', function() {
+                applyAllFilters();
             });
         }
 
