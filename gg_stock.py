@@ -224,11 +224,45 @@ def get_stock_revenue(d):
             d.at[0,'最新單月營收年增率']=float(df.iloc[0]['去年同月增減(%)'])
             d.at[0,'最新單月營收月增率']=float(df.iloc[0]['上月比較增減(%)'])
             d.at[0,'備註']=df.iloc[0]['備註']
-        except:
+            
+            # 取得近 12 個月的月營收趨勢資料
+            months_to_keep = min(len(df), 12)
+            df_12m = df.head(months_to_keep).iloc[::-1]  # 反轉使其由舊到新
+            
+            # 轉換日期為 yy-mm 格式
+            def get_yy_mm(date_str):
+                try:
+                    dt = pd.to_datetime(date_str)
+                    return dt.strftime('%y-%m')
+                except:
+                    return date_str
+            
+            yymm_list = df_12m['date'].apply(get_yy_mm).values.tolist()
+            # 營業收入：當月營收 (千元轉百萬)
+            val_list = []
+            for val in df_12m['當月營收'].values:
+                try:
+                    val_list.append(round(float(val) / 1000, 1))
+                except:
+                    val_list.append(0.0)
+            
+            # 年增率 (去年同月增減(%))
+            yoy_list = []
+            for val in df_12m['去年同月增減(%)'].values:
+                try:
+                    yoy_list.append(round(float(val), 1))
+                except:
+                    yoy_list.append(0.0)
+            
+            d.at[0, 'monthly_revenue_months'] = ', '.join(yymm_list)
+            d.at[0, 'monthly_revenue_values'] = ', '.join(map(str, val_list))
+            d.at[0, 'monthly_revenue_yoy'] = ', '.join(map(str, yoy_list))
+        except Exception as e:
             check_dst_folder('error')
             df.to_csv('error/{}_revenue.csv'.format(df.iloc[0]['公司代號']),encoding='utf-8', index=False,header=0)     
             
             print(lno(),df)
+            print(lno(), "Error getting monthly revenue list:", str(e))
             #raise
     else:
         d.at[0,'本益比']=np.nan
@@ -558,7 +592,8 @@ def gen_stock_info(r,debug=0):
        'week kline vol','day kline vol',
        '股權日期','大戶持股','散戶持股',
        '董監日期','董監持股','big3 date','外資','投信','自營商',
-       '歷季季度', '本季營收(百萬)', '前1季營收(百萬)', '前2季營收(百萬)', '前3季營收(百萬)', '前4季營收(百萬)', '前5季營收(百萬)', '前6季營收(百萬)', '前7季營收(百萬)'
+       '歷季季度', '本季營收(百萬)', '前1季營收(百萬)', '前2季營收(百萬)', '前3季營收(百萬)', '前4季營收(百萬)', '前5季營收(百萬)', '前6季營收(百萬)', '前7季營收(百萬)',
+       'monthly_revenue_months', 'monthly_revenue_values', 'monthly_revenue_yoy'
        ]
     stock_id=r.stock_id
     
@@ -573,7 +608,7 @@ def gen_stock_info(r,debug=0):
         'week kline open','week kline high','week kline low', 'week kline close', 'week kline date',
         'day kline open', 'day kline high', 'day kline low', 'day kline close', 'day kline date',
         'week kline vol','day kline vol',
-        '歷季季度']
+        '歷季季度', 'monthly_revenue_months', 'monthly_revenue_values', 'monthly_revenue_yoy']
     for i in str_col_list:
         d[i]=d[i].astype('str')
     d['date']=d['date'].astype('object')
