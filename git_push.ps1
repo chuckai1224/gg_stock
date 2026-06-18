@@ -13,12 +13,7 @@ git add -A
 git commit -m $Message
 git push
 
-$htmls = @(
-    "final\revenue_good.html",
-    "final\pointK_good.html",
-    "final\director_good.html",
-    "final\fund_good.html"
-)
-foreach ($f in $htmls) {
-    if (Test-Path $f) { Start-Process $f }
+$cf_html = "final\chip_fund_good.html"
+if (Test-Path $cf_html) {
+    Start-Process $cf_html
 }
