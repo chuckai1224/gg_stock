@@ -64,6 +64,18 @@ if ($isToday) {
     & $python gg_stock.py gg $today 2>&1 | Tee-Utf8
 }
 
+# Copy chip_fund_good.html to D:\to_google
+$cf_src = "final\chip_fund_good.html"
+if (Test-Path $cf_src) {
+    if (-not (Test-Path "d:\to_google")) {
+        New-Item -ItemType Directory "d:\to_google" | Out-Null
+    }
+    Copy-Item $cf_src "d:\to_google\chip_fund_good.html" -Force
+    Write-Host "Copied $cf_src to d:\to_google" | Tee-Utf8
+} else {
+    Write-Host "Warning: $cf_src not found" | Tee-Utf8
+}
+
 "===== done =====" | Tee-Utf8
 Write-Host "done. log: $log"
 
