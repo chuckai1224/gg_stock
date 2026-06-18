@@ -138,7 +138,7 @@ gen_stock_info(r)
  ├─ get_stock_pe_networth_yield(d)   本益比、股價淨值比、殖利率、股利年度
  │       └─ 取不到資料 → 回傳空 DataFrame (該檔放棄)
  ├─ get_stock_industry_status(d)     產業 / 細產業 / 產業地位
- ├─ get_stock_revenue(d)             本年累計營收年增率、單月年增率、月增率、備註
+ ├─ get_stock_revenue(d)             本年累計營收年增率、最新單月年增率（已移至 psrS 前並於前端折行美化）、月增率、備註，以及近 12 個月營收金額與 YoY 資料字串（用於 Modal 趨勢圖）
  ├─ get_stock_season_composite_income_sheet(d)
  │       3 年 EPS/營收、psrS、psr 三年高低、近 8 季三率與升降
  │       └─ 取不到資料 → 回傳空 DataFrame (該檔放棄)
@@ -224,6 +224,13 @@ gen_stock_info(r)
 | `final/{method}_good_{YYYYMMDD}.csv` | 同上的 CSV(UTF-8) |
 
 錯誤資料另存於 `error/{stock_id}_revenue.csv`。
+
+---
+
+### 網頁前端顯示優化 (HTML)
+- **長欄位表頭自動折行**：為維持排版整齊，前端 JavaScript 載入時會自動將「最新單月營收年增率」、「大戶近一月增加比」、「投信增減」、「外資增減」、「董監持股增減」等較長表頭欄位拆分成兩行。
+- **欄位位置與美化**：「最新單月營收年增率」已被移至 `psrS` 之前，方便對比估值，並在前端以紅（正成長）綠（負成長）膠囊框高亮呈現。
+- **個股月營收趨勢圖**：當使用者點擊個股的「K線圖」時，詳細彈窗 (Modal) 會載入隱藏的近 12 個月營收與年增率 YoY 資料，並使用 ApexCharts 渲染出直條+折線雙軸趨勢圖，與單季 EPS、歷季三率等共同構成 2x4 的完整對稱版面。
 
 ---
 

@@ -93,8 +93,12 @@
 <td>(本檔)選股評分標準 SOP、籌碼面(期貨/選擇權/三大法人)研究筆記</td>
 </tr>
 <tr>
+<td><code>user_guide.md</code></td>
+<td><strong>使用者操作手冊：從安裝到每日操作（從這裡開始）</strong></td>
+</tr>
+<tr>
 <td><code>setup.md</code></td>
-<td>環境安裝:Python 套件清單、必要資料夾</td>
+<td>環境安裝詳細參考（套件清單、TA-Lib、Selenium）</td>
 </tr>
 <tr>
 <td><code>gg_stock_logic.md</code></td>
@@ -102,7 +106,7 @@
 </tr>
 <tr>
 <td><code>data_sources.md</code></td>
-<td>各資料來源、開放資料 API、如何取得/回補歷史資料、定期排程</td>
+<td>各資料來源、開放資料 API、如何取得/回補歷史資料</td>
 </tr>
 <tr>
 <td><code>run_schedule.md</code></td>
@@ -116,11 +120,9 @@
 </table>
 <h2 id="_2">建議閱讀順序</h2>
 <ol>
-<li><strong><code>README.md</code></strong> —— (本檔)先看上方文件索引,掌握整體</li>
-<li><strong><code>setup.md</code></strong> —— 安裝 Python 套件、建立必要資料夾</li>
-<li><strong><code>data_sources.md</code></strong> —— 下載/回補資料,了解各資料來源與排程</li>
-<li><strong><code>gg_stock_logic.md</code></strong> —— 了解 <code>gg_stock.py</code> 選股邏輯與評分系統</li>
-<li><strong><code>todo.md</code></strong> —— 待辦清單(選讀)</li>
+<li><strong><code>user_guide.md</code></strong> —— 安裝環境、補資料、每日操作（一份搞定）</li>
+<li><strong><code>data_sources.md</code></strong> —— 了解各資料來源與歷史回補</li>
+<li><strong><code>gg_stock_logic.md</code></strong> —— 了解 <code>gg_stock.py</code> 選股邏輯與評分系統（選讀）</li>
 </ol>
 <hr />
 <h2 id="0420">0420</h2>
@@ -298,23 +300,37 @@ top 10 op only have num , no cash</p>
 十大交易人近月(W)賣方口數 (sell put num -sell call num)/(sell put num +sell call num)<br />
 十大交易人遠月(M)賣方口數 (sell put num -sell call num)/(sell put num +sell call num)</p>
 </blockquote></section>
-<section class="doc-section" id="setup-md"><div class="section-label">setup.md</div><h1 id="_1">環境安裝說明</h1>
-<h2 id="_2">系統需求</h2>
-<ul>
-<li>Python 3.9 ~ 3.11（建議 3.11）</li>
-<li>Windows 10/11 或 Linux</li>
-</ul>
+<section class="doc-section" id="setup-md"><div class="section-label">setup.md</div><h1 id="windows">環境安裝說明（Windows）</h1>
 <hr />
-<h2 id="_3">安裝套件</h2>
-<h3 id="ssl">公司/企業網路 SSL 問題</h3>
-<p>若 pip 出現 <code>SSLError: CERTIFICATE_VERIFY_FAILED</code>，需加 <code>--trusted-host</code> 參數：</p>
-<div class="codehilite"><pre><span></span><code>pip<span class="w"> </span>install<span class="w"> </span>&lt;套件名&gt;<span class="w"> </span>--trusted-host<span class="w"> </span>pypi.org<span class="w"> </span>--trusted-host<span class="w"> </span>files.pythonhosted.org
+<h2 id="python">一、安裝 Python</h2>
+<ol>
+<li>前往 <a href="https://www.python.org/downloads/">https://www.python.org/downloads/</a> 下載 <strong>Python 3.11</strong>（建議，3.9+ 皆可）</li>
+<li>執行安裝程式，<strong>勾選「Add Python to PATH」</strong>，再按 Install Now</li>
+<li>安裝完成後，開啟 <strong>命令提示字元（CMD）</strong> 確認版本：</li>
+</ol>
+<div class="codehilite"><pre><span></span><code>python --version
 </code></pre></div>
 
-<p>以下所有 <code>pip install</code> 指令若有 SSL 問題，請加上此參數。</p>
+<p>應顯示 <code>Python 3.11.x</code>。</p>
 <hr />
-<h3 id="gg_stockpy">核心套件（執行 gg_stock.py 必要）</h3>
-<div class="codehilite"><pre><span></span><code>pip<span class="w"> </span>install<span class="w"> </span>python-dateutil<span class="w"> </span>pandas<span class="w"> </span>numpy<span class="w"> </span>scipy<span class="w"> </span>sqlalchemy<span class="w"> </span>beautifulsoup4<span class="w"> </span>lxml<span class="w"> </span>requests<span class="w"> </span>matplotlib<span class="w"> </span>mplfinance<span class="w"> </span>seaborn<span class="w"> </span>kline<span class="w"> </span>Pillow
+<h2 id="venv">二、建立虛擬環境（venv）</h2>
+<p>在 <code>D:\gg_stock</code> 目錄下建立獨立環境，避免影響系統 Python：</p>
+<div class="codehilite"><pre><span></span><code>cd D:\gg_stock
+python -m venv venv
+</code></pre></div>
+
+<p>啟動虛擬環境：</p>
+<div class="codehilite"><pre><span></span><code>.\venv\Scripts\activate
+</code></pre></div>
+
+<p>提示字元前面出現 <code>(venv)</code> 表示成功。</p>
+<blockquote>
+<p>之後每次開新視窗要操作都需要先 activate，或直接用 <code>.\venv\Scripts\python.exe</code> 完整路徑執行。</p>
+</blockquote>
+<hr />
+<h2 id="_1">三、安裝核心套件</h2>
+<p>確認已在 venv 環境內（或使用完整路徑 <code>.\venv\Scripts\pip.exe</code>）：</p>
+<div class="codehilite"><pre><span></span><code>pip install python-dateutil pandas numpy scipy sqlalchemy beautifulsoup4 lxml requests matplotlib mplfinance seaborn kline Pillow flask
 </code></pre></div>
 
 <table>
@@ -363,7 +379,7 @@ top 10 op only have num , no cash</p>
 </tr>
 <tr>
 <td><code>mplfinance</code></td>
-<td>K 線圖（<code>candlestick_ohlc</code>）</td>
+<td>K 線圖</td>
 </tr>
 <tr>
 <td><code>seaborn</code></td>
@@ -375,62 +391,26 @@ top 10 op only have num , no cash</p>
 </tr>
 <tr>
 <td><code>Pillow</code></td>
-<td>圖片處理（<code>PIL.Image</code>）</td>
+<td>圖片處理</td>
+</tr>
+<tr>
+<td><code>flask</code></td>
+<td>網頁控制台（<code>online.py</code>）</td>
 </tr>
 </tbody>
 </table>
 <hr />
-<h3 id="ta-libgood_stockpy-stock_commpy">TA-Lib（技術指標，<code>good_stock.py</code> / <code>stock_comm.py</code> 部分功能）</h3>
-<p>TA-Lib 在 Windows 上<strong>無法直接 pip install</strong>，需先安裝 C 函式庫：</p>
-<p><strong>方法一：用非官方 whl（推薦）</strong></p>
-<ol>
-<li>至 https://github.com/cgohlke/talib-build/releases 下載對應版本的 <code>.whl</code><br />
-   - 例如：<code>TA_Lib-0.4.32-cp311-cp311-win_amd64.whl</code>（Python 3.11，64位元）</li>
-<li>安裝：<br />
-<code>bash
-   pip install TA_Lib-0.4.32-cp311-cp311-win_amd64.whl</code></li>
-</ol>
-<p><strong>方法二：conda</strong></p>
-<div class="codehilite"><pre><span></span><code>conda<span class="w"> </span>install<span class="w"> </span>-c<span class="w"> </span>conda-forge<span class="w"> </span>ta-lib
-</code></pre></div>
-
-<blockquote>
-<p>若不需要技術指標功能，可跳過，相關 <code>import talib</code> 在 <code>good_stock.py</code> 中已移除。</p>
-</blockquote>
-<hr />
-<h3 id="seleniumgood_stockpy-morningpy">Selenium（自動化下載，<code>good_stock.py</code> / <code>morning.py</code>）</h3>
-<div class="codehilite"><pre><span></span><code>pip<span class="w"> </span>install<span class="w"> </span>selenium
-</code></pre></div>
-
-<p>需另外安裝瀏覽器驅動：<br />
-- Firefox：下載 <a href="https://github.com/mozilla/geckodriver/releases">geckodriver</a> 並加入 PATH<br />
-- Chrome：<code>pip install webdriver-manager</code></p>
-<hr />
-<h3 id="_4">選用套件（特定功能才需要）</h3>
-<div class="codehilite"><pre><span></span><code><span class="c1"># pyecharts — 互動圖表（all_stock.py，目前大部分已改為 mplfinance）</span>
-pip<span class="w"> </span>install<span class="w"> </span>pyecharts
-
-<span class="c1"># flask — Web API（部分腳本）</span>
-pip<span class="w"> </span>install<span class="w"> </span>flask
-
-<span class="c1"># backtrader — 回測引擎（backtest.py）</span>
-pip<span class="w"> </span>install<span class="w"> </span>backtrader
-
-<span class="c1"># pdfkit — 輸出 PDF（all_stock.py）</span>
-<span class="c1"># 需另安裝 wkhtmltopdf：https://wkhtmltopdf.org/downloads.html</span>
-pip<span class="w"> </span>install<span class="w"> </span>pdfkit
-
-<span class="c1"># pandas-datareader — 抓取外部金融資料</span>
-pip<span class="w"> </span>install<span class="w"> </span>pandas-datareader
-
-<span class="c1"># pygame — 遊戲模式（game.py，非核心）</span>
-pip<span class="w"> </span>install<span class="w"> </span>pygame
-</code></pre></div>
-
-<hr />
-<h2 id="_5">建立必要資料夾</h2>
-<p>首次執行前需建立以下目錄（或直接執行以下指令）：</p>
-<div class="codehilite"><pre><span></span><code>mkdir<span class="w"> </span>sql<span class="w"> </span>data<span class="w"> </span>data<span class="se">\s</span>tock_data<span class="w"> </span>final<span class="w"> </span>error<span class="w"> </span>out
+<h2 id="_2">四、建立必要資料夾</h2>
+<div class="codehilite"><pre><span></span><code>cd D:\gg_stock
+mkdir sql
+mkdir data\stock_data
+mkdir data\revenue
+mkdir data\director
+mkdir data\down_pe_networth_yield
+mkdir final
+mkdir error
+mkdir out
+mkdir log
 </code></pre></div>
 
 <table>
@@ -447,11 +427,11 @@ pip<span class="w"> </span>install<span class="w"> </span>pygame
 </tr>
 <tr>
 <td><code>data/stock_data/</code></td>
-<td>個股日 K CSV（<code>{stock_id}.csv</code>）</td>
+<td>個股日 K CSV</td>
 </tr>
 <tr>
 <td><code>data/revenue/</code></td>
-<td>月營收資料（爬蟲下載後存放）</td>
+<td>月營收資料</td>
 </tr>
 <tr>
 <td><code>data/director/</code></td>
@@ -469,31 +449,60 @@ pip<span class="w"> </span>install<span class="w"> </span>pygame
 <td><code>error/</code></td>
 <td>異常 CSV 紀錄</td>
 </tr>
+<tr>
+<td><code>log/</code></td>
+<td>網頁控制台執行日誌</td>
+</tr>
 </tbody>
 </table>
 <hr />
-<h2 id="_6">一鍵安裝腳本</h2>
-<div class="codehilite"><pre><span></span><code>pip<span class="w"> </span>install<span class="w"> </span>python-dateutil<span class="w"> </span>pandas<span class="w"> </span>numpy<span class="w"> </span>scipy<span class="w"> </span>sqlalchemy<span class="w"> </span>beautifulsoup4<span class="w"> </span>lxml<span class="w"> </span>requests<span class="w"> </span>matplotlib<span class="w"> </span>mplfinance<span class="w"> </span>seaborn<span class="w"> </span>kline<span class="w"> </span>Pillow<span class="w"> </span>--trusted-host<span class="w"> </span>pypi.org<span class="w"> </span>--trusted-host<span class="w"> </span>files.pythonhosted.org
-
-mkdir<span class="w"> </span>-p<span class="w"> </span>sql<span class="w"> </span>data/stock_data<span class="w"> </span>data/revenue<span class="w"> </span>data/director<span class="w"> </span>data/down_pe_networth_yield<span class="w"> </span>final<span class="w"> </span>error<span class="w"> </span>out
+<h2 id="_3">五、確認安裝</h2>
+<div class="codehilite"><pre><span></span><code><span class="o">.</span>\<span class="n">venv</span>\<span class="n">Scripts</span>\<span class="n">python</span><span class="o">.</span><span class="n">exe</span> <span class="o">-</span><span class="n">c</span> <span class="s2">&quot;import pandas, numpy, scipy, sqlalchemy, bs4, lxml, requests, matplotlib, mplfinance, seaborn, kline, PIL, flask; from dateutil.relativedelta import relativedelta; print(&#39;所有核心套件安裝成功&#39;)&quot;</span>
 </code></pre></div>
 
 <hr />
-<h2 id="_7">確認安裝</h2>
-<div class="codehilite"><pre><span></span><code>python<span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;</span>
-<span class="s2">import pandas, numpy, scipy, sqlalchemy, bs4, lxml, requests</span>
-<span class="s2">import matplotlib, mplfinance, seaborn, kline, PIL</span>
-<span class="s2">from dateutil.relativedelta import relativedelta</span>
-<span class="s2">print(&#39;所有核心套件安裝成功&#39;)</span>
-<span class="s2">&quot;</span>
+<h2 id="_4">六、選用套件（非核心，視需要安裝）</h2>
+<h3 id="ta-lib">TA-Lib（技術指標）</h3>
+<p>Windows 上<strong>無法直接 pip install</strong>，需先裝 C 函式庫：</p>
+<ol>
+<li>至 <a href="https://github.com/cgohlke/talib-build/releases">https://github.com/cgohlke/talib-build/releases</a> 下載對應版本的 <code>.whl</code><br />
+   - 例如：<code>TA_Lib-0.4.32-cp311-cp311-win_amd64.whl</code>（Python 3.11，64 位元）</li>
+<li>安裝：<br />
+<code>cmd
+   .\venv\Scripts\pip.exe install TA_Lib-0.4.32-cp311-cp311-win_amd64.whl</code></li>
+</ol>
+<blockquote>
+<p><code>good_stock.py</code> 中 <code>import talib</code> 已移除，目前可跳過。</p>
+</blockquote>
+<h3 id="selenium">Selenium（自動化下載）</h3>
+<div class="codehilite"><pre><span></span><code>pip install selenium
+</code></pre></div>
+
+<p>需另外安裝瀏覽器驅動：<br />
+- Firefox：下載 <a href="https://github.com/mozilla/geckodriver/releases">geckodriver</a> 並加入 PATH<br />
+- Chrome：<code>pip install webdriver-manager</code></p>
+<h3 id="_5">其他</h3>
+<div class="codehilite"><pre><span></span><code>pip install pyecharts        # 互動圖表（all_stock.py）
+pip install backtrader       # 回測引擎（backtest.py）
+pip install pandas-datareader
 </code></pre></div>
 
 <hr />
-<h2 id="_8">注意事項</h2>
+<h2 id="ssl">七、企業/公司網路 SSL 問題</h2>
+<p>若 pip 出現 <code>SSLError: CERTIFICATE_VERIFY_FAILED</code>，所有 pip 指令加上：</p>
+<div class="codehilite"><pre><span></span><code>--trusted-host pypi.org --trusted-host files.pythonhosted.org
+</code></pre></div>
+
+<p>範例：</p>
+<div class="codehilite"><pre><span></span><code>pip install flask --trusted-host pypi.org --trusted-host files.pythonhosted.org
+</code></pre></div>
+
+<hr />
+<h2 id="_6">八、注意事項</h2>
 <ul>
-<li><code>stock_comm.py</code> 的 <code>datafolder()</code> 在 Windows 上回傳 <code>'data'</code>（相對路徑），執行時需在 <code>D:\gg_stock\</code> 目錄下執行</li>
-<li>系統需先執行各爬蟲腳本（<code>revenue.py</code>、<code>stock_big3.py</code>、<code>tdcc_dist.py</code> 等）下載資料後，<code>gg_stock.py</code> 才能產生有效選股結果</li>
-<li>SQLite DB 檔案（<code>sql/*.db</code>）會在首次執行時自動建立</li>
+<li>所有腳本需在 <code>D:\gg_stock\</code> 目錄下執行（<code>stock_comm.py</code> 的資料路徑為相對路徑）</li>
+<li>首次使用建議先下載資料快照（見 <code>data_sources.md</code>），省去數小時的歷史回補</li>
+<li>SQLite DB 檔案（<code>sql/*.db</code>）會在首次爬取時自動建立</li>
 </ul></section>
 <section class="doc-section" id="data_sources-md"><div class="section-label">data_sources.md</div><h1 id="_1">資料來源與歷史資料取得</h1>
 <blockquote>
@@ -505,7 +514,7 @@ mkdir<span class="w"> </span>-p<span class="w"> </span>sql<span class="w"> </spa
 <p><strong>不想花 10+ 小時自己跑回補腳本?</strong> 下載已備好的資料快照,解壓即可使用。</p>
 <h3 id="_3">📦 下載連結</h3>
 <blockquote>
-<p><a href="https://drive.google.com/file/d/1aKMvIJ8Au2RZoS7nTphRZJyCkZX9aFY2/view?usp=drive_link"><strong>gg_stock_data_20260523.tar.gz</strong></a> (39 MB,解壓後約 181 MB)</p>
+<p><a href="https://drive.google.com/file/d/1qol7VOBteb3kfs5Yni882ZuHPiELPUp4/view?usp=drive_link"><strong>gg_stock_data_20260524.tar.gz</strong></a> (71 MB，解壓後請自行確認)</p>
 </blockquote>
 <p>包含內容:</p>
 <table>
@@ -577,11 +586,11 @@ mkdir<span class="w"> </span>-p<span class="w"> </span>sql<span class="w"> </spa
 <p><strong>解壓</strong>:<br />
    ```bash<br />
    # Linux / macOS / WSL<br />
-   tar -xzf gg_stock_data_20260523.tar.gz</p>
+   tar -xzf gg_stock_data_20260524.tar.gz</p>
 </li>
 </ol>
 <p># Windows PowerShell (內建 tar,Win10+)<br />
-   tar -xzf gg_stock_data_20260523.tar.gz</p>
+   tar -xzf gg_stock_data_20260524.tar.gz</p>
 <p># Windows 7-Zip / WinRAR 也支援<br />
    ```</p>
 <ol start="5">
@@ -603,18 +612,36 @@ mkdir<span class="w"> </span>-p<span class="w"> </span>sql<span class="w"> </spa
 <h3 id="_5">⚠️ 注意事項</h3>
 <ul>
 <li>解壓<strong>會直接覆寫</strong>現有的 <code>sql/</code> 和 <code>data/</code> 目錄,使用前先備份(如有需要)</li>
-<li>快照日期為 <strong>2026-05-23</strong>,之後的每日新資料仍須執行 <code>crawl.py</code> / <code>stock_big3.py</code> / <code>pe_networth_yeild.py</code> 累積(見<a href="#六建議的定期排程cron">第六節</a>)</li>
+<li>快照日期為 <strong>2026-06-18</strong>,之後的每日新資料仍須執行 <code>crawl.py</code> / <code>stock_big3.py</code> / <code>pe_networth_yeild.py</code> 累積(見<a href="#六建議的定期排程cron">第六節</a>)</li>
 <li><code>*.tar.gz</code> 已在 <code>.gitignore</code> 中,不會被 git 追蹤</li>
 </ul>
+<h3 id="_6">🔧 更新快照（給維護者）</h3>
+<p>當資料累積到值得重新發布時,執行以下流程：</p>
+<div class="codehilite"><pre><span></span><code><span class="p">::</span><span class="w"> </span><span class="err">步驟</span><span class="w"> </span><span class="mi">1</span><span class="err">：打包（生成</span><span class="w"> </span><span class="n">gg_stock_data_YYYYMMDD</span><span class="o">.</span><span class="n">tar</span><span class="o">.</span><span class="n">gz</span><span class="err">，約</span><span class="w"> </span><span class="mi">1</span><span class="o">~</span><span class="mi">2</span><span class="w"> </span><span class="err">分鐘）</span>
+<span class="o">.</span>\<span class="n">venv</span>\<span class="n">Scripts</span>\<span class="n">python</span><span class="o">.</span><span class="n">exe</span><span class="w"> </span><span class="n">make_snapshot</span><span class="o">.</span><span class="n">py</span>
+
+<span class="p">::</span><span class="w"> </span><span class="err">步驟</span><span class="w"> </span><span class="mi">2</span><span class="err">：手動上傳</span><span class="w"> </span><span class="o">.</span><span class="n">tar</span><span class="o">.</span><span class="n">gz</span><span class="w"> </span><span class="err">到</span><span class="w"> </span><span class="n">Google</span><span class="w"> </span><span class="n">Drive</span>
+<span class="p">::</span><span class="w">   </span><span class="err">上傳後開啟「取得連結」，從</span><span class="w"> </span><span class="n">URL</span><span class="w"> </span><span class="err">複製</span><span class="w"> </span><span class="n">file_id</span>
+<span class="p">::</span><span class="w">   </span><span class="err">格式：</span><span class="n">https</span><span class="p">:</span><span class="o">//</span><span class="n">drive</span><span class="o">.</span><span class="n">google</span><span class="o">.</span><span class="n">com</span><span class="o">/</span><span class="n">file</span><span class="o">/</span><span class="n">d</span><span class="o">/&lt;</span><span class="n">file_id</span><span class="o">&gt;/</span><span class="n">view</span>
+
+<span class="p">::</span><span class="w"> </span><span class="err">步驟</span><span class="w"> </span><span class="mi">3</span><span class="err">：自動更新</span><span class="w"> </span><span class="n">download_snapshot</span><span class="o">.</span><span class="n">py</span><span class="w"> </span><span class="err">與本文件的連結</span>
+<span class="o">.</span>\<span class="n">venv</span>\<span class="n">Scripts</span>\<span class="n">python</span><span class="o">.</span><span class="n">exe</span><span class="w"> </span><span class="n">make_snapshot</span><span class="o">.</span><span class="n">py</span><span class="w"> </span><span class="o">--</span><span class="n">update</span><span class="w"> </span><span class="o">&lt;</span><span class="n">file_id</span><span class="o">&gt;</span>
+
+<span class="p">::</span><span class="w"> </span><span class="err">步驟</span><span class="w"> </span><span class="mi">4</span><span class="err">：提交</span>
+<span class="n">git</span><span class="w"> </span><span class="n">add</span><span class="w"> </span><span class="n">download_snapshot</span><span class="o">.</span><span class="n">py</span><span class="w"> </span><span class="n">data_sources</span><span class="o">.</span><span class="n">md</span>
+<span class="n">git</span><span class="w"> </span><span class="n">commit</span><span class="w"> </span><span class="o">-</span><span class="n">m</span><span class="w"> </span><span class="s2">&quot;snapshot: update to YYYYMMDD&quot;</span>
+<span class="n">git</span><span class="w"> </span><span class="n">push</span>
+</code></pre></div>
+
 <hr />
-<h2 id="_6">一、資料流總覽</h2>
+<h2 id="_7">一、資料流總覽</h2>
 <div class="codehilite"><pre><span></span><code>各下載腳本 ──&gt; 開放資料 API ──&gt; 本機 SQLite / CSV ──&gt; gg_stock.py 讀取選股
 </code></pre></div>
 
 <p><code>gg_stock.py</code> 的 4 個選股方法都會呼叫 <code>gen_stock_info()</code>,後者需要以下所有資料。<br />
 缺哪一項,該檔個股就會被跳過或欄位留白。</p>
 <hr />
-<h2 id="_7">二、各資料來源一覽</h2>
+<h2 id="_8">二、各資料來源一覽</h2>
 <table>
 <thead>
 <tr>
@@ -715,7 +742,7 @@ mkdir<span class="w"> </span>-p<span class="w"> </span>sql<span class="w"> </spa
 財報等,但<strong>沒有</strong>集保股權分散與董監持股)—— 評估詳見第七節。</p>
 </blockquote>
 <hr />
-<h2 id="_8">四、回補歷史的實際操作</h2>
+<h2 id="_9">四、回補歷史的實際操作</h2>
 <h3 id="1-pointk-k">1. 股價(最重要,<code>pointK</code> 與 K 線欄位都靠它)</h3>
 <div class="codehilite"><pre><span></span><code><span class="c1"># 方式一:完整回補(含 sql/stock_data.db,pointK 需要)— 逐交易日,較慢</span>
 python<span class="w"> </span>crawl.py<span class="w"> </span><span class="m">2026</span><span class="w"> </span><span class="m">5</span><span class="w"> </span><span class="m">19</span><span class="w">      </span><span class="c1"># 跑單日:下載 + exchange2sql + insert_daily_stock_data</span>
@@ -745,7 +772,7 @@ python<span class="w"> </span>crawl.py<span class="w"> </span>-b<span class="w">
 <p>上市 <code>tseYYYYMMDD.csv</code> 會是各日正確資料;上櫃 <code>otcYYYYMMDD.csv</code> 因 API 限制<br />
 一律寫入「最新一日」內容(檔名仍照查詢日期)。</p>
 <hr />
-<h2 id="_9">五、各選股方法需要的資料深度</h2>
+<h2 id="_10">五、各選股方法需要的資料深度</h2>
 <table>
 <thead>
 <tr>
@@ -839,7 +866,7 @@ python<span class="w"> </span>crawl.py<span class="w"> </span>-b<span class="w">
 <h2 id="finmind">七、FinMind 免費版評估(作為歷史資料源)</h2>
 <p><a href="https://finmindtrade.com/">FinMind</a> 是開源台股資料庫,提供<strong>真歷史</strong>資料<br />
 (不像官方開放資料只有最新一期)。2026-05 實測免費版(匿名、未帶 token):</p>
-<h3 id="_10">免費版可取得(真歷史、可指定日期區間,需逐檔查詢)</h3>
+<h3 id="_11">免費版可取得(真歷史、可指定日期區間,需逐檔查詢)</h3>
 <table>
 <thead>
 <tr>
@@ -870,7 +897,7 @@ python<span class="w"> </span>crawl.py<span class="w"> </span>-b<span class="w">
 </tr>
 </tbody>
 </table>
-<h3 id="_11">免費版不能取得</h3>
+<h3 id="_12">免費版不能取得</h3>
 <table>
 <thead>
 <tr>
@@ -893,13 +920,13 @@ python<span class="w"> </span>crawl.py<span class="w"> </span>-b<span class="w">
 </tr>
 </tbody>
 </table>
-<h3 id="_12">限流與回補成本</h3>
+<h3 id="_13">限流與回補成本</h3>
 <ul>
 <li>免費版按小時計(官方約 300–600 requests/hr)</li>
 <li>只能逐檔查 → 回補全市場 ≈ 2000 檔 × 5 種 dataset ≈ <strong>10,000 requests</strong></li>
 <li>→ 一次性回補約 <strong>17–33 小時</strong>(可背景分批跑);之後每日增量很少</li>
 </ul>
-<h3 id="_13">結論:建議「混合架構」,不要當唯一資料源</h3>
+<h3 id="_14">結論:建議「混合架構」,不要當唯一資料源</h3>
 <table>
 <thead>
 <tr>
@@ -1368,7 +1395,7 @@ Q1（ys%4==0）直接等於單季值。</p>
 <li>抓取集保股權 (TDCC) (<code>tdcc_get.py</code>)：每週更新。</li>
 <li>抓取月營收 (Revenue) (<code>revenue.py</code>)：每月更新。</li>
 <li>抓取董監持股 (Director) (<code>director.py</code>)：每月更新。</li>
-<li>抓取單季盈餘 (EPS) (<code>eps.py</code>)：每季更新。</li>
+<li>抓取單季盈餘 (EPS) (<code>eps.py</code>)：每季更新。日期欄位會自動換算為民國年/季（例如 <code>20260522</code> → 民國115年Q2）。</li>
 </ul>
 </li>
 </ul>
@@ -1553,7 +1580,7 @@ python<span class="w"> </span>gg_stock.py<span class="w"> </span>fund<span class
  ├─ get_stock_pe_networth_yield(d)   本益比、股價淨值比、殖利率、股利年度
  │       └─ 取不到資料 → 回傳空 DataFrame (該檔放棄)
  ├─ get_stock_industry_status(d)     產業 / 細產業 / 產業地位
- ├─ get_stock_revenue(d)             本年累計營收年增率、單月年增率、月增率、備註
+ ├─ get_stock_revenue(d)             本年累計營收年增率、最新單月年增率（已移至 psrS 前並於前端折行美化）、月增率、備註，以及近 12 個月營收金額與 YoY 資料字串（用於 Modal 趨勢圖）
  ├─ get_stock_season_composite_income_sheet(d)
  │       3 年 EPS/營收、psrS、psr 三年高低、近 8 季三率與升降
  │       └─ 取不到資料 → 回傳空 DataFrame (該檔放棄)
@@ -1740,6 +1767,13 @@ python<span class="w"> </span>gg_stock.py<span class="w"> </span>fund<span class
 </table>
 <p>錯誤資料另存於 <code>error/{stock_id}_revenue.csv</code>。</p>
 <hr />
+<h3 id="html">網頁前端顯示優化 (HTML)</h3>
+<ul>
+<li><strong>長欄位表頭自動折行</strong>：為維持排版整齊，前端 JavaScript 載入時會自動將「最新單月營收年增率」、「大戶近一月增加比」、「投信增減」、「外資增減」、「董監持股增減」等較長表頭欄位拆分成兩行。</li>
+<li><strong>欄位位置與美化</strong>：「最新單月營收年增率」已被移至 <code>psrS</code> 之前，方便對比估值，並在前端以紅（正成長）綠（負成長）膠囊框高亮呈現。</li>
+<li><strong>個股月營收趨勢圖</strong>：當使用者點擊個股的「K線圖」時，詳細彈窗 (Modal) 會載入隱藏的近 12 個月營收與年增率 YoY 資料，並使用 ApexCharts 渲染出直條+折線雙軸趨勢圖，與單季 EPS、歷季三率等共同構成 2x4 的完整對稱版面。</li>
+</ul>
+<hr />
 <h2 id="_7">十、整體資料流圖</h2>
 <div class="codehilite"><pre><span></span><code>命令列參數
    │
@@ -1874,7 +1908,14 @@ final/{method}_good.html  +  final/{method}_good_{date}.csv
 <p>[ ] <strong>12. <code>final/</code> 資料夾不存在時未自動建立</strong></p>
 </li>
 <li><code>gg_stock.py:808-810</code> — 輸出 HTML/CSV 前無 <code>check_dst_folder</code> 防呼叫，若 <code>final/</code> 不存在會 crash</li>
-<li>修法：在 <code>gen_gg_buy_list()</code> 開頭加 <code>check_dst_folder('final')</code></li>
+<li>
+<p>修法：在 <code>gen_gg_buy_list()</code> 開頭加 <code>check_dst_folder('final')</code></p>
+</li>
+<li>
+<p>[ ] <strong>13. <code>outdf['date']</code> 轉成 object dtype 後排序不可靠</strong></p>
+</li>
+<li><code>stock_comm.py</code> <code>get_stock_df_bydate_nums()</code> — <code>outdf['date']</code> 被 cast 成 object dtype，填入 datetime64 scalar 後呼叫 <code>sort_values(by='date')</code>；object dtype 欄位的排序語義跨 pandas 版本不穩定，若有 NaN 殘留會觸發 TypeError</li>
+<li>修法：填完資料後改回 <code>outdf['date'] = pd.to_datetime(outdf['date'])</code>，再 sort</li>
 </ul></section>
 </main>
 
