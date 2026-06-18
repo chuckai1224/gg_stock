@@ -706,6 +706,23 @@
                 colMap[name] = idx;
             });
 
+            // 1.2 Split long headers into two lines to save horizontal space
+            const splitHeaders = {
+                '最新單月營收年增率': '最新單月營收<br>年增率',
+                '大戶近一月增加比': '大戶近一月<br>增加比',
+                '大戶近一周增加比': '大戶近一周<br>增加比',
+                '散戶近一月增加比': '散戶近一月<br>增加比',
+                '投信增減': '投信<br>增減',
+                '外資增減': '外資<br>增減',
+                '董監持股增減': '董監持股<br>增減'
+            };
+            Object.keys(splitHeaders).forEach(name => {
+                const idx = colMap[name];
+                if (idx !== undefined && headers[idx]) {
+                    headers[idx].innerHTML = splitHeaders[name];
+                }
+            });
+
             // 2. Identify columns to hide
             const columnsToHide = [
                 'day kline open', 'day kline high', 'day kline low', 'day kline close', 'day kline date', 'day kline vol',
