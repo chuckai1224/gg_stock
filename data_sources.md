@@ -11,7 +11,7 @@
 
 ### 📦 下載連結
 
-> [**gg_stock_data_20260524.tar.gz**](https://drive.google.com/file/d/1cR1XEHJoLpbATuGrT8bgE2rnVf12kjiA/view?usp=drive_link) (35 MB，解壓後請自行確認)
+> [**gg_stock_data_20260524.tar.gz**](https://drive.google.com/file/d/1qol7VOBteb3kfs5Yni882ZuHPiELPUp4/view?usp=drive_link) (71 MB，解壓後請自行確認)
 
 包含內容:
 
@@ -66,7 +66,7 @@
 ### ⚠️ 注意事項
 
 - 解壓**會直接覆寫**現有的 `sql/` 和 `data/` 目錄,使用前先備份(如有需要)
-- 快照日期為 **2026-05-24**,之後的每日新資料仍須執行 `crawl.py` / `stock_big3.py` / `pe_networth_yeild.py` 累積(見[第六節](#六建議的定期排程cron))
+- 快照日期為 **2026-06-18**,之後的每日新資料仍須執行 `crawl.py` / `stock_big3.py` / `pe_networth_yeild.py` 累積(見[第六節](#六建議的定期排程cron))
 - `*.tar.gz` 已在 `.gitignore` 中,不會被 git 追蹤
 
 ### 🔧 更新快照（給維護者）
