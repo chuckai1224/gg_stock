@@ -638,14 +638,25 @@
                     </div>
                 </div>
 
-                <!-- 6. Revenue & EPS container -->
+                <!-- 6. Revenue container -->
                 <div style="background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.04); padding: 1rem; border-radius: 12px;">
                     <h3 style="font-size: 0.9rem; color: var(--secondary); margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem; font-weight: 600;">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="9" x2="15" y2="15"></line><line x1="15" y1="9" x2="9" y2="15"></line></svg>
-                        <span>單季營收 (百萬) 與 EPS (元)</span>
+                        <span>單季營收 (百萬)</span>
                     </h3>
                     <div class="chart-container">
                         <div id="chart-financial-revenue"></div>
+                    </div>
+                </div>
+
+                <!-- 7. EPS container -->
+                <div style="background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.04); padding: 1rem; border-radius: 12px;">
+                    <h3 style="font-size: 0.9rem; color: var(--primary); margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem; font-weight: 600;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="9" x2="15" y2="15"></line><line x1="15" y1="9" x2="9" y2="15"></line></svg>
+                        <span>單季 EPS (元)</span>
+                    </h3>
+                    <div class="chart-container">
+                        <div id="chart-financial-eps"></div>
                     </div>
                 </div>
             </div>
@@ -662,7 +673,8 @@
             shareholder: null,
             institutional: null,
             financialMargins: null,
-            financialRevenue: null
+            financialRevenue: null,
+            financialEps: null
         };
         
         let currentStockData = null;
@@ -1540,22 +1552,27 @@
         function renderFinancialCharts() {
             if (activeCharts.financialMargins) activeCharts.financialMargins.destroy();
             if (activeCharts.financialRevenue) activeCharts.financialRevenue.destroy();
+            if (activeCharts.financialEps) activeCharts.financialEps.destroy();
             activeCharts.financialMargins = null;
             activeCharts.financialRevenue = null;
+            activeCharts.financialEps = null;
 
             const marginsEl = document.getElementById('chart-financial-margins');
             const revEl = document.getElementById('chart-financial-revenue');
+            const epsEl = document.getElementById('chart-financial-eps');
 
             const f = currentStockData;
             // Validate that we have the data
             if (!f.financeQuarters || f.financeQuarters.length === 0) {
                 marginsEl.innerHTML = `<div class="no-data-msg"><span>無財務基本面數據。</span></div>`;
                 revEl.innerHTML = '';
+                epsEl.innerHTML = '';
                 return;
             }
 
             marginsEl.innerHTML = '';
             revEl.innerHTML = '';
+            epsEl.innerHTML = '';
 
             const isMobile = window.innerWidth <= 768;
             const chartHeight = isMobile ? 260 : 380;
@@ -1620,12 +1637,55 @@
                 }
             };
 
-            // 2. Revenue (left axis) & EPS (right axis) Dual-axis Mixed Chart with trend lines
+            // 2. Revenue Chart (Bar + Trend Line)
             const revOptions = {
                 series: [
                     { name: '單季營收 (百萬)', type: 'column', data: f.financeRevenue },
+                    { name: '營收趨勢', type: 'line', data: f.financeRevenue }
+                ],
+                chart: {
+                    height: chartHeight,
+                    type: 'line',
+                    stacked: false,
+                    zoom: { enabled: false },
+                    toolbar: { show: false }
+                },
+                stroke: {
+                    width: [0, 3],
+                    curve: 'smooth'
+                },
+                plotOptions: {
+                    bar: {
+                        columnWidth: '50%'
+                    }
+                },
+                colors: ['#ef4444', '#f43f5e'],
+                xaxis: {
+                    categories: f.financeQuarters,
+                    labels: { style: { colors: '#9ca3af' } }
+                },
+                yaxis: {
+                    title: {
+                        text: "單季營收 (百萬)",
+                        style: { color: '#ef4444' }
+                    },
+                    labels: {
+                        style: { colors: '#ef4444' },
+                        formatter: val => val !== null && !isNaN(val) ? Math.round(val).toLocaleString() : ''
+                    }
+                },
+                grid: { borderColor: 'rgba(255,255,255,0.06)' },
+                tooltip: {
+                    theme: 'dark',
+                    shared: true,
+                    intersect: false
+                }
+            };
+
+            // 3. EPS Chart (Bar + Trend Line)
+            const epsOptions = {
+                series: [
                     { name: '單季 EPS (元)', type: 'column', data: f.financeEps },
-                    { name: '營收趨勢', type: 'line', data: f.financeRevenue },
                     { name: 'EPS 趨勢', type: 'line', data: f.financeEps }
                 ],
                 chart: {
@@ -1636,7 +1696,7 @@
                     toolbar: { show: false }
                 },
                 stroke: {
-                    width: [0, 0, 3, 3], // Columns have 0 stroke width, lines have 3 stroke width
+                    width: [0, 3],
                     curve: 'smooth'
                 },
                 plotOptions: {
@@ -1644,50 +1704,21 @@
                         columnWidth: '50%'
                     }
                 },
-                colors: ['#ef4444', '#3b82f6', '#f43f5e', '#60a5fa'], // Red & Blue for bars and trend lines
+                colors: ['#3b82f6', '#60a5fa'],
                 xaxis: {
                     categories: f.financeQuarters,
                     labels: { style: { colors: '#9ca3af' } }
                 },
-                yaxis: [
-                    {
-                        seriesName: '單季營收 (百萬)',
-                        axisTicks: { show: true },
-                        axisBorder: { show: true, color: '#ef4444' },
-                        labels: {
-                            style: { colors: '#ef4444' },
-                            formatter: val => val !== null && !isNaN(val) ? Math.round(val).toLocaleString() : ''
-                        },
-                        title: {
-                            text: "單季營收 (百萬)",
-                            style: { color: '#ef4444' }
-                        }
+                yaxis: {
+                    title: {
+                        text: "單季 EPS (元)",
+                        style: { color: '#3b82f6' }
                     },
-                    {
-                        seriesName: '單季 EPS (元)',
-                        opposite: true,
-                        axisTicks: { show: true },
-                        axisBorder: { show: true, color: '#3b82f6' },
-                        labels: {
-                            style: { colors: '#3b82f6' },
-                            formatter: val => val !== null && !isNaN(val) ? val.toFixed(2) : ''
-                        },
-                        title: {
-                            text: "單季 EPS (元)",
-                            style: { color: '#3b82f6' }
-                        }
-                    },
-                    // Map trend lines to their corresponding y-axes (hidden duplicates)
-                    {
-                        seriesName: '單季營收 (百萬)',
-                        show: false
-                    },
-                    {
-                        seriesName: '單季 EPS (元)',
-                        opposite: true,
-                        show: false
+                    labels: {
+                        style: { colors: '#3b82f6' },
+                        formatter: val => val !== null && !isNaN(val) ? val.toFixed(2) : ''
                     }
-                ],
+                },
                 grid: { borderColor: 'rgba(255,255,255,0.06)' },
                 tooltip: {
                     theme: 'dark',
@@ -1698,9 +1729,11 @@
 
             activeCharts.financialMargins = new ApexCharts(marginsEl, marginsOptions);
             activeCharts.financialRevenue = new ApexCharts(revEl, revOptions);
+            activeCharts.financialEps = new ApexCharts(epsEl, epsOptions);
 
             activeCharts.financialMargins.render();
             activeCharts.financialRevenue.render();
+            activeCharts.financialEps.render();
         }
     </script>
 </body>
