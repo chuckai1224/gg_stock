@@ -267,13 +267,21 @@ def get_stock_season_composite_income_sheet(d,debug=0):
     if len(d1)>0:
         try:
             rev_S=(1+float(d.at[0,'本年累計營收年增率'])/100)*float(d1.iloc[0]['營業收入']/1000)
-            d.at[0,'psrS']=d.at[0,'市值(百萬)']/rev_S
+            if pd.notna(rev_S) and rev_S != 0:
+                d.at[0,'psrS']=d.at[0,'市值(百萬)']/rev_S
+            else:
+                d.at[0,'psrS']=np.nan
         except:
             d.at[0,'psrS']=np.nan
     else:
         d.at[0,'psrS']=np.nan
     try:
-        d.at[0,'去年營收年增率']=(float(d1.iloc[1]['營業收入']/1000 ) /float(d1.iloc[2]['營業收入']/1000 ) -1)*100
+        rev1 = float(d1.iloc[1]['營業收入']/1000)
+        rev2 = float(d1.iloc[2]['營業收入']/1000)
+        if pd.notna(rev2) and rev2 != 0:
+            d.at[0,'去年營收年增率']=(rev1 / rev2 - 1)*100
+        else:
+            d.at[0,'去年營收年增率']=np.nan
     except:
         d.at[0,'去年營收年增率']=np.nan
     #print(lno(),r_df.iloc[0])
@@ -290,12 +298,19 @@ def get_stock_season_composite_income_sheet(d,debug=0):
             #print(lno(),ds.iloc[0])
             high=max(ds['high'])
             low=min(ds['low'])
-            #營業收入
-            psrhigh.append(d.at[0,'股數(萬張)']*10000 *high/d1.iloc[i]['營業收入'])
-            
-            psrlow.append(d.at[0,'股數(萬張)']*10000 *low/d1.iloc[i]['營業收入'])
-            d.at[0,'psr高-{}'.format(i+1)]=d.at[0,'股數(萬張)']*10000 *high/d1.iloc[i]['營業收入']    
-            d.at[0,'psr低-{}'.format(i+1)]=d.at[0,'股數(萬張)']*10000 *low/d1.iloc[i]['營業收入']
+            #營業收入 (防範除以零或 nan)
+            rev = d1.iloc[i]['營業收入']
+            if pd.notna(rev) and rev != 0:
+                high_val = d.at[0,'股數(萬張)']*10000 *high/rev
+                low_val = d.at[0,'股數(萬張)']*10000 *low/rev
+            else:
+                high_val = np.nan
+                low_val = np.nan
+
+            psrhigh.append(high_val)
+            psrlow.append(low_val)
+            d.at[0,'psr高-{}'.format(i+1)]=high_val
+            d.at[0,'psr低-{}'.format(i+1)]=low_val
             #print(lno(),high,low,d1.iloc[i]['year'])
         else:
             d.at[0,'psr高-{}'.format(i+1)]=0  
