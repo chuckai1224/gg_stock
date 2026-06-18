@@ -318,6 +318,24 @@ def get_stock_season_composite_income_sheet(d,debug=0):
     seasons=len(df)
     if seasons>8:
         seasons=8      
+
+    # 歷季季度
+    season_names = []
+    for i in range(0, seasons):
+        y_short = str(df.iloc[i]['year'])[-2:]
+        s_val = df.iloc[i]['season']
+        season_names.append('{}Q{}'.format(y_short, s_val))
+    d.at[0, '歷季季度'] = ', '.join(season_names)
+
+    # 歷季單季營收 (千元轉百萬)
+    for i in range(0, seasons):
+        val = df.iloc[i]['單季營收']
+        val_mb = val / 1000 if pd.notna(val) else np.nan
+        if i == 0:
+            d.at[0, '本季營收(百萬)'] = val_mb
+        else:
+            d.at[0, '前{}季營收(百萬)'.format(i)] = val_mb
+
     for i in range(0,seasons):
         #d.at[0,'{}.{}QEPS'.format(df.iloc[i]['year'],df.iloc[i]['season'])]=df.iloc[i]['單季EPS']
         if i==0:
@@ -524,7 +542,8 @@ def gen_stock_info(r,debug=0):
        'day kline open', 'day kline high', 'day kline low', 'day kline close', 'day kline date',
        'week kline vol','day kline vol',
        '股權日期','大戶持股','散戶持股',
-       '董監日期','董監持股','big3 date','外資','投信','自營商'
+       '董監日期','董監持股','big3 date','外資','投信','自營商',
+       '歷季季度', '本季營收(百萬)', '前1季營收(百萬)', '前2季營收(百萬)', '前3季營收(百萬)', '前4季營收(百萬)', '前5季營收(百萬)', '前6季營收(百萬)', '前7季營收(百萬)'
        ]
     stock_id=r.stock_id
     
@@ -538,7 +557,8 @@ def gen_stock_info(r,debug=0):
         '股權日期','大戶持股','散戶持股',
         'week kline open','week kline high','week kline low', 'week kline close', 'week kline date',
         'day kline open', 'day kline high', 'day kline low', 'day kline close', 'day kline date',
-        'week kline vol','day kline vol']
+        'week kline vol','day kline vol',
+        '歷季季度']
     for i in str_col_list:
         d[i]=d[i].astype('str')
     d['date']=d['date'].astype('object')
@@ -733,6 +753,45 @@ def gen_fund_ratio_list(date):
     #print(lno(),d1)
     return d1
     
+# 全域收集變數，用以儲存所有選股法跑完後符合籌碼基本面過濾的個股 DataFrame
+all_chip_fund_dfs = []
+
+def filter_chip_fund(df):
+    if df is None or df.empty:
+        return pd.DataFrame()
+    
+    # 建立副本
+    temp = df.copy()
+    
+    # 確保為數值型態，防範 nan
+    cols_to_numeric = ['總分', '董監持股增減', '投信增減', '外資增減', '大戶近一月增加比', '大戶近一周增加比', '散戶近一月增加比']
+    for col in cols_to_numeric:
+        if col in temp.columns:
+            temp[col] = pd.to_numeric(temp[col], errors='coerce').fillna(0)
+            
+    # 籌碼指標條件累加 (共 6 項)
+    chip_score = pd.Series(0, index=temp.index)
+    
+    if '董監持股增減' in temp.columns:
+        chip_score += (temp['董監持股增減'] > 0).astype(int)
+    if '投信增減' in temp.columns:
+        chip_score += (temp['投信增減'] > 0).astype(int)
+    if '外資增減' in temp.columns:
+        chip_score += (temp['外資增減'] > 0).astype(int)
+    if '大戶近一月增加比' in temp.columns:
+        chip_score += (temp['大戶近一月增加比'] > 0).astype(int)
+    if '大戶近一周增加比' in temp.columns:
+        chip_score += (temp['大戶近一周增加比'] > 0).astype(int)
+    if '散戶近一月增加比' in temp.columns:
+        chip_score += (temp['散戶近一月增加比'] < 0).astype(int)
+        
+    # 基本面條件 (總分 >= 0)
+    fund_score = temp['總分'] if '總分' in temp.columns else pd.Series(0, index=temp.index)
+    
+    # 篩選條件
+    mask = (chip_score >= 4) & (fund_score >= 0)
+    return df[mask]
+
 def gen_gg_buy_list(date,rev_date,method):
     
     #,'stock_name','market','收盤價','股數(萬張)','市值(百萬)']
@@ -772,6 +831,12 @@ def gen_gg_buy_list(date,rev_date,method):
         out=out.sort_values(by=['投本比'], ascending=False).copy()
         c = out.pop('投本比')
         out.insert(16,'投本比',c)
+
+    # 過濾並收集符合籌碼與基本面雙重指標的股票
+    filtered = filter_chip_fund(out)
+    if not filtered.empty:
+        all_chip_fund_dfs.append(filtered)
+
     check_dst_folder('final')
     pd.set_option('display.max_colwidth', None)
     table_html = out.to_html(escape=False, index=False, border=2, index_names=False)
@@ -798,7 +863,37 @@ def gen_gg_buy_list(date,rev_date,method):
 
     out.to_csv('final/{}_good_{}.csv'.format(method,date.strftime('%Y%m%d')),encoding='utf-8-sig', index=False)
     
+def output_chip_fund_report():
+    if not all_chip_fund_dfs:
+        print("沒有符合籌碼與基本面篩選的股票。")
+        return
     
+    # 合併
+    final_cf = pd.concat(all_chip_fund_dfs, ignore_index=True)
+    # 去重複
+    final_cf = final_cf.drop_duplicates(subset=['stock_id'], keep='first')
+    # 依總分由高到低排序
+    final_cf = final_cf.sort_values(by=['總分'], ascending=False)
+    
+    check_dst_folder('final')
+    pd.set_option('display.max_colwidth', None)
+    table_html = final_cf.to_html(escape=False, index=False, border=2, index_names=False)
+    pd.reset_option('display.max_colwidth')
+    
+    title = '籌碼+基本面精選好股 (Chip & Fund)'
+    try:
+        from jinja2 import Environment, FileSystemLoader
+        env = Environment(loader=FileSystemLoader('templates'))
+        tpl = env.get_template('report.html')
+        rendered = tpl.render(table_html=table_html, title=title)
+        with open('final/chip_fund_good.html', 'w', encoding='utf-8') as f:
+            f.write(rendered)
+    except Exception as e:
+        print(f"Jinja2 渲染失敗: {str(e)}，將直接寫入原始 table html。")
+        with open('final/chip_fund_good.html', 'w', encoding='utf-8') as f:
+            f.write(table_html)
+            
+    print(f"成功輸出 籌碼+基本面精選好股 報表共 {len(final_cf)} 檔個股。")
         
 def get_market_value(r):
     #return 百萬
@@ -894,4 +989,6 @@ if __name__ == '__main__':
         gen_gg_buy_list(nowdate,rev_date,"pointK")
     else:
         pass
+        
+    output_chip_fund_report()
     

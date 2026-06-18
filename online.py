@@ -283,7 +283,8 @@ def serve_final_files(filename):
                 'fund': '投信追蹤好股 (Fund)',
                 'pointK': '技術分析好股 (PointK)',
                 'revenue': '營收強勢好股 (Revenue)',
-                'director': '董監持股好股 (Director)'
+                'director': '董監持股好股 (Director)',
+                'chip_fund': '籌碼+基本面精選好股 (Chip & Fund)'
             }
             title = title_map.get(report_type, report_type.upper() + " 選股報表")
             # extract only the <table> if file is already a full rendered page
