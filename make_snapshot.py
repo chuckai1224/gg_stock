@@ -57,6 +57,25 @@ def pack():
 
     size_mb = os.path.getsize(out_name) / 1024 / 1024
     print(f'\n完成：{out_name}  ({size_mb:.1f} MB，共 {total_files} 個檔案)')
+
+    # 複製一份到 d:\to_google，去除日期後綴 (命名為 gg_stock_data.tar.gz)
+    dest_dir = r"d:\to_google"
+    dest_name = "gg_stock_data.tar.gz"
+    if not os.path.exists(dest_dir):
+        try:
+            os.makedirs(dest_dir, exist_ok=True)
+        except Exception as e:
+            print(f"無法建立目錄 {dest_dir}: {str(e)}")
+            
+    if os.path.exists(dest_dir):
+        import shutil
+        dest_path = os.path.join(dest_dir, dest_name)
+        try:
+            shutil.copy2(out_name, dest_path)
+            print(f"[OK] 已複製一份快照至 {dest_path}")
+        except Exception as e:
+            print(f"複製快照失敗: {str(e)}")
+
     print()
     print('下一步：')
     print(f'  1. 上傳 {out_name} 到 Google Drive（取代舊版本或新增）')
