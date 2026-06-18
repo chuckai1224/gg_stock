@@ -1637,29 +1637,37 @@
                 }
             };
 
-            // 2. Revenue Chart (Bar + Trend Line)
+            // 2. Revenue Chart (Pure Bar Chart)
             const revOptions = {
                 series: [
-                    { name: '單季營收 (百萬)', type: 'column', data: f.financeRevenue },
-                    { name: '營收趨勢', type: 'line', data: f.financeRevenue }
+                    { name: '單季營收 (百萬)', data: f.financeRevenue }
                 ],
                 chart: {
                     height: chartHeight,
-                    type: 'line',
-                    stacked: false,
+                    type: 'bar',
                     zoom: { enabled: false },
                     toolbar: { show: false }
                 },
-                stroke: {
-                    width: [0, 3],
-                    curve: 'smooth'
-                },
                 plotOptions: {
                     bar: {
-                        columnWidth: '50%'
+                        columnWidth: '55%',
+                        dataLabels: {
+                            position: 'top',
+                        }
                     }
                 },
-                colors: ['#ef4444', '#f43f5e'],
+                dataLabels: {
+                    enabled: true,
+                    formatter: function (val) {
+                        return val !== null && !isNaN(val) ? Math.round(val).toLocaleString() : '';
+                    },
+                    offsetY: -20,
+                    style: {
+                        fontSize: '9px',
+                        colors: ['#fff']
+                    }
+                },
+                colors: ['#ef4444'], // Red
                 xaxis: {
                     categories: f.financeQuarters,
                     labels: { style: { colors: '#9ca3af' } }
@@ -1677,34 +1685,45 @@
                 grid: { borderColor: 'rgba(255,255,255,0.06)' },
                 tooltip: {
                     theme: 'dark',
-                    shared: true,
-                    intersect: false
+                    y: {
+                        formatter: val => val !== null && !isNaN(val) ? Math.round(val).toLocaleString() + ' 百萬' : '-'
+                    }
                 }
             };
 
-            // 3. EPS Chart (Bar + Trend Line)
+            // 3. EPS Chart (Pure Line Chart)
             const epsOptions = {
                 series: [
-                    { name: '單季 EPS (元)', type: 'column', data: f.financeEps },
-                    { name: 'EPS 趨勢', type: 'line', data: f.financeEps }
+                    { name: '單季 EPS (元)', data: f.financeEps }
                 ],
                 chart: {
                     height: chartHeight,
                     type: 'line',
-                    stacked: false,
                     zoom: { enabled: false },
                     toolbar: { show: false }
                 },
                 stroke: {
-                    width: [0, 3],
+                    width: 3,
                     curve: 'smooth'
                 },
-                plotOptions: {
-                    bar: {
-                        columnWidth: '50%'
+                markers: {
+                    size: 5,
+                    hover: {
+                        size: 7
                     }
                 },
-                colors: ['#3b82f6', '#60a5fa'],
+                dataLabels: {
+                    enabled: true,
+                    formatter: function (val) {
+                        return val !== null && !isNaN(val) ? val.toFixed(2) : '';
+                    },
+                    offsetY: -10,
+                    style: {
+                        fontSize: '9px',
+                        colors: ['#fff']
+                    }
+                },
+                colors: ['#3b82f6'], // Blue
                 xaxis: {
                     categories: f.financeQuarters,
                     labels: { style: { colors: '#9ca3af' } }
@@ -1722,8 +1741,9 @@
                 grid: { borderColor: 'rgba(255,255,255,0.06)' },
                 tooltip: {
                     theme: 'dark',
-                    shared: true,
-                    intersect: false
+                    y: {
+                        formatter: val => val !== null && !isNaN(val) ? val.toFixed(2) + ' 元' : '-'
+                    }
                 }
             };
 
