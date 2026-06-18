@@ -869,6 +869,32 @@
                 });
             }
 
+            // 4.64 Format and style "最新單月營收年增率" (>0 red, <0 green, with %)
+            const revYoyIdx = colMap['最新單月營收年增率'];
+            if (revYoyIdx !== undefined) {
+                rows.forEach(row => {
+                    const cell = row.cells[revYoyIdx + 1];
+                    if (cell) {
+                        const rawText = cell.textContent.trim();
+                        if (rawText === '' || rawText === 'nan' || rawText === 'NaN' || rawText === 'None' || rawText === '-') {
+                            cell.textContent = '-';
+                            return;
+                        }
+                        const val = parseFloat(rawText);
+                        if (!isNaN(val)) {
+                            const formattedText = (val > 0 ? '+' : '') + val.toFixed(1) + '%';
+                            if (val > 0) {
+                                cell.innerHTML = `<span style="color: #ef4444; font-weight: 700; padding: 0.2rem 0.5rem; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 6px; display: inline-block; min-width: 65px; text-align: center;">${formattedText}</span>`;
+                            } else if (val < 0) {
+                                cell.innerHTML = `<span style="color: #10b981; font-weight: 700; padding: 0.2rem 0.5rem; background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 6px; display: inline-block; min-width: 65px; text-align: center;">${formattedText}</span>`;
+                            } else {
+                                cell.innerHTML = `<span style="color: var(--text-muted); font-weight: 500; padding: 0.2rem 0.5rem; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 6px; display: inline-block; min-width: 65px; text-align: center;">${formattedText}</span>`;
+                            }
+                        }
+                    }
+                });
+            }
+
             // 4.65 Format and style "psrS" and "prr" (psrS <= 0.75 for Red, prr > 0 and <= 15 for Red)
             const psrsIdx = colMap['psrS'];
             const prrIdx = colMap['prr'];
