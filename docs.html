@@ -684,7 +684,7 @@ pip install pandas-datareader
 <tr>
 <td>月營收</td>
 <td><code>revenue.py</code></td>
-<td>TWSE/TPEX <code>openapi .../t187ap05</code></td>
+<td>優先使用 <code>mopsov</code> 舊版 HTML 爬取 (最即時)<br>自動 Fallback 官網 <code>t187ap05</code> API</td>
 <td style="text-align: center;">❌ 僅最新一月</td>
 <td><code>sql/income.db</code><br><code>sql/stock/*.db</code>(<code>revenue</code> 表)</td>
 </tr>
@@ -1009,6 +1009,10 @@ python<span class="w"> </span>crawl.py<span class="w"> </span>-b<span class="w">
 <tr>
 <td><code>0bd6f15</code></td>
 <td>revenue 數值型別修正;董監 <code>director.py</code> → <code>t187ap11</code> 開放資料</td>
+</tr>
+<tr>
+<td><code>f07c909</code></td>
+<td>月營收 <code>revenue.py</code> 改為優先向 <code>mopsov</code> 舊版 HTML 銜接站抓取即時資料，解決 OpenAPI 即時性差（上市營收常拖延至 20 日更新）之痛點；並使用 BeautifulSoup 純 Python 解析 Big5，徹底解決 lxml 解碼衝碼（許功蓋問題）亂碼，支援 OpenAPI 自動降級</td>
 </tr>
 </tbody>
 </table>

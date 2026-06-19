@@ -111,7 +111,7 @@ git push
 | 三大法人(投信買超) | `stock_big3.py` | TWSE `rwd/zh/fund/T86`<br>TPEX `insti/dailyTrade` | ✅ | `sql/stock_big3.db` |
 | 集保股權分散(TDCC) | `tdcc_dist.py` | TDCC `opendata/getOD.ashx?id=1-5` | ❌ 僅最新一週 | `sql/tdcc_dist.db` |
 | 本益比/淨值比/殖利率 | `pe_networth_yeild.py` | 上市 TWSE `rwd/.../BWIBBU_d`<br>上櫃 TPEX `openapi/.../peratio` | ⚠️ 上市可,上櫃僅最新 | `data/down_pe_networth_yield/*.csv` |
-| 月營收 | `revenue.py` | TWSE/TPEX `openapi .../t187ap05` | ❌ 僅最新一月 | `sql/income.db`<br>`sql/stock/*.db`(`revenue` 表) |
+| 月營收 | `revenue.py` | 優先使用 `mopsov` 舊版 HTML 爬取 (最即時)<br>自動 Fallback 官網 `t187ap05` API | ❌ 僅最新一月 | `sql/income.db`<br>`sql/stock/*.db`(`revenue` 表) |
 | 季財報/EPS | `eps.py` | TWSE/TPEX `openapi .../t187ap06_*_ci` | ❌ 僅最新一季 | `sql/stock/*.db`(`mix_income` 表) |
 | 董監持股 | `director.py` | TWSE/TPEX `openapi .../t187ap11` | ❌ 僅最新一月 | `data/director/final/*.csv` |
 
@@ -280,6 +280,7 @@ df = dl.taiwan_stock_daily(stock_id='2330',
 | `65944c1` | 月營收 `revenue.py` → TWSE/TPEX `t187ap05` 開放資料 |
 | `7816112` | 季財報 `eps.py` → `t187ap06` 開放資料;薄資料防呆 |
 | `0bd6f15` | revenue 數值型別修正;董監 `director.py` → `t187ap11` 開放資料 |
+| `f07c909` | 月營收 `revenue.py` 改為優先向 `mopsov` 舊版 HTML 銜接站抓取即時資料，解決 OpenAPI 即時性差（上市營收常拖延至 20 日更新）之痛點；並使用 BeautifulSoup 純 Python 解析 Big5，徹底解決 lxml 解碼衝碼（許功蓋問題）亂碼，支援 OpenAPI 自動降級 |
 
 共同問題:
 - 舊網址失效(TWSE/TPEX 改版、MOPS 擋爬蟲)→ 全面改開放資料 API
