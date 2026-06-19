@@ -420,7 +420,7 @@ class income:
 
                     for idx, r_node in enumerate(rows):
                         cells = [c.get_text().strip() for c in r_node.find_all(['td', 'th'])]
-                        if cells and '公司代號' in cells[0]:
+                        if cells and cells[0] == '公司代號':
                             is_rev_table = True
                             headers_list = cells
                             header_idx = idx
@@ -443,7 +443,7 @@ class income:
                     '前期比較增減(%)', '備註']
 
             df['公司代號'] = df['公司代號'].astype(str).str.strip()
-            df = df[df['公司代號'].str.len() == 4].reset_index(drop=True)
+            df = df[df['公司代號'].str.len() == 4].drop_duplicates(subset=['公司代號']).reset_index(drop=True)
 
             df_out = df.copy()
             df_out = df_out[[c for c in cols if c in df_out.columns]]

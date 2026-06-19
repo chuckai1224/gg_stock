@@ -1036,58 +1036,58 @@ def get_stock_sql_engine(stock_id):
 
 def stock_df_to_sql(stock_id,table_name,df):
     engine=get_stock_sql_engine(stock_id)
-    con = engine.connect()
-    df.to_sql(name=table_name, con=con, if_exists='replace',  index= False,chunksize=10) 
+    with engine.begin() as con:
+        df.to_sql(name=table_name, con=con, if_exists='replace',  index= False,chunksize=10) 
     
 def stock_df_to_sql_append(stock_id,table_name,df):
     engine=get_stock_sql_engine(stock_id)
-    con = engine.connect()
-    if table_name in sa_inspect(engine).get_table_names():
-        cmd='SELECT * FROM "{}" WHERE ys == "{}" '.format(table_name,df.iloc[0]['ys'])
-        df_query= pd.read_sql(cmd, con=con)
-        if len(df_query):
-            print(lno(),"repeat",stock_id,df.iloc[0]['ys']/4,df.iloc[0]['ys']%4)
-            return
-        else:
-            #print(lno(),df)
-            #print(lno(),df.columns)
-            df.to_sql(name=table_name,  con=con, if_exists='append',  index= False,chunksize=10)
-    else:    
-        df.to_sql(name=table_name, con=con, if_exists='replace',  index= False,chunksize=10) 
+    with engine.begin() as con:
+        if table_name in sa_inspect(engine).get_table_names():
+            cmd='SELECT * FROM "{}" WHERE ys == "{}" '.format(table_name,df.iloc[0]['ys'])
+            df_query= pd.read_sql(cmd, con=con)
+            if len(df_query):
+                print(lno(),"repeat",stock_id,df.iloc[0]['ys']/4,df.iloc[0]['ys']%4)
+                return
+            else:
+                #print(lno(),df)
+                #print(lno(),df.columns)
+                df.to_sql(name=table_name,  con=con, if_exists='append',  index= False,chunksize=10)
+        else:    
+            df.to_sql(name=table_name, con=con, if_exists='replace',  index= False,chunksize=10) 
 def stock_read_sql_add_df(stock_id,table_name,df):
 
     engine=get_stock_sql_engine(stock_id)
-    con = engine.connect()
-    if table_name in sa_inspect(engine).get_table_names():
-        cmd='SELECT * FROM "{}"'.format(table_name)
-        df_query= pd.read_sql(cmd, con=con, parse_dates=['date'])
-        if df.columns.all()==df_query.columns.all():
-            df=df.append(df_query,ignore_index=True)
-            df.drop_duplicates(subset=['date'], keep='first', inplace=True)
-            df=df.sort_values(by=['date'], ascending=True)
-        print(lno(),df)    
-        #raise
-        df.to_sql(name=table_name,  con=con, if_exists='replace',  index= False,chunksize=10)
-    else:    
-        df.to_sql(name=table_name, con=con, if_exists='replace',  index= False,chunksize=10)         
+    with engine.begin() as con:
+        if table_name in sa_inspect(engine).get_table_names():
+            cmd='SELECT * FROM "{}"'.format(table_name)
+            df_query= pd.read_sql(cmd, con=con, parse_dates=['date'])
+            if df.columns.all()==df_query.columns.all():
+                df=df.append(df_query,ignore_index=True)
+                df.drop_duplicates(subset=['date'], keep='first', inplace=True)
+                df=df.sort_values(by=['date'], ascending=True)
+            print(lno(),df)    
+            #raise
+            df.to_sql(name=table_name,  con=con, if_exists='replace',  index= False,chunksize=10)
+        else:    
+            df.to_sql(name=table_name, con=con, if_exists='replace',  index= False,chunksize=10)         
 def stock_df_to_sql_append_querydate(stock_id,table_name,df):
     engine=get_stock_sql_engine(stock_id)
-    con = engine.connect()
-    if table_name in sa_inspect(engine).get_table_names():
-        #print(lno(),df.iloc[0])   
-        date=df.iloc[0]['date']
-        cmd='SELECT * FROM "{}" WHERE date >= "{}" and date < "{}" '.format(table_name,date-relativedelta(days=1),date+relativedelta(days=1))
-        df_query= pd.read_sql(cmd, con=con)
-        if len(df_query):
-            print(lno(),"repeat",stock_id,df.iloc[0]['date'])
-            return
+    with engine.begin() as con:
+        if table_name in sa_inspect(engine).get_table_names():
+            #print(lno(),df.iloc[0])   
+            date=df.iloc[0]['date']
+            cmd='SELECT * FROM "{}" WHERE date >= "{}" and date < "{}" '.format(table_name,date-relativedelta(days=1),date+relativedelta(days=1))
+            df_query= pd.read_sql(cmd, con=con)
+            if len(df_query):
+                print(lno(),"repeat",stock_id,df.iloc[0]['date'])
+                return
+            else:
+                #print(lno(),df)
+                #print(lno(),df.columns)
+                df.to_sql(name=table_name,  con=con, if_exists='append', index= False,dtype={'date': Date()}, chunksize=10)
         else:
-            #print(lno(),df)
-            #print(lno(),df.columns)
-            df.to_sql(name=table_name,  con=con, if_exists='append', index= False,dtype={'date': Date()}, chunksize=10)
-    else:
-        #print(lno(),df.iloc[0])    
-        df.to_sql(name=table_name, con=con, if_exists='replace',  index= False,dtype={'date': Date()},chunksize=10)        
+            #print(lno(),df.iloc[0])    
+            df.to_sql(name=table_name, con=con, if_exists='replace',  index= False,dtype={'date': Date()},chunksize=10)        
 def tofloat64(x):
     if x is None or pd.isna(x):
         return np.nan
