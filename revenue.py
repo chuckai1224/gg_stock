@@ -374,8 +374,103 @@ class income:
         check_dst_folder(self.data_folder)
         
     def download(self, date, dw=1, ver=2):
-        """改用 TWSE/TPEX 開放資料下載每月營收彙總(僅最新一期),
-        寫入 sql/income.db 與每檔 sql/stock/{id}.db 的 revenue 表。"""
+        """下載每月營收彙總。優先嘗試透過 mopsov 銜接網域抓取最即時的 HTML 營收，
+        解析後寫入資料庫；若失敗或無資料，則自動 fallback 使用官網開放資料 API。"""
+        import requests
+        from bs4 import BeautifulSoup
+
+        year = date.year
+        month = date.month
+        m_year = year - 1911 if year > 1990 else year
+
+        print(lno(), f"Attempting to download instant revenue via HTML (mopsov) for {year}-{month}...")
+
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Referer': 'https://mopsov.twse.com.tw/'
+        }
+
+        urls = [
+            f'https://mopsov.twse.com.tw/nas/t21/sii/t21sc03_{m_year}_{month}_0.html',
+            f'https://mopsov.twse.com.tw/nas/t21/sii/t21sc03_{m_year}_{month}_1.html',
+            f'https://mopsov.twse.com.tw/nas/t21/otc/t21sc03_{m_year}_{month}_0.html',
+            f'https://mopsov.twse.com.tw/nas/t21/otc/t21sc03_{m_year}_{month}_1.html'
+        ]
+
+        all_rows = []
+        parsed_ok = False
+
+        for url in urls:
+            try:
+                r = requests.get(url, headers=headers, timeout=20)
+                if r.status_code != 200:
+                    continue
+
+                html_str = r.content.decode('big5hkscs', errors='ignore')
+                soup = BeautifulSoup(html_str, 'html.parser')
+
+                for table in soup.find_all('table'):
+                    rows = table.find_all('tr')
+                    if not rows:
+                        continue
+
+                    is_rev_table = False
+                    header_idx = -1
+                    headers_list = []
+
+                    for idx, r_node in enumerate(rows):
+                        cells = [c.get_text().strip() for c in r_node.find_all(['td', 'th'])]
+                        if cells and '公司代號' in cells[0]:
+                            is_rev_table = True
+                            headers_list = cells
+                            header_idx = idx
+                            break
+
+                    if is_rev_table:
+                        parsed_ok = True
+                        for r_node in rows[header_idx+1:]:
+                            cells = [c.get_text().strip() for c in r_node.find_all(['td', 'th'])]
+                            if len(cells) >= 10 and len(cells[0]) == 4 and cells[0].isdigit():
+                                d_row = dict(zip(headers_list, cells))
+                                all_rows.append(d_row)
+            except Exception as e:
+                print(lno(), f"HTML download or parse failed for {url}: {e}")
+
+        if parsed_ok and all_rows:
+            df = pd.DataFrame(all_rows)
+            cols = ['公司代號', '公司名稱', '當月營收', '上月營收', '去年當月營收',
+                    '上月比較增減(%)', '去年同月增減(%)', '當月累計營收', '去年累計營收',
+                    '前期比較增減(%)', '備註']
+
+            df['公司代號'] = df['公司代號'].astype(str).str.strip()
+            df = df[df['公司代號'].str.len() == 4].reset_index(drop=True)
+
+            df_out = df.copy()
+            df_out = df_out[[c for c in cols if c in df_out.columns]]
+            for c in cols:
+                if c not in df_out.columns:
+                    df_out[c] = np.nan
+            df_out = df_out[cols].copy()
+
+            for c in ['當月營收', '上月營收', '去年當月營收', '上月比較增減(%)',
+                      '去年同月增減(%)', '當月累計營收', '去年累計營收', '前期比較增減(%)']:
+                df_out[c] = pd.to_numeric(
+                    df_out[c].astype(str).str.replace(',', '', regex=False),
+                    errors='coerce')
+
+            table_name = '%d%02d' % (year, month)
+            df_out.to_sql(name=table_name, con=self.con, if_exists='replace',
+                          index=False, chunksize=200)
+            df_out['date'] = datetime(year, month, 1)
+
+            for i in range(0, len(df_out)):
+                comm.stock_df_to_sql_append_querydate(df_out.iloc[i]['公司代號'],
+                                                      'revenue', df_out[i:i + 1])
+            print(lno(), f"Instant HTML revenue saved successfully for {table_name}, {len(df_out)} stocks.")
+            return
+
+        # ---------------- Fallback to OpenAPI ----------------
+        print(lno(), "HTML download failed or no data. Fallback to OpenAPI...")
         headers = {'User-Agent': 'Mozilla/5.0'}
         sources = ['https://openapi.twse.com.tw/v1/opendata/t187ap05_L',
                    'https://www.tpex.org.tw/openapi/v1/mopsfin_t187ap05_O']
