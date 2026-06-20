@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 #from __future__ import unicode_literals
 import io
 import csv
@@ -218,10 +218,10 @@ def get_df_bydate(date,debug=0):
                 print(lno(),df)
             return df
         
-        return pd.DataFrame(pd.np.empty(( 1, len(outcols))) * pd.np.nan, columns = outcols)
+        return pd.DataFrame(np.nan, index=range(1), columns=outcols)
         
     else :
-        return pd.DataFrame(pd.np.empty(( 1, len(outcols))) * pd.np.nan, columns = outcols)
+        return pd.DataFrame(np.nan, index=range(1), columns=outcols)
 
 def get_dfs_bydate(startdate,enddate,debug=0):
     out_file='data/fut/final/fut.csv'
@@ -241,10 +241,10 @@ def get_dfs_bydate(startdate,enddate,debug=0):
                 print(lno(),df)
             return df
         
-        return pd.DataFrame(pd.np.empty(( 1, len(outcols))) * pd.np.nan, columns = outcols)
+        return pd.DataFrame(np.nan, index=range(1), columns=outcols)
         
     else :
-        return pd.DataFrame(pd.np.empty(( 1, len(outcols))) * pd.np.nan, columns = outcols)
+        return pd.DataFrame(np.nan, index=range(1), columns=outcols)
 def get_good_stock_m1(selday,debug=0):
     """
     1. 投信 小市值

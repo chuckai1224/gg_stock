@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 #import grs
 import csv
 import os
@@ -864,7 +864,7 @@ def get_tdcc_dist_df_bydate_num(stock_no,enddate,num,ver=1,debug=0):
             #print(lno(),j+k)
             outcols.append(j+k)
     #print(lno(),outcols)           
-    df_s=pd.DataFrame(pd.np.empty(( 1, len(outcols))) * pd.np.nan, columns = outcols)
+    df_s=pd.DataFrame(np.nan, index=range(1), columns=outcols)
     o_list=[]
     for i in range(0, len(sample_df)):
         #print (lno(),sample_df.iloc[i]['date_str'])

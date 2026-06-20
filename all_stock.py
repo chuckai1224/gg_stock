@@ -421,7 +421,7 @@ def get_tdcc_dist_df(stock_no,startdate,enddate):
         df = pd.read_csv(tdcc_dist_file,encoding = 'utf8',header=None)
     except:
         print  (lno(),'error',tdcc_dist_file)
-        df = pd.DataFrame(pd.np.empty(( 1, len(outcols))) * pd.np.nan, columns = outcols)
+        df = pd.DataFrame(np.nan, index=range(1), columns=outcols)
     df.columns = outcols
     df.drop('du1', axis=1, inplace = True)
     df.drop('du2', axis=1, inplace = True)
@@ -486,7 +486,7 @@ def get_tdcc_dist_df_bydate_num(stock_no,enddate,num):
     #print (lno(),sample_df)
     outcols = ['date','t_stocks','t_persons','>400_stocks','>400_percents','>400_persons','>1000_stocks','>1000_percents','>1000_persons']       
     
-    df = pd.DataFrame(pd.np.empty(( 1, len(outcols))) * pd.np.nan, columns = outcols)
+    df = pd.DataFrame(np.nan, index=range(1), columns=outcols)
     for i in range(0, len(sample_df)):
         #print (lno(),sample_df.iloc[i]['date_str'])
         tdcc_dist_file=('data/csv/dist/%(stock)s/%(ymd)s_dist.csv')% {'stock': stock_no,'ymd':sample_df.iloc[i]['date_str'] }

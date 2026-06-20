@@ -600,7 +600,7 @@ def gen_stock_info(r,debug=0):
     date=r.date
     _tse_df=comm.exchange_data('tse').get_df_date_parse(date)
     tse_stock=_tse_df['stock_id'].tolist() if 'stock_id' in _tse_df.columns else []
-    d=pd.DataFrame(np.empty(( 1, len(cols))) * np.nan, columns = cols)
+    d=pd.DataFrame(np.nan, index=range(1), columns=cols)
     str_col_list=[
         'stock_id','stock_name','market','產業地位', '備註','細產業','產業','董監日期','董監持股',
         'big3 date','外資','投信','自營商',

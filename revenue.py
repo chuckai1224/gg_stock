@@ -656,7 +656,7 @@ def down_stock_composite_income(stock_id,download=1,debug=1):
     if len(dfs)>=3 and '綜合損益表' in dfs[1].iloc[0][0]:
         df=dfs[2]
         outcols=df[0]
-        d= pd.DataFrame(np.empty(( len(df.columns), len(outcols))) * np.nan, columns = outcols)
+        d= pd.DataFrame(np.nan, index=range(len(df.columns)), columns=outcols)
         d=d.astype('object')
         #print(lno(),df[1])
         for i in range(1,len(df.columns)):

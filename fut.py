@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 #from __future__ import unicode_literals
 import io
 import csv
@@ -436,10 +436,10 @@ def get_df_bydate(date,debug=0):
                 print(lno(),df)
             return df
         
-        return pd.DataFrame(pd.np.empty(( 1, len(outcols))) * pd.np.nan, columns = outcols)
+        return pd.DataFrame(np.nan, index=range(1), columns=outcols)
         
     else :
-        return pd.DataFrame(pd.np.empty(( 1, len(outcols))) * pd.np.nan, columns = outcols)
+        return pd.DataFrame(np.nan, index=range(1), columns=outcols)
 
 def get_dfs_bydate(startdate,enddate,debug=0):
     out_file='data/fut/final/fut.csv'
@@ -459,10 +459,10 @@ def get_dfs_bydate(startdate,enddate,debug=0):
                 print(lno(),df)
             return df
         
-        return pd.DataFrame(pd.np.empty(( 1, len(outcols))) * pd.np.nan, columns = outcols)
+        return pd.DataFrame(np.nan, index=range(1), columns=outcols)
         
     else :
-        return pd.DataFrame(pd.np.empty(( 1, len(outcols))) * pd.np.nan, columns = outcols)
+        return pd.DataFrame(np.nan, index=range(1), columns=outcols)
 ##v=2 算外資
 def calc_fix_delta(enddate,BoS,price,df_top10,debug=0,v=1):
     ##抓取周月期別
@@ -695,7 +695,7 @@ def down_fut_op_big3_top10_data_bydate(enddate,download=1,debug=0xff):
         elif '十大' in i:
             top10_cols.append(i)
 
-    df_o = pd.DataFrame(np.empty(( 1, len(outcols))) * np.nan, columns = outcols)   
+    df_o = pd.DataFrame(np.nan, index=range(1), columns=outcols)   
     #raise
     dst_folder='final'
     out_file='final/fut_day_report_fin.csv'

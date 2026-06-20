@@ -249,7 +249,7 @@ def get_tdcc_dist_df(stock_no,startdate,enddate):
         df = pd.read_csv(tdcc_dist_file,encoding = 'utf8',header=None)
     except:
         print  (lno(),'error',tdcc_dist_file)
-        df = pd.DataFrame(pd.np.empty(( 1, len(outcols))) * pd.np.nan, columns = outcols)
+        df = pd.DataFrame(np.nan, index=range(1), columns=outcols)
     df.columns = outcols
     df.drop('du1', axis=1, inplace = True)
     df.drop('du2', axis=1, inplace = True)
@@ -478,7 +478,7 @@ def get_stock_df_bydate_nums(stock_no,nums,date):
     #print  (lno(),df.tail(5))
     #print  (lno(),stock_no,date,lendf)
     try :
-        outdf = pd.DataFrame(np.empty(( lendf, len(outcols))) * np.nan, columns = outcols)
+        outdf = pd.DataFrame(np.nan, index=range(lendf), columns=outcols)
         outdf['date'] = outdf['date'].astype('object')
     except:
         print  (lno(),stock_no,date,lendf)
