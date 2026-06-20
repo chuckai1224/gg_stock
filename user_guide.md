@@ -27,81 +27,51 @@
 
 1. 前往 [https://www.python.org/downloads/](https://www.python.org/downloads/) 下載 **Python 3.11**
 2. 執行安裝程式，**務必勾選「Add Python to PATH」**，再按 Install Now
-3. 開啟命令提示字元（CMD）確認：
+3. 開啟命令提示字元（CMD）確認版本：
    ```cmd
    python --version
    ```
    顯示 `Python 3.11.x` 即成功。
 
-### 步驟 2 — 建立虛擬環境
+### 步驟 2 — 執行一鍵環境安裝
+在本專案目錄下開啟 **PowerShell**，執行以下指令來自動建立虛擬環境與安裝依賴套件：
 
-```cmd
-cd D:\gg_stock
-python -m venv venv
+```powershell
+powershell -ExecutionPolicy Bypass -File .\setup_venv.ps1
 ```
 
-### 步驟 3 — 安裝套件
-
-```cmd
-.\venv\Scripts\pip.exe install python-dateutil pandas numpy scipy sqlalchemy beautifulsoup4 lxml requests matplotlib mplfinance seaborn kline Pillow flask
-```
-
-> 企業網路出現 SSL 錯誤時，指令後加：
-> `--trusted-host pypi.org --trusted-host files.pythonhosted.org`
-
-### 步驟 4 — 建立必要資料夾
-
-```cmd
-mkdir sql
-mkdir data\stock_data
-mkdir data\revenue
-mkdir data\director
-mkdir data\down_pe_networth_yield
-mkdir final
-mkdir error
-mkdir out
-mkdir log
-```
-
-### 步驟 5 — 確認安裝
-
-```cmd
-.\venv\Scripts\python.exe -c "import pandas, numpy, flask, sqlalchemy, requests; print('安裝成功')"
-```
+* **此指令會自動為您：**
+  * 在目錄下建立 `venv` 虛擬環境。
+  * 升級 `pip` 並依照 `requirements.txt` 自動下載安裝所有需要的 Python 套件（如 `pandas`, `flask`, `requests` 等）。
+  * 自動驗證安裝成果，確認所有模組均可正常載入。
 
 ---
 
-## 三、首次補齊歷史資料
+## 三、啟動網頁控制台
 
-第一次使用需先補資料，選一種方式：
+完成環境部署後，即可啟動系統主控台：
 
-### 方法 A：下載快照（建議，約 5 分鐘）
+**雙擊目錄下的 `start_web.cmd`** —— 將會自動啟動後端伺服器並自動在瀏覽器中開啟控制台首頁。
 
-參考 `data_sources.md` 開頭的「快速開始」章節，從 Google Drive 下載 `.tar.gz` 解壓即可。
-
-### 方法 B：從頭爬取（需 1~2 天）
-
-```cmd
-.\venv\Scripts\python.exe crawl.py -b 20240101 20260522
-.\venv\Scripts\python.exe stock_big3.py -d 20240101 20260522
-.\venv\Scripts\python.exe finmind_backfill_fundament.py
-```
+> * 💡 *黑色命令視窗為背景伺服器，**不能關閉**，關閉後網頁即失效。*
+> * 網址為：`http://127.0.0.1:5000/online/`
 
 ---
 
-## 四、啟動網頁控制台
+## 四、載入歷史資料（網頁起來第一步）
 
-**雙擊 `start_web.cmd`** — 自動啟動伺服器並開啟瀏覽器，一步完成。
+當您首次啟動網頁主控台時，由於尚未有歷史數據，所有資料庫狀態會顯示為「檔案不存在」。
 
-> - 黑色命令視窗**不能關**，關掉後網頁即失效。
-> - 若瀏覽器比伺服器早開，重新整理一次即可。
-> - 網址：`http://127.0.0.1:5000/online/`
+請執行以下步驟取回資料：
+1. 在網頁右側的 **【資料更新控制台】** 區塊中，找到 **【3. 資料庫快照備份】**。
+2. 點擊 **`下載快照`** 按鈕。
+3. 系統將會自動在背景取得最新版歷史數據壓縮檔 `gg_stock_data_XXXXXX.tar.gz`，並**自動進行解壓縮還原**。
+4. 解壓進度可在網頁左側的 **【實時控制台日誌】** 視窗中即時查看。當日誌顯示「Decompression completed successfully!」且任務狀態變回「空閒」時，即代表歷史資料庫初始化成功！
 
-也可用命令列直接執行腳本（適合自動化排程）：
+> ⚠️ **Google Drive 分享權限提醒**：
+> 若在乾淨的外部機器部署，為防範 Google Drive 下載被拒絕，請確保該檔案在 Google Drive 上已被設定為 **「知道連結的任何人」(Anyone with the link) 均可檢視**。如果權限為已限制，程式下載將會失敗。如果本地已有該檔，程式會自動偵測並直接複製解壓。
 
-```cmd
-.\venv\Scripts\python.exe gg_stock.py fund 20260522
-```
+*(如果您不想使用快照，而想從頭下載 2024 年至今的所有歷史資料，可以在終端機中執行：`.\venv\Scripts\python.exe crawl.py -b 20240101 20260522`，需耗時 1~2 天)*
 
 ---
 
