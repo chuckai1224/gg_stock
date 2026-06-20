@@ -21,10 +21,10 @@ def lno():
 
 def check_dst_folder(dstpath):
     if not os.path.isdir(dstpath):
-        os.makedirs(dstpath)     
+        os.makedirs(dstpath)
 
 
-                
+
 def get_gg_income_ratio(r):
     ratio1=np.nan
     result=np.nan
@@ -43,14 +43,14 @@ def get_gg_income_ratio(r):
         month=r.rev_month
         date=datetime(year,month,1)
 
-    df =income.get_by_stockid_date_months(r.stock_id,date,4,debug=1) 
+    df =income.get_by_stockid_date_months(r.stock_id,date,4,debug=1)
     if len(df)<2:
         print(lno(),r.stock_id)
         return 0
     if r.rev_month!=0 and df.iloc[-1]['date'].month!=r.rev_month:
-        print(lno(),df.iloc[-1]['date'].year,df.iloc[-1]['date'].month) 
+        print(lno(),df.iloc[-1]['date'].year,df.iloc[-1]['date'].month)
         return 0
-    
+
     if df.iloc[-1]['去年同月增減(%)']<20:
         return 0
     if df.iloc[-2]['去年同月增減(%)']>20:
@@ -58,17 +58,17 @@ def get_gg_income_ratio(r):
     return df.iloc[-1]['去年同月增減(%)']
     #print(lno(),df[['date','公司代號','公司名稱','去年同月增減(%)']])
     #print(lno(),get_market_value(r))
-##get 董監事持股 6個月內的增減    
+##get 董監事持股 6個月內的增減
 def get_director_change(r):
     df=comm.get_director_df(r.stock_id,dw=0)
     d=df.head(6).copy()
     d['全體董監持股增減']=d['全體董監持股增減'].astype('float64')
-    
+
     #print(lno(),d)
     #print(lno(),d['全體董監持股增減'].sum())
     return d['全體董監持股增減'].sum()
 
-#市值/營收比 找<0.75  避開>1.5 絕對不買>3 
+#市值/營收比 找<0.75  避開>1.5 絕對不買>3
 def get_stock_psrS(r):
     df=comm.get_stock_last_year_income(r.date,r.stock_id)
     if len(df)!=0:
@@ -82,7 +82,7 @@ def get_stock_psrS(r):
         #print(lno(),df.iloc[0])
         #print(lno(),income,market_value)
         return market_value/income1
-    return np.nan 
+    return np.nan
 #市值/研究發展比
 def get_stock_prr(r,debug=1):
     RD_fee=comm.get_stock_RD_fee(r.stock_id,dw=0)
@@ -96,8 +96,8 @@ def get_stock_prr(r,debug=1):
             print(lno(),r.stock_id)
             print(lno(),RD_fee,market_value)
         return market_value/RD_fee
-    return np.nan 
-  
+    return np.nan
+
 
 def get_stock_market(r):
     d1=comm.exchange_data('tse').get_df_date_parse(r.date)
@@ -106,13 +106,13 @@ def get_stock_market(r):
     return 'otc'
 ##get 本益比 淨值比 殖利率 股利年度
 def get_stock_pe_networth_yield(d):
-    df=comm.get_stock_pe_networth_yield_df(d.iloc[0]) 
+    df=comm.get_stock_pe_networth_yield_df(d.iloc[0])
     if len(df):
         try:
             d.at[0,'本益比']=df.iloc[0]['本益比']
         except:
             print(lno(),d.iloc[0]['stock_id'],'本益比',df.iloc[0]['本益比'])
-            d.at[0,'本益比']=np.nan    
+            d.at[0,'本益比']=np.nan
         d.at[0,'股價淨值比']=df.iloc[0]['股價淨值比']
         d.at[0,'殖利率(%)']=df.iloc[0]['殖利率(%)']
         d.at[0,'股利年度']=df.iloc[0]['股利年度']
@@ -122,52 +122,52 @@ def get_stock_pe_networth_yield(d):
         d.at[0,'殖利率(%)']=np.nan
         d.at[0,'股利年度']=np.nan
         return 'N'
-    return 'Y'    
+    return 'Y'
 def get_stock_director(d,ver=1):
     if ver==1:
-        df=director.get_mops_stock_director_df(d.iloc[0]) 
+        df=director.get_mops_stock_director_df(d.iloc[0])
         for i in range(0,6):
             try:
                 d.at[0,'前{}月董監持股'.format(i)]=df.iloc[i]['全體董監持股合計']/1000 #股數轉張數
-            except:    
+            except:
                 d.at[0,'前{}月董監持股'.format(i)]=np.nan
-        d.at[0,'董監持股增減']= d.at[0,'前0月董監持股']- d.at[0,'前1月董監持股']    
+        d.at[0,'董監持股增減']= d.at[0,'前0月董監持股']- d.at[0,'前1月董監持股']
         #print(lno(),df.head(6))
-  
+
         if len(df)!=0:
             df['date']=df['date'].apply(time642str)
             d.at[0,'董監日期']=', '.join(map(str,df['date'].values.tolist()))
             d.at[0,'董監持股']=', '.join(map(str,df['全體董監持股合計'].values.tolist()))
         else:
-            print(lno(),"get director NG")    
-            print(lno(),d.iloc[0])    
-        
-        #raise    
+            print(lno(),"get director NG")
+            print(lno(),d.iloc[0])
+
+        #raise
         return
-    
+
     try:
-        df=comm.get_stock_director_df(d.iloc[0]) 
+        df=comm.get_stock_director_df(d.iloc[0])
     except:
         print(lno(),d.iloc[0])
-        return    
-        #raise    
+        return
+        #raise
     for i in range(0,6):
         try:
             d.at[0,'前{}月董監持股'.format(i)]=df.iloc[-1-i]['董監持股']
-        except:    
+        except:
             d.at[0,'前{}月董監持股'.format(i)]=np.nan
-    d.at[0,'董監持股增減']= d.at[0,'前0月董監持股']- d.at[0,'前5月董監持股']         
+    d.at[0,'董監持股增減']= d.at[0,'前0月董監持股']- d.at[0,'前5月董監持股']
 
 def get_stock_tdcc_dist(d,debug=0):
     cols=['15','16','17','18','19','20','21','22','23','24','25','26','27','28','29']
     s_cols=['15','16','17','18','19','20','21','22','23','24','25']
     b_cols=['29']
-    
+
     #     大戶近一周增加比,大戶近一月增加比,散戶近一月增加比
     #df.iloc[-1][cols].values.sum()
-    df=comm.get_stock_tdcc_dist_df(d.iloc[0]).tail(8).reset_index(drop=True) 
+    df=comm.get_stock_tdcc_dist_df(d.iloc[0]).tail(8).reset_index(drop=True)
     #print(lno(),df)
-    
+
     date_list=[]
     s_ratio_list=[]
     b_ratio_list=[]
@@ -186,7 +186,7 @@ def get_stock_tdcc_dist(d,debug=0):
     d.at[0,'股權日期']=  ', '.join(map(str,date_list))
     d.at[0,'大戶持股']=  ', '.join(map(str,b_ratio_list))
     d.at[0,'散戶持股']=  ', '.join(map(str,s_ratio_list))
-          
+
     if len(df)>=4:
         """
         print(lno(),d.at[0,'前1周<400張比例'],d.at[0,'前4周<400張比例'])
@@ -205,7 +205,7 @@ def get_stock_tdcc_dist(d,debug=0):
         d.at[0,'大戶近一月增加比']=np.nan
         d.at[0,'大戶近一周增加比']=np.nan
 def get_stock_industry_status(d):
-    df=comm.get_stock_industry_status_df(d.iloc[0])  
+    df=comm.get_stock_industry_status_df(d.iloc[0])
     try:
         d.at[0,'產業']=df.iloc[0]['產業']
         d.at[0,'細產業']=df.iloc[0]['細產業']
@@ -213,22 +213,22 @@ def get_stock_industry_status(d):
     except:
         print(lno(),'get_stock_industry_status error',d.iloc[0]    )
     #print(lno(),df)
-    #raise       
+    #raise
 def get_stock_revenue(d):
-    df=comm.get_stock_revenue_df(d.iloc[0]) 
+    df=comm.get_stock_revenue_df(d.iloc[0])
     if len(df):
-        
+
         #print(lno(),df.iloc[0])
         try:
             d.at[0,'本年累計營收年增率']=float(df.iloc[0]['前期比較增減(%)'])
             d.at[0,'最新單月營收年增率']=float(df.iloc[0]['去年同月增減(%)'])
             d.at[0,'最新單月營收月增率']=float(df.iloc[0]['上月比較增減(%)'])
             d.at[0,'備註']=df.iloc[0]['備註']
-            
+
             # 取得近 12 個月的月營收趨勢資料
             months_to_keep = min(len(df), 12)
             df_12m = df.head(months_to_keep).iloc[::-1]  # 反轉使其由舊到新
-            
+
             # 轉換日期為 yy-mm 格式
             def get_yy_mm(date_str):
                 try:
@@ -236,7 +236,7 @@ def get_stock_revenue(d):
                     return dt.strftime('%y-%m')
                 except:
                     return date_str
-            
+
             yymm_list = df_12m['date'].apply(get_yy_mm).values.tolist()
             # 營業收入：當月營收 (千元轉百萬)
             val_list = []
@@ -245,7 +245,7 @@ def get_stock_revenue(d):
                     val_list.append(round(float(val) / 1000, 1))
                 except:
                     val_list.append(0.0)
-            
+
             # 年增率 (去年同月增減(%))
             yoy_list = []
             for val in df_12m['去年同月增減(%)'].values:
@@ -253,14 +253,14 @@ def get_stock_revenue(d):
                     yoy_list.append(round(float(val), 1))
                 except:
                     yoy_list.append(0.0)
-            
+
             d.at[0, 'monthly_revenue_months'] = ', '.join(yymm_list)
             d.at[0, 'monthly_revenue_values'] = ', '.join(map(str, val_list))
             d.at[0, 'monthly_revenue_yoy'] = ', '.join(map(str, yoy_list))
         except Exception as e:
             check_dst_folder('error')
-            df.to_csv('error/{}_revenue.csv'.format(df.iloc[0]['公司代號']),encoding='utf-8', index=False,header=0)     
-            
+            df.to_csv('error/{}_revenue.csv'.format(df.iloc[0]['公司代號']),encoding='utf-8', index=False,header=0)
+
             print(lno(),df)
             print(lno(), "Error getting monthly revenue list:", str(e))
             #raise
@@ -279,7 +279,7 @@ def calc_ratio(num, den):
         return np.nan
 
 def get_stock_season_composite_income_sheet(d,debug=0):
-    df=comm.get_stock_season_df(d.iloc[0],debug=0) 
+    df=comm.get_stock_season_df(d.iloc[0],debug=0)
     if len(df)==0:
         return 'N'
     ##get 第4季df 計算 前3年eps 營收收入
@@ -291,12 +291,12 @@ def get_stock_season_composite_income_sheet(d,debug=0):
         if i==0:
             d.at[0,'本年EPS']=d1.iloc[i]['基本每股盈餘（元）']
         else:
-            d.at[0,'前{}年EPS'.format(i)]=d1.iloc[i]['基本每股盈餘（元）']    
+            d.at[0,'前{}年EPS'.format(i)]=d1.iloc[i]['基本每股盈餘（元）']
     for i in range(0,years):
         if i==0:
-            d.at[0,'本年營收(百萬)']=float(d1.iloc[i]['營業收入']/1000 ) 
+            d.at[0,'本年營收(百萬)']=float(d1.iloc[i]['營業收入']/1000 )
         else:
-            d.at[0,'前{}年營收(百萬)'.format(i)]=float(d1.iloc[i]['營業收入']/1000 ) 
+            d.at[0,'前{}年營收(百萬)'.format(i)]=float(d1.iloc[i]['營業收入']/1000 )
     ##計算3年psr high low and 計算psrS
     if len(d1)>0:
         try:
@@ -324,10 +324,10 @@ def get_stock_season_composite_income_sheet(d,debug=0):
     stk=comm.get_stock_data()
     psrhigh=[]
     psrlow=[]
-    for i in range(0,years):    
+    for i in range(0,years):
         startdate=datetime(d1.iloc[i]['year'],1,1)
         enddate=datetime(d1.iloc[i]['year'],12,31)
-        ds=stk.get_df_by_startdate_enddate(d.iloc[0]['stock_id'],startdate,enddate) 
+        ds=stk.get_df_by_startdate_enddate(d.iloc[0]['stock_id'],startdate,enddate)
         if len(ds):
             #print(lno(),ds.iloc[0])
             high=max(ds['high'])
@@ -347,9 +347,9 @@ def get_stock_season_composite_income_sheet(d,debug=0):
             d.at[0,'psr低-{}'.format(i+1)]=low_val
             #print(lno(),high,low,d1.iloc[i]['year'])
         else:
-            d.at[0,'psr高-{}'.format(i+1)]=0  
+            d.at[0,'psr高-{}'.format(i+1)]=0
             d.at[0,'psr低-{}'.format(i+1)]=0
-    if len(psrlow)==3:    
+    if len(psrlow)==3:
         d.at[0,'psr三年最高']=max(psrhigh)
         d.at[0,'psr三年最低']=min(psrlow)
         d.at[0,'psrs/psr三年最低-1']=d.at[0,'psrS']/d.at[0,'psr三年最低']  -1
@@ -359,14 +359,14 @@ def get_stock_season_composite_income_sheet(d,debug=0):
         d.at[0,'psr三年最高']=0
         d.at[0,'psrs/psr三年最低-1']=0
         d.at[0,'psrs/psr三年最高']=0
-    #d.d.at[0,'psrS']=np.nan  
-    
+    #d.d.at[0,'psrS']=np.nan
+
     #print(d.iloc[0])
     #raise
-    ##抓取前8季 eps 毛利率 盈利率 淨益率  計算近一季 三率季成長 年成長          
+    ##抓取前8季 eps 毛利率 盈利率 淨益率  計算近一季 三率季成長 年成長
     seasons=len(df)
     if seasons>8:
-        seasons=8      
+        seasons=8
 
     # 歷季季度
     season_names = []
@@ -389,26 +389,26 @@ def get_stock_season_composite_income_sheet(d,debug=0):
         #d.at[0,'{}.{}QEPS'.format(df.iloc[i]['year'],df.iloc[i]['season'])]=df.iloc[i]['單季EPS']
         if i==0:
             d.at[0,'本季EPS']=df.iloc[i]['單季EPS']
-        else:        
+        else:
             d.at[0,'前{}季EPS'.format(i)]=df.iloc[i]['單季EPS']
     for i in range(0,seasons):
         #print(lno(),df.iloc[i]['單季毛利淨額'],df.iloc[i]['單季營收'])
         #d.at[0,'{}.{}Q毛利率'.format(df.iloc[i]['year'],df.iloc[i]['season'])]=df.iloc[i]['單季毛利淨額']/df.iloc[i]['單季營收']*100
         if i==0:
             d.at[0,'本季毛利率']=calc_ratio(df.iloc[i]['單季毛利淨額'], df.iloc[i]['單季營收'])
-        else:        
+        else:
             d.at[0,'前{}季毛利率'.format(i)]=calc_ratio(df.iloc[i]['單季毛利淨額'], df.iloc[i]['單季營收'])
     for i in range(0,seasons):
         #d.at[0,'{}.{}Q營利率'.format(df.iloc[i]['year'],df.iloc[i]['season'])]=df.iloc[i]['單季營業利益淨額']/df.iloc[i]['單季營收']*100
         if i==0:
             d.at[0,'本季營利率']=calc_ratio(df.iloc[i]['單季營業利益淨額'], df.iloc[i]['單季營收'])
-        else:        
+        else:
             d.at[0,'前{}季營利率'.format(i)]=calc_ratio(df.iloc[i]['單季營業利益淨額'], df.iloc[i]['單季營收'])
     for i in range(0,seasons):
-        #d.at[0,'{}.{}Q淨利率'.format(df.iloc[i]['year'],df.iloc[i]['season'])]=df.iloc[i]['單季綜合損益總額']/df.iloc[i]['單季營收']*100    
+        #d.at[0,'{}.{}Q淨利率'.format(df.iloc[i]['year'],df.iloc[i]['season'])]=df.iloc[i]['單季綜合損益總額']/df.iloc[i]['單季營收']*100
         if i==0:
             d.at[0,'本季淨利率']=calc_ratio(df.iloc[i]['單季綜合損益總額'], df.iloc[i]['單季營收'])
-        else:        
+        else:
             d.at[0,'前{}季淨利率'.format(i)]=calc_ratio(df.iloc[i]['單季綜合損益總額'], df.iloc[i]['單季營收'])
     try:
         d.at[0,'近一季毛利率升降(年)']=calc_ratio(df.iloc[0]['單季毛利淨額'], df.iloc[0]['單季營收']) - calc_ratio(df.iloc[4]['單季毛利淨額'], df.iloc[4]['單季營收'])
@@ -421,9 +421,9 @@ def get_stock_season_composite_income_sheet(d,debug=0):
         pass
     if debug==1:
         print(lno(),d1)
-       
 
-def get_psrs_div_psr3y_score(r,debug=0):  
+
+def get_psrs_div_psr3y_score(r,debug=0):
     if debug==1:
         print(lno(),r['psrs/psr三年最低-1'])
     x=r['psrs/psr三年最低-1']
@@ -433,22 +433,22 @@ def get_psrs_div_psr3y_score(r,debug=0):
         y=-2
     else:
         y=(0.2-x)*2
-    if debug==1:    
-        print(lno(),y)    
+    if debug==1:
+        print(lno(),y)
     return y
 
-def get_networth_score(r,debug=0):  
+def get_networth_score(r,debug=0):
     if debug==1:
         print(lno(),r['股價淨值比'])
     x=r['股價淨值比']
-    if x>=3.3: 
+    if x>=3.3:
         y=-2
     elif x>=1.3:
         y=1.3-x
     else:
         y=(1.3-x)*2
-    if debug==1:    
-        print(lno(),y)   
+    if debug==1:
+        print(lno(),y)
     return y
 def get_psrs_score(r):
     psrs=r['psrS']
@@ -471,13 +471,13 @@ def get_Gross_margin_score(r,debug=0):
     x=r['本季毛利率']
     if x<10:
         y=-2
-    elif x>=60:    
+    elif x>=60:
         y=2
     else:
-        y=(x-30)/15  
-    if debug==1:    
-        print(lno(),y)  
-    #raise  
+        y=(x-30)/15
+    if debug==1:
+        print(lno(),y)
+    #raise
     return y
 def get_Operating_Profit_margin_score(r,debug=0):
     if debug==1:
@@ -485,14 +485,14 @@ def get_Operating_Profit_margin_score(r,debug=0):
     try:
         x=r['本季營利率']-r['前4季營利率']
     except:
-        return np.nan    
+        return np.nan
     if x/2.5<-2:
         y=-2
     elif x/2.5>2:
         y=2
     else:
-        y=x/2.5    
-    #raise  
+        y=x/2.5
+    #raise
     return y
 def get_revenue_year_20_score(r,debug=0):
     if debug==1:
@@ -511,10 +511,10 @@ def get_revenue_month_80_score(r,debug=0):
     if x>0.8:
         y=2
     elif x<-0.8:
-        y=-2    
+        y=-2
     else:
-        y=  x*2.5  
-    #raise  
+        y=  x*2.5
+    #raise
     return y
 def get_peg_score(n,debug=0):
     r=n.copy()
@@ -523,11 +523,11 @@ def get_peg_score(n,debug=0):
         r['去年eps']=r['前4季EPS']*2+r['前5季EPS']+r['前6季EPS']
         a=r['今年eps預估']/r['去年eps'] -1
     except:
-        return np.nan    
+        return np.nan
     if a<0 and r['去年eps']<0:
         a=0-a
     r['eps預估年成長率']=a
-    
+
     if r['eps預估年成長率']<0:
         peg=1.34
     else:
@@ -541,17 +541,17 @@ def get_peg_score(n,debug=0):
             peg=1.34
         else
             peg=股價/今年eps預估/eps預估年成長率/100
-    else        
+    else
         peg=本益比/(eps預估年成長率)/100
-    """    
+    """
     if peg>1.34:
         y=-2
     elif peg <0.66:
         y=2
     else:
-        y=(1-peg)*2/0.34  
-    #raise 
-    if debug!=0: 
+        y=(1-peg)*2/0.34
+    #raise
+    if debug!=0:
         print(lno(),r[['今年eps預估','本季EPS','前1季EPS','前2季EPS']])
         print(lno(),r[['去年eps','前4季EPS','前5季EPS','前6季EPS']])
         print(lno(),r['eps預估年成長率'],peg,y)
@@ -563,18 +563,18 @@ def time642str(x):
             return ''
         d = ts.strftime('%y-%m-%d')
         return d
-    
+
 def gen_stock_info(r,debug=0):
     #cols=['date','stock_id']
     cols=[ 'stock_id', 'stock_name','總分', '董監持股增減','外資增減','投信增減','大戶近一月增加比','大戶近一周增加比','散戶近一月增加比',
        '最新單月營收年增率','psrS','prr', '本益比', '股價淨值比', '殖利率(%)',  '收盤價', '股數(萬張)', '市值(百萬)',
        '產業地位', '備註','細產業','產業',
-       '本年累計營收年增率', '最新單月營收月增率', 
+       '本年累計營收年增率', '最新單月營收月增率',
        #'前0月董監持股', '前1月董監持股', '前2月董監持股', '前3月董監持股', '前4月董監持股', '前5月董監持股',
-       #'前1周>1000張比例', '前2周>1000張比例','前3周>1000張比例', '前4周>1000張比例', 
+       #'前1周>1000張比例', '前2周>1000張比例','前3周>1000張比例', '前4周>1000張比例',
        #'前1周<400張比例', '前2周<400張比例', '前3周<400張比例', '前4周<400張比例',
        'market',
-       '股利年度', 
+       '股利年度',
        '本年EPS', '前1年EPS', '前2年EPS', '本年營收(百萬)',
        '前1年營收(百萬)', '前2年營收(百萬)', '去年營收年增率', 'psr高-1', 'psr低-1',
        'psr高-2', 'psr低-2', 'psr高-3', 'psr低-3', 'psr三年最高', 'psr三年最低',
@@ -596,7 +596,7 @@ def gen_stock_info(r,debug=0):
        'monthly_revenue_months', 'monthly_revenue_values', 'monthly_revenue_yoy'
        ]
     stock_id=r.stock_id
-    
+
     date=r.date
     _tse_df=comm.exchange_data('tse').get_df_date_parse(date)
     tse_stock=_tse_df['stock_id'].tolist() if 'stock_id' in _tse_df.columns else []
@@ -619,12 +619,12 @@ def gen_stock_info(r,debug=0):
     if stock_id in tse_stock:
         d.at[0,'market']='tse'
     else:
-        d.at[0,'market']='otc'  
+        d.at[0,'market']='otc'
     total_stock_nums=comm.get_total_stock_num(stock_id,date)
 
-    d.at[0,'收盤價']=comm.get_stock_last_close(stock_id,date) 
+    d.at[0,'收盤價']=comm.get_stock_last_close(stock_id,date)
     d.at[0,'股數(萬張)']=comm.get_total_stock_num(stock_id,date)/10000000
-    #1萬張=1千萬股 市值百萬 要x10    
+    #1萬張=1千萬股 市值百萬 要x10
     d.at[0,'市值(百萬)']=d.at[0,'收盤價']*d.at[0,'股數(萬張)']*10
 
     ## 抓取 董監持股
@@ -642,28 +642,28 @@ def gen_stock_info(r,debug=0):
 
     ## 抓取 產業地位
     get_stock_industry_status(d)
-    
-    ##抓取 	本年累計營收年增率	最新單月營收年增率	最新單月營收月增率	
+
+    ##抓取 	本年累計營收年增率	最新單月營收年增率	最新單月營收月增率
     get_stock_revenue(d)
 
     ##三年eps 營業收入 psr high low psrS  8季三率 近一季三率成長 去年營收年增率 去年營收-百萬	今年營收預估-百萬
-    res=get_stock_season_composite_income_sheet(d)  
+    res=get_stock_season_composite_income_sheet(d)
     if res=='N':
         return pd.DataFrame()
 
     #get prr
-    d.at[0,'prr']=get_stock_prr(d.iloc[0])   
-    d.at[0,'分數:psrs/psr(3)-1']= get_psrs_div_psr3y_score(d.iloc[0])   
-    d.at[0,'分數:淨值比']= get_networth_score(d.iloc[0])   
-    d.at[0,'分數:psrs']= get_psrs_score(d.iloc[0])   
-    d.at[0,'分數:prr']= get_prr_score(d.iloc[0])   
-    d.at[0,'分數:毛利率']= get_Gross_margin_score(d.iloc[0])   
-    d.at[0,'分數:營利率年增']= get_Operating_Profit_margin_score(d.iloc[0])   
-    d.at[0,'分數:營收年增20%']= get_revenue_year_20_score(d.iloc[0]) 
-    d.at[0,'分數:營收月增80%']= get_revenue_month_80_score(d.iloc[0]) 
-    d.at[0,'分數:peg']= get_peg_score(d.iloc[0]) 
-    
-    
+    d.at[0,'prr']=get_stock_prr(d.iloc[0])
+    d.at[0,'分數:psrs/psr(3)-1']= get_psrs_div_psr3y_score(d.iloc[0])
+    d.at[0,'分數:淨值比']= get_networth_score(d.iloc[0])
+    d.at[0,'分數:psrs']= get_psrs_score(d.iloc[0])
+    d.at[0,'分數:prr']= get_prr_score(d.iloc[0])
+    d.at[0,'分數:毛利率']= get_Gross_margin_score(d.iloc[0])
+    d.at[0,'分數:營利率年增']= get_Operating_Profit_margin_score(d.iloc[0])
+    d.at[0,'分數:營收年增20%']= get_revenue_year_20_score(d.iloc[0])
+    d.at[0,'分數:營收月增80%']= get_revenue_month_80_score(d.iloc[0])
+    d.at[0,'分數:peg']= get_peg_score(d.iloc[0])
+
+
     score_cols=['分數:psrs/psr(3)-1','分數:淨值比','分數:psrs','分數:prr','分數:毛利率','分數:營利率年增','分數:營收年增20%','分數:營收月增80%','分數:peg']
     if debug==1:
         print(lno(),d.iloc[0][score_cols].values)
@@ -678,7 +678,7 @@ def gen_stock_info(r,debug=0):
     if debug!=0:
         print(lno(),week_df.iloc[0])
         print(lno(),len(week_df))
-  
+
     if len(week_df)>=60:
         d.at[0,'week kline open']=', '.join(map(str,week_df['open'].values.tolist()))
         d.at[0,'week kline high']=', '.join(map(str,week_df['high'].values.tolist()))
@@ -686,7 +686,7 @@ def gen_stock_info(r,debug=0):
         d.at[0,'week kline close']=', '.join(map(str,week_df['close'].values.tolist()))
         d.at[0,'week kline date']=', '.join(week_df['date'].values.tolist())
         d.at[0,'week kline vol']=', '.join(map(str,week_df['vol'].values.tolist()))
-    else:    
+    else:
         d.at[0,'week kline open']=''
         d.at[0,'week kline high']=''
         d.at[0,'week kline low']=''
@@ -711,7 +711,7 @@ def gen_stock_info(r,debug=0):
     d.at[0,'day kline date']=', '.join(day_df['date'].values.tolist())
     d.at[0,'day kline vol']=', '.join(map(str,day_df['vol'].values.tolist()))
     stock_3big_df=stock_big3.get_stock_3big(stock_id,date,10,d.at[0,'market'])
-    
+
     if len(stock_3big_df)!=0:
         stock_3big_df['date']=stock_3big_df['日期'].apply(time642str)
         d.at[0,'big3 date']=', '.join(stock_3big_df['date'].values.tolist())
@@ -736,29 +736,29 @@ def gen_stock_info(r,debug=0):
 def check_skip_stock(r):
     close=np.nan
     if len(r.stock_id)!=4:
-        return np.nan 
+        return np.nan
     if r['stock_id'].startswith('00'):
-        return np.nan 
+        return np.nan
     if r['stock_id'].startswith( '25' ):
-        return np.nan 
+        return np.nan
     if r['stock_id'].startswith( '28' ):
-        return np.nan 
+        return np.nan
     if r['stock_id'].startswith( '55' ):
-        return np.nan 
+        return np.nan
     if r['stock_id'].startswith( '58' ):
-        return np.nan 
+        return np.nan
     cash=float(r.cash)
     if cash<3000000:
         return np.nan
-    return r.close  
+    return r.close
 def red_K_ratio_calc(r):
     try:
         pre_close=r.close-r['diff']
         if r.open >pre_close:
             red_K_pwr= (r.close -pre_close)/pre_close
         else :
-            red_K_pwr= (r.close -r.open)/pre_close    
-        return red_K_pwr 
+            red_K_pwr= (r.close -r.open)/pre_close
+        return red_K_pwr
     except :
         return np.nan
 def check_point_K(r):
@@ -775,53 +775,53 @@ def check_point_K(r):
     return   0
 def gen_pointK_list(date):
     df=comm.get_tse_otc_stock_df_by_date(date)
-    df['close']=df.apply(check_skip_stock,axis=1)  
-    
+    df['close']=df.apply(check_skip_stock,axis=1)
+
     df = df[~df['close'].isnull()]
-   
+
     df['point_K']=df.apply(check_point_K,axis=1)
     d=df[(df['point_K']>=1)].copy()
-    return d    
- 
+    return d
+
 def gen_fund_ratio_list(date):
     df=stock_big3.get_stock_big3_date_df(date)
     if df.empty:
         return pd.DataFrame()
     def check_fund_skip_stock(r):
         if len(r['證券代號'])!=4:
-            return 0 
+            return 0
         if r['證券代號'].startswith('00'):
             return 0
-        
+
         if r['投信買賣超股數']>0:
             return 1
-        return 0    
+        return 0
     df['result']=df.apply(check_fund_skip_stock,axis=1)
     df=df[df['result']==1].reset_index(drop=True)
     d1=df[['證券代號','證券名稱','投信買賣超股數','date','market']].copy()
     d1.columns=['stock_id','stock_name','投信買賣超股數','date','market']
     #print(lno(),d1)
     return d1
-    
+
 # 全域收集變數，用以儲存所有選股法跑完後符合籌碼基本面過濾的個股 DataFrame
 all_chip_fund_dfs = []
 
 def filter_chip_fund(df):
     if df is None or df.empty:
         return pd.DataFrame()
-    
+
     # 建立副本
     temp = df.copy()
-    
+
     # 確保為數值型態，防範 nan
     cols_to_numeric = ['總分', '董監持股增減', '投信增減', '外資增減', '大戶近一月增加比', '大戶近一周增加比', '散戶近一月增加比']
     for col in cols_to_numeric:
         if col in temp.columns:
             temp[col] = pd.to_numeric(temp[col], errors='coerce').fillna(0)
-            
+
     # 籌碼指標條件累加 (共 6 項)
     chip_score = pd.Series(0, index=temp.index)
-    
+
     if '董監持股增減' in temp.columns:
         chip_score += (temp['董監持股增減'] > 0).astype(int)
     if '投信增減' in temp.columns:
@@ -834,25 +834,25 @@ def filter_chip_fund(df):
         chip_score += (temp['大戶近一周增加比'] > 0).astype(int)
     if '散戶近一月增加比' in temp.columns:
         chip_score += (temp['散戶近一月增加比'] < 0).astype(int)
-        
+
     # 基本面條件 (總分 >= 0)
     fund_score = temp['總分'] if '總分' in temp.columns else pd.Series(0, index=temp.index)
-    
+
     # 篩選條件
     mask = (chip_score >= 4) & (fund_score >= 0)
     return df[mask]
 
 def gen_gg_buy_list(date,rev_date,method):
-    
+
     #,'stock_name','market','收盤價','股數(萬張)','市值(百萬)']
     if 'revenue'==method:
         d1=revenue.gen_revenue_good_list(rev_date)
     elif 'pointK'==method:
         d1=gen_pointK_list(date)
     elif 'fund'==method:
-        d1=gen_fund_ratio_list(date)    
+        d1=gen_fund_ratio_list(date)
     else:
-        d1=director.gen_director_good_list(rev_date) 
+        d1=director.gen_director_good_list(rev_date)
     #print(lno(),d1)
     if len(d1)==0:
         return
@@ -912,24 +912,24 @@ def gen_gg_buy_list(date,rev_date,method):
             f.write(table_html)
 
     out.to_csv('final/{}_good_{}.csv'.format(method,date.strftime('%Y%m%d')),encoding='utf-8-sig', index=False)
-    
+
 def output_chip_fund_report():
     if not all_chip_fund_dfs:
         print("沒有符合籌碼與基本面篩選的股票。")
         return
-    
+
     # 合併
     final_cf = pd.concat(all_chip_fund_dfs, ignore_index=True)
     # 去重複
     final_cf = final_cf.drop_duplicates(subset=['stock_id'], keep='first')
     # 依總分由高到低排序
     final_cf = final_cf.sort_values(by=['總分'], ascending=False)
-    
+
     check_dst_folder('final')
     pd.set_option('display.max_colwidth', None)
     table_html = final_cf.to_html(escape=False, index=False, border=2, index_names=False)
     pd.reset_option('display.max_colwidth')
-    
+
     title = '籌碼+基本面精選好股 (Chip & Fund)'
     try:
         from jinja2 import Environment, FileSystemLoader
@@ -942,9 +942,9 @@ def output_chip_fund_report():
         print(f"Jinja2 渲染失敗: {str(e)}，將直接寫入原始 table html。")
         with open('final/chip_fund_good.html', 'w', encoding='utf-8') as f:
             f.write(table_html)
-            
+
     print(f"成功輸出 籌碼+基本面精選好股 報表共 {len(final_cf)} 檔個股。")
-        
+
 def get_market_value(r):
     #return 百萬
     date=r.date
@@ -967,59 +967,59 @@ def get_market_value(r):
         #print(lno(),df)
         return np.nan, np.nan, np.nan
     return last_close,total_stock_nums/10000000, market_value
-   
- 
+
+
 
 
 if __name__ == '__main__':
     sns.set()
     mpl.rcParams['font.family'] = 'sans-serif'
     mpl.rcParams[u'font.sans-serif'] = ['simhei']
-    
+
     if len(sys.argv)==1:
-        nowdate=comm.get_date() 
+        nowdate=comm.get_date()
         rev_date=nowdate-relativedelta(months=1)
-        gen_gg_buy_list(nowdate,rev_date,"pointK")                            
-        gen_gg_buy_list(nowdate,rev_date,"revenue")                      
-        gen_gg_buy_list(nowdate,rev_date,"director")  
-        gen_gg_buy_list(nowdate,rev_date,"fund")                   
+        gen_gg_buy_list(nowdate,rev_date,"pointK")
+        gen_gg_buy_list(nowdate,rev_date,"revenue")
+        gen_gg_buy_list(nowdate,rev_date,"director")
+        gen_gg_buy_list(nowdate,rev_date,"fund")
     elif sys.argv[1]=='gg' :
         ## TODO gg gen_analy_data
-        try:    
+        try:
             nowdate=datetime.strptime(sys.argv[2],'%Y%m%d')
         except:
-            nowdate=comm.get_date()  
-        try:    
+            nowdate=comm.get_date()
+        try:
             rev_date=datetime.strptime(sys.argv[3],'%Y%m%d')
         except:
             rev_date=nowdate-relativedelta(months=1)
-        gen_gg_buy_list(nowdate,rev_date,"pointK")                            
-        gen_gg_buy_list(nowdate,rev_date,"revenue")                      
-        gen_gg_buy_list(nowdate,rev_date,"director")    
-        gen_gg_buy_list(nowdate,rev_date,"fund")   
+        gen_gg_buy_list(nowdate,rev_date,"pointK")
+        gen_gg_buy_list(nowdate,rev_date,"revenue")
+        gen_gg_buy_list(nowdate,rev_date,"director")
+        gen_gg_buy_list(nowdate,rev_date,"fund")
     elif sys.argv[1]=='director' :
         ## TODO gg gen_analy_data
-        try:    
+        try:
             nowdate=datetime.strptime(sys.argv[2],'%Y%m%d')
         except:
-            nowdate=comm.get_date()  
-        try:    
+            nowdate=comm.get_date()
+        try:
             rev_date=datetime.strptime(sys.argv[3],'%Y%m%d')
         except:
             rev_date=nowdate-relativedelta(months=1)
-        gen_gg_buy_list(nowdate,rev_date,"director")    
-    
+        gen_gg_buy_list(nowdate,rev_date,"director")
+
     elif sys.argv[1]=='fund' :
         ## TODO gg gen_analy_data
-        try:    
+        try:
             nowdate=datetime.strptime(sys.argv[2],'%Y%m%d')
         except:
-            nowdate=comm.get_date()  
-        try:    
+            nowdate=comm.get_date()
+        try:
             rev_date=datetime.strptime(sys.argv[3],'%Y%m%d')
         except:
             rev_date=nowdate-relativedelta(months=1)
-        gen_gg_buy_list(nowdate,rev_date,"fund")  
+        gen_gg_buy_list(nowdate,rev_date,"fund")
     elif sys.argv[1]=='revenue' :
         try:
             nowdate=datetime.strptime(sys.argv[2],'%Y%m%d')
@@ -1039,6 +1039,5 @@ if __name__ == '__main__':
         gen_gg_buy_list(nowdate,rev_date,"pointK")
     else:
         pass
-        
+
     output_chip_fund_report()
-    

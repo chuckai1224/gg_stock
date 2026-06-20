@@ -9,7 +9,8 @@ csv/
 download/
 
 # 程式輸出
-final/
+final/*
+!final/*.html
 error/
 out/
 log/
@@ -27,3 +28,4 @@ codex_full_access.cmd
 # 資料備份打包
 *.tar.gz
 *.zip
+test/

@@ -2,9 +2,13 @@ param(
     [string]$Date = ""
 )
 
-Set-Location D:\gg_stock
+# 使用腳本所在的資料夾路徑作為工作目錄，不再鎖死 D:\gg_stock
+Set-Location $PSScriptRoot
 
-$python = "D:\gg_stock\venv\Scripts\python.exe"
+$python = Join-Path $PSScriptRoot "venv\Scripts\python.exe"
+if (-not (Test-Path $python)) {
+    $python = "python"
+}
 
 if ($Date -eq "") {
     $today = (Get-Date).ToString("yyyyMMdd")

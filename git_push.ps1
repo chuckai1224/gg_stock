@@ -2,7 +2,7 @@ param(
     [string]$Message = ""
 )
 
-Set-Location D:\gg_stock
+Set-Location $PSScriptRoot
 
 if ($Message -eq "") {
     $today = (Get-Date).ToString("yyyy-MM-dd")

@@ -66,7 +66,7 @@ def pack():
             os.makedirs(dest_dir, exist_ok=True)
         except Exception as e:
             print(f"無法建立目錄 {dest_dir}: {str(e)}")
-            
+
     if os.path.exists(dest_dir):
         import shutil
         dest_path = os.path.join(dest_dir, dest_name)
