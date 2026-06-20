@@ -40,11 +40,6 @@ powershell -ExecutionPolicy Bypass -File .\setup_venv.ps1
 1. 在網頁主控台右側的 **【資料更新控制台】** 中，找到 **【3. 資料庫快照備份】** 區塊。
 2. 點擊 **`下載快照`** 按鈕。
 3. 系統將會自動背景下載最新版歷史數據壓縮檔 `gg_stock_data_XXXXXX.tar.gz`，並解壓更新至 `sql/stock_data.db` 資料庫與 `data/stock_data/` 個股 CSV 目錄。
-   
-   > [!IMPORTANT]
-   > **關於 Google Drive 分享權限設定**  
-   > 為了讓程式能夠在任何乾淨的環境下成功下載資料，請確保您在 Google Drive 上該檔案的分享權限已設定為 **「知道連結的任何人」(Anyone with the link) 均可檢視**。如果權限為「已限制」(Restricted)，程式在下載時會被重新導向至登入頁面並回報 401 錯誤。
-   
 4. 下載進度可在網頁左側的 **【實時控制台日誌】** 視窗中即時查看。當日誌顯示「Download completed successfully!」且任務狀態變回「空閒」時，代表初始化成功！
 
 ---
