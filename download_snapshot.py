@@ -76,28 +76,7 @@ def main():
         extract_tar_gz(destination)
         return
 
-    # 2. 檢查主目錄或上層目錄是否有快照檔
-    parent_candidate = os.path.join("..", destination)
-    grandparent_candidate = os.path.join("..", "..", destination)
-    main_repo_candidate = os.path.join("D:\\gg_stock", destination)
-    
-    copied = False
-    for candidate in [parent_candidate, grandparent_candidate, main_repo_candidate]:
-        if os.path.exists(candidate):
-            print(f"找到快照來源檔 {candidate}，正在進行複製...")
-            try:
-                shutil.copy(candidate, destination)
-                print("複製成功！")
-                copied = True
-                break
-            except Exception as e:
-                print(f"複製失敗: {str(e)}")
-                
-    if copied:
-        extract_tar_gz(destination)
-        return
-
-    # 3. 嘗試從 Google Drive 下載
+    # 2. 嘗試從 Google Drive 下載
     try:
         download_file_from_google_drive(file_id, destination)
         extract_tar_gz(destination)
