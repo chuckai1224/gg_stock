@@ -1,4 +1,4 @@
-# Windows PowerShell Script to Set Up Python Virtual Environment (venv)
+﻿# Windows PowerShell Script to Set Up Python Virtual Environment (venv)
 # Usage: .\setup_venv.ps1
 
 $ErrorActionPreference = "Stop"
@@ -33,7 +33,7 @@ try {
         Write-ErrorMsg "找不到 python 指令，請確認 Python 是否已安裝並已加入環境變數 PATH 中。"
         exit 1
     }
-    
+
     $pythonVersion = python --version 2>&1
     Write-Info "偵測到系統 Python 版本: $pythonVersion"
     Write-Info "Python 路徑: $($pythonPath.Source)"
