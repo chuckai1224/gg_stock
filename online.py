@@ -24,12 +24,19 @@ def ensure_log_dir():
 def run_subprocess_thread(cmd, log_file):
     global task_process, task_status
     try:
+        # 強制子進程使用 UTF-8 編碼輸出
+        import os
+        env = os.environ.copy()
+        env["PYTHONIOENCODING"] = "utf-8"
+        env["PYTHONUTF8"] = "1"
+        
         task_process = subprocess.Popen(
             cmd,
             stdout=log_file,
             stderr=subprocess.STDOUT,
-            text=True,
-            shell=True
+            encoding="utf-8",
+            shell=True,
+            env=env
         )
         task_process.wait()
         with _task_lock:
@@ -158,7 +165,8 @@ def get_task_status():
 def get_task_log():
     if os.path.exists(task_log_path):
         try:
-            with open(task_log_path, "r", encoding="utf-8") as f:
+            # 加上 errors="replace" 防止遇到非 UTF-8 字元時解碼崩潰
+            with open(task_log_path, "r", encoding="utf-8", errors="replace") as f:
                 content = f.read()
             return jsonify({"log": content})
         except Exception as e:
