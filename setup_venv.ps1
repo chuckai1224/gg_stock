@@ -1,4 +1,4 @@
-﻿# Windows PowerShell Script to Set Up Python Virtual Environment (venv)
+# Windows PowerShell Script to Set Up Python Virtual Environment (venv)
 # Usage: .\setup_venv.ps1
 
 $ErrorActionPreference = "Stop"
@@ -55,7 +55,7 @@ if (Test-Path $venvDir) {
 }
 
 try {
-    python -m venv venv
+    python -m venv "$venvDir"
     Write-Success "虛擬環境建立成功！"
 }
 catch {
