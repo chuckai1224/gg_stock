@@ -325,10 +325,26 @@ def process_one(dl, stock_id, stock_name, start_s, end_s,
 def main():
     args = sys.argv[1:]
 
+    # 載入 .env 檔案中的環境變數
+    if os.path.exists('.env'):
+        with open('.env', 'r', encoding='utf-8') as f:
+            for line in f:
+                if '=' in line and not line.strip().startswith('#'):
+                    k, v = line.strip().split('=', 1)
+                    os.environ[k.strip()] = v.strip()
+    token = os.environ.get('FINMIND_TOKEN')
+
     # --dry-run 2330
     if args and args[0] == '--dry-run':
         stock_id = args[1] if len(args) > 1 else '2330'
         dl = DataLoader()
+        if token:
+            try:
+                dl.login_by_token(api_token=token)
+                print('[finmind] (dry-run) 使用 FINMIND_TOKEN 登入成功！')
+            except Exception as e:
+                print('[finmind] (dry-run) 登入 Token 失敗: %s' % repr(e))
+
         end   = datetime.today()
         start = calc_start_date(end)
         start_s, end_s = start.strftime('%Y-%m-%d'), end.strftime('%Y-%m-%d')
@@ -353,6 +369,13 @@ def main():
     start_s, end_s = start.strftime('%Y-%m-%d'), end.strftime('%Y-%m-%d')
 
     dl = DataLoader()
+    if token:
+        try:
+            dl.login_by_token(api_token=token)
+            print('[finmind] 使用 FINMIND_TOKEN 登入成功！')
+        except Exception as e:
+            print('[finmind] 登入 Token 失敗: %s' % repr(e))
+
     try:
         info  = dl.taiwan_stock_info()
         names = dict(zip(info['stock_id'].astype(str), info['stock_name']))

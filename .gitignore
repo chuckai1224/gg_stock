@@ -24,6 +24,7 @@ venv/
 .idea/
 .vscode/
 codex_full_access.cmd
+.env
 
 # 資料備份打包
 *.tar.gz
