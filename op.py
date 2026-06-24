@@ -211,7 +211,7 @@ def down_op_pc(startdate,enddate):
         df_s.dropna(inplace=True)
         
         
-        df_s=df_s.append(df,ignore_index=True)
+        df_s=pd.concat([df_s, df],ignore_index=True)
         
         df_s.drop_duplicates(subset=['日期'],keep='first',inplace=True)
         df_s=df_s.sort_values(by=['日期'], ascending=False)
@@ -1141,7 +1141,7 @@ def generate_twii(startdate,enddate,debug=1):
                 if debug==1:
                     print(lno(),df_s.dtypes)
                 df_s['日期']=[date_sub2time64(x) for x in df_s['日期'] ]    
-                df_s=df_s.append(df,ignore_index=True)
+                df_s=pd.concat([df_s, df],ignore_index=True)
                 
                 df_s.drop_duplicates(subset=['日期'],keep='first',inplace=True)
                 if debug==1:
@@ -1277,7 +1277,7 @@ def gen_op_fin(date):
     #print(lno(),df1)
     check_dst_folder('day_report/%d%02d'%(date.year,date.month))
     old_width = pd.get_option('display.max_colwidth')
-    pd.set_option('display.max_colwidth', -1)
+    pd.set_option('display.max_colwidth', None)
     filen='day_report/%d%02d/%d%02d%02d_選擇權_v1.html'%(date.year,date.month,date.year,date.month,date.day)
     df2.to_html(filen,escape=False,index=False,sparsify=True,border=2,index_names=False)
     pd.set_option('display.max_colwidth', old_width)  
@@ -1313,7 +1313,7 @@ def gen_op_fin_v1(date):
     #print(lno(),df1)
     check_dst_folder('day_report/%d%02d'%(date.year,date.month))
     old_width = pd.get_option('display.max_colwidth')
-    pd.set_option('display.max_colwidth', -1)
+    pd.set_option('display.max_colwidth', None)
     filen='day_report/%d%02d/%d%02d%02d_選擇權_v1.html'%(date.year,date.month,date.year,date.month,date.day)
     df2.to_html(filen,escape=False,index=False,sparsify=True,border=2,index_names=False)
     pd.set_option('display.max_colwidth', old_width)  
@@ -1555,7 +1555,7 @@ def op_plot_v1(date,debug=0):
         df['OP分析圖'] = df['OP分析圖'].apply(lambda x: '<img src="{}" style="max-height:450px;"/>'.format(x) if x else '') 
         filen='day_report/%d%02d%02d/op.html'%(date.year,date.month,date.day)
         old_width = pd.get_option('display.max_colwidth')
-        pd.set_option('display.max_colwidth', -1)
+        pd.set_option('display.max_colwidth', None)
         df.to_html(filen,escape=False,index=False,sparsify=True,border=2,index_names=False)
         pd.set_option('display.max_colwidth', old_width) 
         PdfFilename='day_report/%d%02d%02d/op.pdf'%(date.year,date.month,date.day)

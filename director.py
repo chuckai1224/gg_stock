@@ -14,6 +14,7 @@ import requests
 from io import StringIO
 from inspect import currentframe, getframeinfo
 from sqlalchemy import create_engine
+from sqlalchemy import inspect as sa_inspect
 import stock_comm as comm
 import inspect
 import traceback
@@ -106,7 +107,7 @@ class director:
     def df_to_sql(self,stock_id,df,date):
         enddate=date+relativedelta(days=1)
         table_name=stock_id
-        if table_name in self.engine.table_names():
+        if table_name in sa_inspect(self.engine).get_table_names():
             cmd='SELECT * FROM "{}" WHERE date >= "{}" and date < "{}" '.format(table_name,date,enddate)
             df_query= pd.read_sql(cmd, con=self.con, parse_dates=['date'])
             if len(df_query):
@@ -206,7 +207,7 @@ def down_stock_director(stock_id,stock_name,market,date,download=1,debug=1):
             df_s.dropna(axis=1,how='all',inplace=True)
             df_s.dropna(inplace=True)
             df_s['date']=[comm.date_sub2time64(x) for x in df_s['date'] ]    
-            df_s=df_s.append(df1,ignore_index=True)
+            df_s=pd.concat([df_s, df1],ignore_index=True)
             df_s.drop_duplicates(subset=['date'],keep='last',inplace=True)
             df_s=df_s.sort_values(by=['date'], ascending=False)
             df_s.to_csv(out_file,encoding='utf-8', index=False)
@@ -219,7 +220,7 @@ def down_stock_director(stock_id,stock_name,market,date,download=1,debug=1):
             df_s.dropna(axis=1,how='all',inplace=True)
             df_s.dropna(inplace=True)
             df_s['date']=[comm.date_sub2time64(x) for x in df_s['date'] ] 
-            df_s=df_s.append(df1,ignore_index=True)
+            df_s=pd.concat([df_s, df1],ignore_index=True)
             df_s.drop_duplicates(subset=['stock_id'],keep='last',inplace=True)
             df_s.to_csv(out_file,encoding='utf-8', index=False)
         else :

@@ -111,7 +111,7 @@ def calc_bpwr(row):
         return 0
     
     buy_pwr=vol*total_buy/(total_buy+total_sell)
-    sell_pwr=vol*total_buy/(total_buy+total_sell)
+    sell_pwr=vol*total_sell/(total_buy+total_sell)
     return buy_pwr
 def kpwr_mode1_calc(row):
     diff=float(row['diff'])
@@ -1691,7 +1691,7 @@ def generate_stock_html_mode2(enddate,practice=0,mode='股job',in_df=[],debug=1)
     d1.columns=['日K','周K','籌碼(法人/周/月股權)','毛利/營益/淨利率','營收/EPS']
 
     old_width = pd.get_option('display.max_colwidth')
-    pd.set_option('display.max_colwidth', -1)
+    pd.set_option('display.max_colwidth', None)
     filen='out/%d%02d%02d/%s.html'%(enddate.year,enddate.month,enddate.day,mode)
     d1.to_html(filen,escape=False,index=False,sparsify=True,border=2,index_names=False)
     pd.set_option('display.max_colwidth', old_width) 

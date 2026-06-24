@@ -109,7 +109,7 @@ def down_fut_op_big3(enddate,download=1):
                     df_s.dropna(axis=1,how='all',inplace=True)
                     df_s.dropna(inplace=True)
                     df_s['日期']=[date_sub2time64(x) for x in df_s['日期'] ]    
-                    df_s=df_s.append(df1,ignore_index=True)
+                    df_s=pd.concat([df_s, df1],ignore_index=True)
                     df_s.drop_duplicates(subset=['日期'],keep='last',inplace=True)
                     df_s=df_s.sort_values(by=['日期'], ascending=False)
                     df_s.to_csv(out_file,encoding='utf-8', index=False)
@@ -161,7 +161,7 @@ def down_fut_op_big3(enddate,download=1):
                         df_s.dropna(axis=1,how='all',inplace=True)
                         df_s.dropna(inplace=True)
                         df_s['日期']=[date_sub2time64(x) for x in df_s['日期'] ]    
-                        df_s=df_s.append(df1,ignore_index=True)
+                        df_s=pd.concat([df_s, df1],ignore_index=True)
                         df_s.drop_duplicates(subset=['日期'],keep='last',inplace=True)
                         df_s=df_s.sort_values(by=['日期'], ascending=False)
                         df_s.to_csv(out_file,encoding='utf-8', index=False)
@@ -348,7 +348,7 @@ def get_fut_op_big3_dfs_bydate(stardate,enddate):
     while   now_date>=stardate :
         now_date = enddate - relativedelta(days=day)
         df=get_fut_op_big3_df_bydate(now_date) 
-        df_s=df_s.append(df,ignore_index=True)
+        df_s=pd.concat([df_s, df],ignore_index=True)
         df_s.dropna(axis=1,how='all',inplace=True)
         df_s.dropna(inplace=True)
         df_s.drop_duplicates(subset=['日期'],keep='last',inplace=True)

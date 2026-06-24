@@ -85,10 +85,50 @@ def calc_bpwr(row):
     if (total_buy+total_sell) ==0:
         return 0
     buy_pwr=vol*total_buy/(total_buy+total_sell)
-    sell_pwr=vol*total_buy/(total_buy+total_sell)
+    sell_pwr=vol*total_sell/(total_buy+total_sell)
     return buy_pwr
 def calc_spwr(row):
     return row['vol']-row['b_pwr']
+
+def get_long_red_ratio(open, high, low, close, diff, loop_back_date):
+    open = np.asarray(open, dtype=np.float64)
+    high = np.asarray(high, dtype=np.float64)
+    low = np.asarray(low, dtype=np.float64)
+    close = np.asarray(close, dtype=np.float64)
+
+    if not (len(open) == len(high) == len(low) == len(close)):
+        raise Exception("input array lengths are different")
+
+    valid = ~(np.isnan(open) | np.isnan(high) | np.isnan(low) | np.isnan(close))
+    if not valid.any():
+        raise Exception("inputs are all NaN")
+
+    begidx = int(np.argmax(valid))
+    endidx = len(open) - begidx - 1
+    start = endidx - loop_back_date
+    if start < 0:
+        raise Exception("loop_back_date is longer than input array")
+
+    box_high = high[start]
+    box_low = low[start]
+    total = 0.0
+    now_real_body = 0.0
+
+    for i in range(start, endidx + 1):
+        real_body = abs(close[i] - open[i])
+        if i == endidx:
+            now_real_body = real_body
+        else:
+            total += real_body
+            if high[i] > box_high:
+                box_high = high[i]
+            if low[i] < box_low:
+                box_low = low[i]
+
+    if total == 0:
+        return 0, box_high, box_low
+    return now_real_body / (total / loop_back_date), box_high, box_low
+
 def calc_ma5_20(row):
     per=(row['MA_5']-row['MA_20'])/row['MA_20']
 
@@ -538,6 +578,7 @@ def get_stock_df_bydate_nums(stock_no,nums,date):
                 break
     outdf = outdf.ffill()
     outdf=outdf.dropna(how='any',axis=0)
+    outdf['date'] = pd.to_datetime(outdf['date'])
     outdf=outdf.sort_values(by='date', ascending=True).drop_duplicates(subset='date',keep='last')
     outdf=outdf.reset_index(drop=True)
     if nums >0:
@@ -1025,7 +1066,7 @@ def insert_daily_stock_data(startdate):
 def to_html(df,filen):
     check_dst_folder(os.path.dirname(filen))
     old_width = pd.get_option('display.max_colwidth')
-    pd.set_option('display.max_colwidth', -1)
+    pd.set_option('display.max_colwidth', None)
     df.to_html(filen,escape=False,index=False,sparsify=True,border=2,index_names=False)
     pd.set_option('display.max_colwidth', old_width)
 
@@ -1062,7 +1103,7 @@ def stock_read_sql_add_df(stock_id,table_name,df):
             cmd='SELECT * FROM "{}"'.format(table_name)
             df_query= pd.read_sql(cmd, con=con, parse_dates=['date'])
             if df.columns.all()==df_query.columns.all():
-                df=df.append(df_query,ignore_index=True)
+                df=pd.concat([df, df_query],ignore_index=True)
                 df.drop_duplicates(subset=['date'], keep='first', inplace=True)
                 df=df.sort_values(by=['date'], ascending=True)
             print(lno(),df)

@@ -31,7 +31,7 @@ from matplotlib import ticker
 import mpl_finance
 import backtrader as bt
 import scipy.signal as signal 
-from stocktool import comm as comm1
+import stock_comm as comm1
 def lno():
     cf = currentframe()
     filename = getframeinfo(cf).filename
@@ -52,7 +52,7 @@ class order:
         df1=comm.get_stock_df_by_startdate(self.stock_id,comm.get_prev_month_date(self.signal_date,3))
         ma_list = [10,21]
         for ma in ma_list:
-            df1['MA_' + str(ma)] = df1['close'].rolling(window=ma,center=False,axis=0).mean()
+            df1['MA_' + str(ma)] = df1['close'].rolling(window=ma,center=False).mean()
             
         self.lastpeak=0 #comm.get_last_peak(df1,signal_date)
         self.lastvalley=0 #comm.get_last_valley(df1,signal_date)
@@ -192,7 +192,7 @@ class backtest:
         order_list==>order_df
         """
         old_width = pd.get_option('display.max_colwidth')
-        pd.set_option('display.max_colwidth', -1)
+        pd.set_option('display.max_colwidth', None)
         
         columns=['日期','買進次數','勝率','總獲利','平均獲利']
         df=pd.DataFrame(self.history_list, columns=columns)

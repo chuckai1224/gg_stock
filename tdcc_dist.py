@@ -895,7 +895,7 @@ def get_tdcc_dist_df_bydate_num(stock_no,enddate,num,ver=1,debug=0):
         o_list.append(tmp)
         #print (lno(),o_list)
         df = pd.DataFrame.from_records(o_list, columns=outcols)
-        df_s=df_s.append(df,ignore_index=True)
+        df_s=pd.concat([df_s, df],ignore_index=True)
         df_s.dropna(axis=1,how='all',inplace=True)
         df_s.dropna(inplace=True)
         df_s.drop_duplicates(subset=['date'],keep='last',inplace=True)
@@ -1067,7 +1067,7 @@ def gen_tdcc_dist_good(enddate):
     dd=d[['stock_id','stock_name','tdcc_bspwr']].copy()
     dd=dd.sort_values(by=['tdcc_bspwr'], ascending=False)
     d2=dd.head(cnt).copy()
-    d3=d1.append(d2,ignore_index=True)
+    d3=pd.concat([d1, d2],ignore_index=True)
     d3.to_csv('csv/tdcc_good.csv',encoding='utf-8', index=False)
     #print(lno(),dd.head(20))
 def get_total_stock(enddate,stock_no):

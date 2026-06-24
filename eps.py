@@ -249,7 +249,7 @@ def generate_stock_profit(flag,year,season):
                 df_s = pd.read_csv(filen,encoding = 'utf-8')
                 df_s.dropna(axis=1,how='all',inplace=True)
                 df_s.dropna(inplace=True)
-                df_s=df_s.append(df1,ignore_index=True)
+                df_s=pd.concat([df_s, df1],ignore_index=True)
                 #print(lno(),df_s)
                 df_s['日期']=df_s['年度'].astype('int')*4+df_s['季'].astype('int')  
                 #print(lno(),df_s['日期'])

@@ -144,7 +144,7 @@ def parse_tse_kline(startdate,enddate):
                 df_s.dropna(inplace=True)
                 
                 
-                df_s=df_s.append(df,ignore_index=True)
+                df_s=pd.concat([df_s, df],ignore_index=True)
                 
                 df_s.drop_duplicates(subset=['日期'],keep='first',inplace=True)
                 df_s=df_s.sort_values(by=['日期'], ascending=False)

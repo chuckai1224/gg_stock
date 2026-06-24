@@ -363,7 +363,7 @@ def generate_twii(startdate,enddate,debug=1):
                 if debug==1:
                     print(lno(),df_s.dtypes)
                 df_s['日期']=[date_sub2time64(x) for x in df_s['日期'] ]    
-                df_s=df_s.append(df,ignore_index=True)
+                df_s=pd.concat([df_s, df],ignore_index=True)
                 
                 df_s.drop_duplicates(subset=['日期'],keep='first',inplace=True)
                 if debug==1:
@@ -485,21 +485,21 @@ def show_twii(objdatetime):
     
     df = pd.DataFrame.from_records(out_list, columns=labels)
     old_width = pd.get_option('display.max_colwidth')
-    pd.set_option('display.max_colwidth', -1)
+    pd.set_option('display.max_colwidth', None)
     #df.to_html('files.html',escape=False,index=False,sparsify=True,border=0,index_names=False,header=False)
     df.to_html('技術分析.html',escape=False,index=False,sparsify=True,border=2,index_names=False)
     pd.set_option('display.max_colwidth', old_width)
     labels = ['日期','上市強勢主流','上櫃強勢主流','上市弱勢主流','上櫃弱勢主流']
     df1 = pd.DataFrame.from_records(out_list1, columns=labels)
     old_width = pd.get_option('display.max_colwidth')
-    pd.set_option('display.max_colwidth', -1)
+    pd.set_option('display.max_colwidth', None)
     #df.to_html('files.html',escape=False,index=False,sparsify=True,border=0,index_names=False,header=False)
     df1.to_html('強勢族群.html',escape=False,index=False,sparsify=True,border=2,index_names=False)
     pd.set_option('display.max_colwidth', old_width)
     labels = ['日期','指數','買權留倉最大量','買權留倉次量','賣權留倉最大量','賣權留倉次量','買權留倉增加最多','賣權留倉增加最多']
     df2 = pd.DataFrame.from_records(out_list2, columns=labels)
     old_width = pd.get_option('display.max_colwidth')
-    pd.set_option('display.max_colwidth', -1)
+    pd.set_option('display.max_colwidth', None)
     #df.to_html('files.html',escape=False,index=False,sparsify=True,border=0,index_names=False,header=False)
     df2.to_html('選擇權.html',escape=False,index=False,sparsify=True,border=2,index_names=False)
     pd.set_option('display.max_colwidth', old_width)
@@ -603,7 +603,7 @@ def show_twii_v1_org(objdatetime,debug=0):
         print(lno(),df1)
      
     old_width = pd.get_option('display.max_colwidth')
-    pd.set_option('display.max_colwidth', -1)
+    pd.set_option('display.max_colwidth', None)
 
     check_dst_folder('day_report/%s'%(objdatetime.strftime('%Y%m%d')))
     filen='day_report/%s/%s_技術分析.html'%(objdatetime.strftime('%Y%m%d'),objdatetime.strftime('%Y%m%d'))
@@ -612,14 +612,14 @@ def show_twii_v1_org(objdatetime,debug=0):
 
     df1=df[ ['日期','上市強勢主流','上櫃強勢主流','上市弱勢主流','上櫃弱勢主流']].copy()
     old_width = pd.get_option('display.max_colwidth')
-    pd.set_option('display.max_colwidth', -1)
+    pd.set_option('display.max_colwidth', None)
     filen='day_report/%s/%s_強勢族群.html'%(objdatetime.strftime('%Y%m%d'),objdatetime.strftime('%Y%m%d'))
     df1.to_html(filen,escape=False,index=False,sparsify=True,border=2,index_names=False)
     pd.set_option('display.max_colwidth', old_width)   
     
     df1=df[ ['日期','指數','買權留倉最大量','買權留倉次量','賣權留倉最大量','賣權留倉次量','買權留倉增加最多','賣權留倉增加最多']].copy()
     old_width = pd.get_option('display.max_colwidth')
-    pd.set_option('display.max_colwidth', -1)
+    pd.set_option('display.max_colwidth', None)
     filen='day_report/%s/%s_選擇權.html'%(objdatetime.strftime('%Y%m%d'),objdatetime.strftime('%Y%m%d'))
     df1.to_html(filen,escape=False,index=False,sparsify=True,border=2,index_names=False)
     pd.set_option('display.max_colwidth', old_width)   
@@ -649,7 +649,7 @@ def show_twii_v1_org(objdatetime,debug=0):
     df2['漲跌點']=df2['指數']-df2['指數'].shift(-1)
     #print(lno(),df1)
     old_width = pd.get_option('display.max_colwidth')
-    pd.set_option('display.max_colwidth', -1)
+    pd.set_option('display.max_colwidth', None)
     filen='day_report/{}/{}_選擇權_v1.html'.format(objdatetime.strftime('%Y%m%d'),objdatetime.strftime('%Y%m%d'))
     df2.to_html(filen,escape=False,index=False,sparsify=True,border=2,index_names=False)
     pd.set_option('display.max_colwidth', old_width)   
@@ -959,7 +959,7 @@ def check_twii_fin(seldata,debug=1,regen=0):
         #df_s.dropna(axis=1,how='all',inplace=True)
         #df_s.dropna(inplace=True)
         df_s['日期']=[date_sub2time64(x) for x in df_s['日期'] ]
-        df_s=df_s.append(df_fin,ignore_index=True)
+        df_s=pd.concat([df_s, df_fin],ignore_index=True)
         df_s.drop_duplicates(subset=['日期'],keep='last',inplace=True)
         df_s=df_s.sort_values(by=['日期'], ascending=False)
         df_s.to_csv(fin_file,encoding='utf-8', index=False)

@@ -396,7 +396,7 @@ def generate_final(enddate):
         if os.path.exists(out_file): 
             df_s = pd.read_csv(out_file,encoding = 'utf-8',dtype= {'日期':str})
             df_s['日期']=[comm.date_sub2time64(x) for x in df_s['日期'] ]  
-            df_s=df_s.append(df,ignore_index=True)
+            df_s=pd.concat([df_s, df],ignore_index=True)
             df_s.dropna(axis=1,how='all',inplace=True)
             df_s.dropna(inplace=True)
             df_s.drop_duplicates(subset=['日期'],keep='last',inplace=True)
@@ -924,7 +924,7 @@ def gen_final_html():
     print(lno(),"teeee")
     #df_o.to_csv('final/test.csv',encoding='utf-8', index=False) 
     old_width = pd.get_option('display.max_colwidth')
-    pd.set_option('display.max_colwidth', -1)
+    pd.set_option('display.max_colwidth', None)
     ##=IMPORThtml("https://raw.githubusercontent.com/chuckai1224/final/master/fut_day_report_fin.html","table",1)
     df_o.to_html('final/fut_day_report_fin.html',escape=False,index=False,sparsify=True,border=2,index_names=False)
     df_o.to_csv('final/mix_report_fin.csv',encoding='utf-8', index=False)

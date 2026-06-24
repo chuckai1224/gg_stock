@@ -20,7 +20,8 @@ try:
     pass
 except:
     pass    
-import stock_comm as comm 
+import stock_comm as comm
+import stock_comm as cm1
 import stock_big3
 import tdcc_dist
 import requests
@@ -32,19 +33,20 @@ import op
 import math
 import kline
 from sqlalchemy import create_engine
+from sqlalchemy import inspect as sa_inspect
 #from pyecharts import Kline
 #from pyecharts import Candlestick
 #import webbrowser
 import revenue
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.common.by import By
+from selenium.webdriver.firefox.options import Options
 from time import sleep
-from selenium.webdriver.support.ui import Select
 import shutil
 import talib
 from talib import abstract
 import scipy.signal as signal 
-#from stocktool import comm as cm1 
 import platform
 import all_stock
 import seaborn as sns
@@ -69,43 +71,28 @@ def down_data(enddate,download=1):
     out_file='data/good_stock/%d%02d%02d.csv'%(int(enddate.year), int(enddate.month),int(enddate.day))
     check_dst_folder(dst_folder)
     enddate_str='%d/%02d/%02d'%(int(enddate.year), int(enddate.month),int(enddate.day))
-    """
-    fp = webdriver.FirefoxProfile()
-    fp.set_preference("browser.download.folderList",2)
-    fp.set_preference("browser.download.manager.showWhenStarting",False)
-    fp.set_preference("browser.download.dir", os.getcwd())
-    #fp.set_preference("browser.helperApps.neverAsk.saveToDisk", "application/octet-stream")
-    fp.set_preference("browser.helperApps.neverAsk.saveToDisk","application/xls;text/csv");
-    """
     url = 'https://www.sitca.org.tw/ROC/Industry/IN2629.aspx?pid=IN22601_04'
-    profile = webdriver.FirefoxProfile()
+    options = Options()
     print(lno(),dst_folder)
-    profile.set_preference('browser.download.dir', dst_folder)
-    profile.set_preference('browser.download.folderList', 2)
-    profile.set_preference('browser.download.manager.showWhenStarting', False)
-    profile.set_preference('browser.helperApps.alwaysAsk.force', False);
-    profile.set_preference('browser.download.manager.showWhenStarting',False);
-    profile.set_preference('browser.helperApps.neverAsk.saveToDisk', 'application/xls,application/octet-stream,application/vnd.ms-excel')
-    driver = webdriver.Firefox(firefox_profile=profile)
+    options.set_preference('browser.download.dir', dst_folder)
+    options.set_preference('browser.download.folderList', 2)
+    options.set_preference('browser.download.manager.showWhenStarting', False)
+    options.set_preference('browser.helperApps.alwaysAsk.force', False);
+    options.set_preference('browser.download.manager.showWhenStarting',False);
+    options.set_preference('browser.helperApps.neverAsk.saveToDisk', 'application/xls,application/octet-stream,application/vnd.ms-excel')
+    driver = webdriver.Firefox(options=options)
     driver.implicitly_wait(8) # 隱式等待
     driver.get(url)
     sleep(3)
-    driver.find_element_by_id("ctl00_ContentPlaceHolder1_rbClass").send_keys(Keys.SPACE)
+    driver.find_element(By.ID, "ctl00_ContentPlaceHolder1_rbClass").send_keys(Keys.SPACE)
     sleep(5)
-    if driver.find_element_by_id("ctl00_ContentPlaceHolder1_rbClass").is_selected():
+    if driver.find_element(By.ID, "ctl00_ContentPlaceHolder1_rbClass").is_selected():
         print(lno(),'selected!')
     else:
         print(lno(), 'not yet!')
-    #driver.find_element_by_id("ctl00_ContentPlaceHolder1_BtnQuery").send_keys(Keys.SPACE)
-    driver.find_element_by_id("ctl00_ContentPlaceHolder1_BtnExport").send_keys(Keys.SPACE)
+    driver.find_element(By.ID, "ctl00_ContentPlaceHolder1_BtnExport").send_keys(Keys.SPACE)
     
     sleep(5)
-    #driver.find_element_by_id("ctl00_ContentPlaceHolder1_BtnQuery").click()
-    #driver.find_element_by_id("ctl00_ContentPlaceHolder1_ddlQ_Class").send_keys(Keys.SPACE)
-    #select = Select(driver.find_element_by_id("ctl00_ContentPlaceHolder1_ddlQ_Class"))
-    #select.select_by_index(0)
-    #select.select_by_value("op_2")
-    #select.select_by_value("op_2")
     filename1 = max([dst_folder + "\\" + f for f in os.listdir(dst_folder)],key=os.path.getctime)
     print(lno(),filename1)
     #shutil.move(filename,os.path.join(dst_folder,r"newfilename.ext"))
@@ -179,7 +166,7 @@ def generate_final(enddate):
         if os.path.exists(out_file): 
             df_s = pd.read_csv(out_file,encoding = 'utf-8',dtype= {'日期':str})
             df_s['日期']=[comm.date_sub2time64(x) for x in df_s['日期'] ]  
-            df_s=df_s.append(df,ignore_index=True)
+            df_s=pd.concat([df_s, df],ignore_index=True)
             df_s.dropna(axis=1,how='all',inplace=True)
             df_s.dropna(inplace=True)
             df_s.drop_duplicates(subset=['日期'],keep='last',inplace=True)
@@ -316,8 +303,8 @@ def get_date_income_ratio(r):
         YOY=df.iloc[0]['去年同月增減(%)']
         if  len(df.index)>=12:  
             try:
-                df['inavg3']=df['當月營收'].rolling(window=3,center=False,axis=0).mean()
-                df['inavg12']=df['當月營收'].rolling(window=12,center=False,axis=0).mean()
+                df['inavg3']=df['當月營收'].rolling(window=3,center=False).mean()
+                df['inavg12']=df['當月營收'].rolling(window=12,center=False).mean()
                 avg3=df.iloc[-1]['inavg3']
                 avg12=df.iloc[-1]['inavg12']
                 ratio1=avg3/avg12
@@ -326,7 +313,7 @@ def get_date_income_ratio(r):
                 pass
   
             try:
-                df['inavg4']=df['當月營收'].rolling(window=4,center=False,axis=0).mean()
+                df['inavg4']=df['當月營收'].rolling(window=4,center=False).mean()
                 length=len(df.index)
                 result=1
                 #print(lno(),df)
@@ -505,7 +492,7 @@ def gen_buy_list_step1(date):
     ## 莊家信號  投信小主力  強力K
     engine = create_engine('sqlite:///sql/revenue_good.db', echo=False)
     con = engine.connect()
-    table_names=engine.table_names()
+    table_names=sa_inspect(engine).get_table_names()
     print(lno(),table_names[-1])
     table_name='revenue_good_{}'.format(date.strftime('%Y%m%d'))
     if not table_name in table_names:
@@ -587,7 +574,7 @@ def gen_buy_list_day_v1(date):
     
     engine = create_engine('sqlite:///sql/revenue_good.db', echo=False)
     con = engine.connect()
-    table_names=engine.table_names()
+    table_names=sa_inspect(engine).get_table_names()
     
     
     print(lno(),table_names[-1])
@@ -855,7 +842,7 @@ class findstock:
             enddate= self.rundate + relativedelta(days=1)    
             #print(lno(),date_str,df['stock_id'].values.tolist())
             date_str=self.rundate.strftime('%Y%m%d')
-            table_names = self.engine.table_names() 
+            table_names = sa_inspect(self.engine).get_table_names()
             if self.strategy in table_names:
                 cmd='SELECT * FROM "{}" WHERE date >= "{}" and date < "{}"'.format(self.strategy,self.rundate,enddate)
                 df_query= pd.read_sql(cmd, con=self.con)
@@ -912,7 +899,7 @@ class findstock:
             df1=self.stk.get_df_by_enddate_num(stock_id,date-relativedelta(days=1),120)
             ma_list = [5,21,89]
             for ma in ma_list:
-                df1['MA_' + str(ma)] = df1['close'].rolling(window=ma,center=False,axis=0).mean()
+                df1['MA_' + str(ma)] = df1['close'].rolling(window=ma,center=False).mean()
             #print(lno(),df1)
 
             ma5_angle=np.nan    
@@ -1030,7 +1017,7 @@ class findstock:
         print(lno(), df)  
         if len(df):
             #print(lno(),date_str,df['stock_id'].values.tolist())
-            table_names = self.engine.table_names() 
+            table_names = sa_inspect(self.engine).get_table_names()
             if table_name in table_names:
                 cmd='SELECT * FROM "{}" WHERE date >= "{}" and date < "{}"'.format(table_name,rundate,rundate+relativedelta(days=1)  )
                 df_query= pd.read_sql(cmd, con=self.con)
@@ -1514,7 +1501,7 @@ def get_analy_1(r):
     ma_list = [5,21,89]
     try:
         for ma in ma_list:
-            df1['MA_' + str(ma)] = df1['close'].rolling(window=ma,center=False,axis=0).mean()
+            df1['MA_' + str(ma)] = df1['close'].rolling(window=ma,center=False).mean()
     except:
         print(lno(),df1)
         if len(df1.index)==0:
@@ -1571,7 +1558,7 @@ def get_ma5_21(r):
     df1=stk.get_df_by_enddate_num(stock_id,date-relativedelta(days=1),120)
     ma_list = [5,21]
     for ma in ma_list:
-        df1['MA_' + str(ma)] = df1['close'].rolling(window=ma,center=False,axis=0).mean()
+        df1['MA_' + str(ma)] = df1['close'].rolling(window=ma,center=False).mean()
 
     ma1_ma5=np.nan    
     ma1_ma21=np.nan    
@@ -1635,8 +1622,8 @@ def get_income_ratio(r):
         YOY=df.iloc[0]['去年同月增減(%)']
         if  len(df.index)>=12:  
             try:
-                df['inavg3']=df['當月營收'].rolling(window=3,center=False,axis=0).mean()
-                df['inavg12']=df['當月營收'].rolling(window=12,center=False,axis=0).mean()
+                df['inavg3']=df['當月營收'].rolling(window=3,center=False).mean()
+                df['inavg12']=df['當月營收'].rolling(window=12,center=False).mean()
                 avg3=df.iloc[-1]['inavg3']
                 avg12=df.iloc[-1]['inavg12']
                 ratio1=avg3/avg12
@@ -1645,7 +1632,7 @@ def get_income_ratio(r):
                 pass
   
             try:
-                df['inavg4']=df['當月營收'].rolling(window=4,center=False,axis=0).mean()
+                df['inavg4']=df['當月營收'].rolling(window=4,center=False).mean()
                 length=len(df.index)
                 result=1
                 #print(lno(),df)

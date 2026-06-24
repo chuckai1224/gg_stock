@@ -164,7 +164,7 @@ def gen_stock_bs_oneday(date,debug=1):
         df_s.dropna(inplace=True)
         #print(lno(),df_s['date'].dtype)
         #print(lno(),res_df['date'].dtype)
-        df_s=df_s.append(res_df,ignore_index=True)
+        df_s=pd.concat([df_s, res_df],ignore_index=True)
         #print(lno(),df_s[['date','自營商total']])
         df_s.drop_duplicates(subset=['日期'],keep='first',inplace=True)
         #print(lno(),df_s[['date','外資total','投信total','自營商total']])
