@@ -1295,25 +1295,41 @@
             targetElKline.innerHTML = '';
             targetElVol.innerHTML = '';
 
+            // Clone data to avoid mutating original state
+            let rDates = [...dates];
+            let rOpens = [...opens];
+            let rHighs = [...highs];
+            let rLows = [...lows];
+            let rCloses = [...closes];
+            let rVols = [...vols];
+
+            // If the series is in reverse chronological order (newest to oldest), reverse it to chronological order (oldest to newest)
+            if (rDates.length > 1 && parseDate(rDates[0]) > parseDate(rDates[rDates.length - 1])) {
+                rDates.reverse();
+                rOpens.reverse();
+                rHighs.reverse();
+                rLows.reverse();
+                rCloses.reverse();
+                rVols.reverse();
+            }
+
             const ohlcData = [];
             const volData = [];
 
-            for (let i = 0; i < dates.length; i++) {
-                const ts = parseDate(dates[i]);
-                if (opens[i] !== null && highs[i] !== null && lows[i] !== null && closes[i] !== null) {
-                    ohlcData.push({
-                        x: ts,
-                        y: [opens[i], highs[i], lows[i], closes[i]]
-                    });
-                }
-                if (vols[i] !== null) {
-                    const isUp = closes[i] >= opens[i];
-                    volData.push({
-                        x: ts,
-                        y: Math.round(vols[i]),
-                        fillColor: isUp ? 'rgba(239, 68, 68, 0.7)' : 'rgba(16, 185, 129, 0.7)'
-                    });
-                }
+            for (let i = 0; i < rDates.length; i++) {
+                const dateStr = rDates[i];
+                const hasOHLC = rOpens[i] !== null && rHighs[i] !== null && rLows[i] !== null && rCloses[i] !== null;
+                // Always push both arrays in sync so category indices stay aligned for grouped charts
+                ohlcData.push({
+                    x: dateStr,
+                    y: hasOHLC ? [rOpens[i], rHighs[i], rLows[i], rCloses[i]] : [null, null, null, null]
+                });
+                const isUp = hasOHLC ? (rCloses[i] >= rOpens[i]) : true;
+                volData.push({
+                    x: dateStr,
+                    y: rVols[i] !== null ? Math.round(rVols[i]) : null,
+                    fillColor: isUp ? 'rgba(239, 68, 68, 0.7)' : 'rgba(16, 185, 129, 0.7)'
+                });
             }
 
             const isMobile = window.innerWidth <= 768;
@@ -1344,8 +1360,8 @@
                     }
                 },
                 xaxis: {
-                    type: 'datetime',
-                    labels: { show: false, datetimeUTC: false, style: { colors: '#9ca3af' } },
+                    type: 'category',
+                    labels: { show: false, style: { colors: '#9ca3af' } },
                     axisBorder: { show: false },
                     axisTicks: { show: false }
                 },
@@ -1378,8 +1394,9 @@
                     enabled: false
                 },
                 xaxis: {
-                    type: 'datetime',
-                    labels: { datetimeUTC: false, style: { colors: '#9ca3af' } }
+                    type: 'category',
+                    tickAmount: isMobile ? 5 : 10,
+                    labels: { style: { colors: '#9ca3af' }, hideOverlappingLabels: true }
                 },
                 yaxis: {
                     labels: {
