@@ -261,6 +261,37 @@ def stock_detail():
                 monthly_revenue_yoy.append(round(float(row_data['去年同月增減(%)']), 1) if pd.notna(row_data['去年同月增減(%)']) else 0.0)
     except Exception as e:
         print(f"Warn: failed to load monthly revenue for {stock_id}: {str(e)}")
+    # 嘗試從 final/ 下的 CSV 尋找當前 stock_id 的基本面數據 (總分, 本益比 等)
+    score_val = None
+    pe_val = None
+    rev_yoy_val = None
+    foreign_val = None
+    it_val = None
+    large_month_val = None
+    large_week_val = None
+    retail_month_val = None
+
+    import glob
+    csv_files = glob.glob("final/*_good*.csv")
+    if csv_files:
+        csv_files.sort(key=os.path.getmtime, reverse=True)
+        for cf in csv_files:
+            try:
+                tmp_df = pd.read_csv(cf, dtype={'stock_id': str})
+                row_match = tmp_df[tmp_df['stock_id'] == stock_id]
+                if not row_match.empty:
+                    r_match = row_match.iloc[0]
+                    score_val = float(r_match['總分']) if '總分' in r_match and pd.notna(r_match['總分']) else None
+                    pe_val = float(r_match['本益比']) if '本益比' in r_match and pd.notna(r_match['本益比']) else None
+                    rev_yoy_val = float(r_match['最新單月營收年增率']) if '最新單月營收年增率' in r_match and pd.notna(r_match['最新單月營收年增率']) else None
+                    foreign_val = float(r_match['外資增減']) if '外資增減' in r_match and pd.notna(r_match['外資增減']) else None
+                    it_val = float(r_match['投信增減']) if '投信增減' in r_match and pd.notna(r_match['投信增減']) else None
+                    large_month_val = float(r_match['大戶近一月增加比']) if '大戶近一月增加比' in r_match and pd.notna(r_match['大戶近一月增加比']) else None
+                    large_week_val = float(r_match['大戶近一周增加比']) if '大戶近一周增加比' in r_match and pd.notna(r_match['大戶近一周增加比']) else None
+                    retail_month_val = float(r_match['散戶近一月增加比']) if '散戶近一月增加比' in r_match and pd.notna(r_match['散戶近一月增加比']) else None
+                    break
+            except Exception as e:
+                print(f"Error reading {cf}: {str(e)}")
 
     # 彙整為 dictionary
     stock_data = {
@@ -294,7 +325,17 @@ def stock_detail():
         "financeRevenue": finance_revenue,
         "monthlyRevenueMonths": monthly_revenue_months,
         "monthlyRevenueValues": monthly_revenue_values,
-        "monthlyRevenueYoy": monthly_revenue_yoy
+        "monthlyRevenueYoy": monthly_revenue_yoy,
+        
+        # 8 Core metrics (scalar value for details bar)
+        "score": score_val,
+        "pe": pe_val,
+        "revYoy": rev_yoy_val if rev_yoy_val is not None else (monthly_revenue_yoy[-1] if monthly_revenue_yoy else None),
+        "foreign_val": foreign_val if foreign_val is not None else (inst_foreign[-1] if inst_foreign else None),
+        "it_val": it_val if it_val is not None else (inst_it[-1] if inst_it else None),
+        "largeMonth": large_month_val,
+        "largeWeek": large_week_val,
+        "retailMonth": retail_month_val
     }
 
     return render_template('stock_detail.html', stock_data=stock_data)

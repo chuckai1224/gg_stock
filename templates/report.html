@@ -535,6 +535,25 @@
                 gap: 1rem;
             }
         }
+        .hidden-col {
+            display: none !important;
+        }
+        @media (max-width: 768px) {
+            #modal-metrics-summary {
+                grid-template-columns: repeat(4, 1fr) !important;
+                gap: 0.5rem !important;
+                padding: 0.75rem 1rem !important;
+            }
+            #modal-metrics-summary > div {
+                border-right: none !important;
+                border-bottom: 1px solid rgba(255,255,255,0.04);
+                padding-bottom: 0.25rem;
+            }
+            #modal-metrics-summary > div:nth-child(n+5) {
+                border-bottom: none;
+                padding-top: 0.25rem;
+            }
+        }
     </style>
 </head>
 <body>
@@ -577,6 +596,11 @@
                     <span id="modal-stock-title">個股技術圖表</span>
                 </div>
                 <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+
+            <!-- Stats metrics summary bar -->
+            <div id="modal-metrics-summary" style="display: grid; grid-template-columns: repeat(8, 1fr); gap: 0.75rem; padding: 1rem 1.5rem; background: rgba(255,255,255,0.02); border-bottom: 1px solid var(--border-color); border-top: 1px solid rgba(255,255,255,0.04); margin-bottom: 1rem;">
+                <!-- Dynamically injected stats card -->
             </div>
 
             <!-- Charts Grid (War Room Style Layout) -->
@@ -708,13 +732,13 @@
 
             // 1.2 Split long headers into two lines to save horizontal space
             const splitHeaders = {
-                '最新單月營收年增率': '最新單月營收<br>年增率',
-                '大戶近一月增加比': '大戶近一月<br>增加比',
-                '大戶近一周增加比': '大戶近一周<br>增加比',
-                '散戶近一月增加比': '散戶近一月<br>增加比',
-                '投信增減': '投信<br>增減',
-                '外資增減': '外資<br>增減',
-                '董監持股增減': '董監持股<br>增減'
+                '最新單月營收年增率': '月營收增長率',
+                '大戶近一月增加比': '月大戶',
+                '大戶近一周增加比': '周大戶',
+                '散戶近一月增加比': '月散戶',
+                '投信增減': '日投信',
+                '外資增減': '日外資',
+                '董監持股增減': '董監持股增減'
             };
             Object.keys(splitHeaders).forEach(name => {
                 const idx = colMap[name];
@@ -1240,6 +1264,89 @@
                     monthlyRevenueYoy: parseCsvFloatList(getVal('monthly_revenue_yoy'))
                 };
 
+                // Dynamically fetch and display the 8 core metrics in the modal header bar
+                const valScore = getVal('總分');
+                const valPe = getVal('本益比');
+                const valRevYoy = getVal('最新單月營收年增率');
+                const valForeign = getVal('外資增減');
+                const valIt = getVal('投信增減');
+                const valLargeMonth = getVal('大戶近一月增加比');
+                const valLargeWeek = getVal('大戶近一周增加比');
+                const valRetailMonth = getVal('散戶近一月增加比');
+
+                // Color formats helper
+                const formatColorSpan = (valStr, isRetail = false) => {
+                    if (!valStr || valStr === '-' || valStr === 'nan' || valStr === 'NaN' || valStr === 'None') return `<span style="color: var(--text-muted); font-weight: 600;">-</span>`;
+                    let val = parseFloat(valStr.replace(/%|,/g, ''));
+                    if (isNaN(val)) return `<span style="color: var(--text-muted); font-weight: 600;">${valStr}</span>`;
+                    
+                    // If it was parsed as a ratio without %, convert to percentage
+                    if (!valStr.includes('%') && Math.abs(val) <= 1.0) {
+                        val = val * 100;
+                    }
+
+                    let isUp = val > 0;
+                    if (isRetail) isUp = val < 0; // 散戶減少為佳
+
+                    if (val === 0) return `<span style="color: var(--text-muted); font-weight: 600;">0.00%</span>`;
+                    
+                    const color = isUp ? '#ef4444' : '#10b981'; // 紅漲綠跌
+                    return `<span style="color: ${color}; font-weight: 700;">${val > 0 ? '+' : ''}${val.toFixed(2)}%</span>`;
+                };
+
+                const formatScoreSpan = (valStr) => {
+                    const val = parseFloat(valStr);
+                    if (isNaN(val)) return `<span style="color: var(--text-muted); font-weight: 600;">-</span>`;
+                    const color = val > 4 ? '#ef4444' : (val > 0 ? '#f97316' : '#10b981');
+                    return `<span style="color: ${color}; font-weight: 700;">${val.toFixed(2)}</span>`;
+                };
+
+                const formatIntSpan = (valStr) => {
+                    const val = parseFloat(valStr.replace(/,/g, ''));
+                    if (isNaN(val)) return `<span style="color: var(--text-muted); font-weight: 600;">-</span>`;
+                    if (val === 0) return `<span style="color: var(--text-muted); font-weight: 600;">0</span>`;
+                    const color = val > 0 ? '#ef4444' : '#10b981';
+                    const formatted = Math.round(val).toLocaleString();
+                    return `<span style="color: ${color}; font-weight: 700;">${val > 0 ? '+' : ''}${formatted}</span>`;
+                };
+
+                // Injected HTML template
+                const statsHtml = `
+                    <div style="text-align: center; border-right: 1px solid rgba(255,255,255,0.04);">
+                        <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.25rem;">總分</div>
+                        <div style="font-size: 1.05rem;">${formatScoreSpan(valScore)}</div>
+                    </div>
+                    <div style="text-align: center; border-right: 1px solid rgba(255,255,255,0.04);">
+                        <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.25rem;">本益比</div>
+                        <div style="font-size: 1.05rem; font-weight: 600; color: #fff;">${valPe || '-'}</div>
+                    </div>
+                    <div style="text-align: center; border-right: 1px solid rgba(255,255,255,0.04);">
+                        <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.25rem;">日外資 (張)</div>
+                        <div style="font-size: 1.05rem;">${formatIntSpan(valForeign)}</div>
+                    </div>
+                    <div style="text-align: center; border-right: 1px solid rgba(255,255,255,0.04);">
+                        <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.25rem;">日投信 (張)</div>
+                        <div style="font-size: 1.05rem;">${formatIntSpan(valIt)}</div>
+                    </div>
+                    <div style="text-align: center; border-right: 1px solid rgba(255,255,255,0.04);">
+                        <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.25rem;">周大戶</div>
+                        <div style="font-size: 1.05rem;">${formatColorSpan(valLargeWeek)}</div>
+                    </div>
+                    <div style="text-align: center; border-right: 1px solid rgba(255,255,255,0.04);">
+                        <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.25rem;">月大戶</div>
+                        <div style="font-size: 1.05rem;">${formatColorSpan(valLargeMonth)}</div>
+                    </div>
+                    <div style="text-align: center; border-right: 1px solid rgba(255,255,255,0.04);">
+                        <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.25rem;">月散戶</div>
+                        <div style="font-size: 1.05rem;">${formatColorSpan(valRetailMonth, true)}</div>
+                    </div>
+                    <div style="text-align: center;">
+                        <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.25rem;">月營收 YoY</div>
+                        <div style="font-size: 1.05rem;">${formatColorSpan(valRevYoy)}</div>
+                    </div>
+                `;
+                document.getElementById('modal-metrics-summary').innerHTML = statsHtml;
+
                 // Open modal
                 const modal = document.getElementById('detail-modal');
                 modal.classList.add('active');
@@ -1338,31 +1445,24 @@
             const volumeHeight = isMobile ? 70 : 100;
 
             const klineOptions = {
-                series: [{
-                    name: 'K線',
-                    data: ohlcData
-                }],
+                series: [{ name: 'K線', data: ohlcData }],
                 chart: {
                     type: 'candlestick',
                     height: klineHeight,
-                    id: candlestickElId,
-                    group: groupName,
                     zoom: { enabled: false },
                     toolbar: { show: false },
-                    animations: { enabled: false }
+                    animations: { enabled: false },
+                    background: 'transparent'
                 },
                 plotOptions: {
                     candlestick: {
-                        colors: {
-                            upward: '#ef4444',
-                            downward: '#10b981'
-                        },
+                        colors: { upward: '#ef4444', downward: '#10b981' },
                         wick: { useFillColor: true }
                     }
                 },
                 xaxis: {
                     type: 'category',
-                    labels: { show: false, style: { colors: '#9ca3af' } },
+                    labels: { show: false },
                     axisBorder: { show: false },
                     axisTicks: { show: false }
                 },
@@ -1374,38 +1474,36 @@
                     }
                 },
                 grid: { borderColor: 'rgba(255,255,255,0.06)' },
-                tooltip: { shared: true, intersect: false, theme: 'dark' }
+                tooltip: { theme: 'dark' }
             };
 
+            const volYValues = volData.map(d => d.y);
             const volOptions = {
-                series: [{
-                    name: '成交量',
-                    data: volData
-                }],
+                series: [{ name: '成交量', data: volYValues }],
                 chart: {
                     type: 'bar',
                     height: volumeHeight,
-                    id: volumeElId,
-                    group: groupName,
-                    zoom: { enabled: false },
                     toolbar: { show: false },
                     animations: { enabled: false }
                 },
                 colors: volColors,
-                dataLabels: {
-                    enabled: false
-                },
-                plotOptions: {
-                    bar: {
-                        columnWidth: '70%',
-                        distributed: true
-                    }
-                },
+                dataLabels: { enabled: false },
+                plotOptions: { bar: { columnWidth: '80%', distributed: true } },
                 legend: { show: false },
                 xaxis: {
-                    type: 'category',
-                    tickAmount: isMobile ? 5 : 10,
-                    labels: { style: { colors: '#9ca3af' }, hideOverlappingLabels: true }
+                    categories: rDates,
+                    tickAmount: isMobile ? 4 : 8,
+                    labels: {
+                        style: { colors: '#9ca3af' },
+                        rotate: 0,
+                        hideOverlappingLabels: true,
+                        formatter: val => {
+                            if (!val) return '';
+                            const str = String(val);
+                            const p = str.split('-');
+                            return p.length >= 3 ? p[1] + '-' + p[2] : str;
+                        }
+                    }
                 },
                 yaxis: {
                     labels: {
@@ -1414,7 +1512,7 @@
                     }
                 },
                 grid: { borderColor: 'rgba(255,255,255,0.06)' },
-                tooltip: { shared: true, intersect: false, theme: 'dark' }
+                tooltip: { theme: 'dark' }
             };
 
             if (typeof ApexCharts === 'undefined') {
