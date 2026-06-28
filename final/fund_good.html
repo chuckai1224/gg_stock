@@ -21259,6 +21259,7 @@
 
             const ohlcData = [];
             const volData = [];
+            const volColors = [];
 
             for (let i = 0; i < rDates.length; i++) {
                 const dateStr = rDates[i];
@@ -21271,9 +21272,9 @@
                 const isUp = hasOHLC ? (rCloses[i] >= rOpens[i]) : true;
                 volData.push({
                     x: dateStr,
-                    y: rVols[i] !== null ? Math.round(rVols[i]) : null,
-                    fillColor: isUp ? 'rgba(239, 68, 68, 0.7)' : 'rgba(16, 185, 129, 0.7)'
+                    y: rVols[i] !== null && rVols[i] !== undefined ? Math.round(rVols[i]) : 0
                 });
+                volColors.push(isUp ? 'rgba(239, 68, 68, 0.7)' : 'rgba(16, 185, 129, 0.7)');
             }
 
             const isMobile = window.innerWidth <= 768;
@@ -21334,9 +21335,17 @@
                     toolbar: { show: false },
                     animations: { enabled: false }
                 },
+                colors: volColors,
                 dataLabels: {
                     enabled: false
                 },
+                plotOptions: {
+                    bar: {
+                        columnWidth: '70%',
+                        distributed: true
+                    }
+                },
+                legend: { show: false },
                 xaxis: {
                     type: 'category',
                     tickAmount: isMobile ? 5 : 10,

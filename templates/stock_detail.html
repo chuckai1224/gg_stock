@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📊 {{ stock_data.stock_id }} {{ stock_data.stock_name }} 綜合分析 - GG Stock</title>
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- ApexCharts JS -->
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+    <style>
+        :root {
+            --bg-color: #0b0f19;
+            --panel-bg: rgba(22, 28, 45, 0.6);
+            --border-color: rgba(255, 255, 255, 0.08);
+            --text-color: #f3f4f6;
+            --text-muted: #9ca3af;
+            --primary: #00f2fe;
+            --secondary: #4facfe;
+            --success: #ef4444; /* Rise is Red in Taiwan */
+            --danger: #10b981;  /* Fall is Green in Taiwan */
+            --warning: #f59e0b;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', -apple-system, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(0, 242, 254, 0.1) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(79, 172, 254, 0.1) 0px, transparent 50%);
+            min-height: 100vh;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1400px;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        /* Header */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.5rem;
+            background: var(--panel-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        }
+
+        h1 {
+            font-size: 1.6rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.5px;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .actions {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .btn-back {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            text-decoration: none;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+        }
+
+        .btn-back:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: var(--primary);
+        }
+
+        .search-box {
+            position: relative;
+        }
+
+        .search-box input {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border-color);
+            padding: 0.5rem 1rem;
+            padding-left: 2.2rem;
+            border-radius: 8px;
+            color: #fff;
+            font-size: 0.9rem;
+            outline: none;
+            width: 250px;
+            transition: all 0.2s;
+        }
+
+        .search-box input:focus {
+            border-color: var(--primary);
+            width: 320px;
+            box-shadow: 0 0 8px rgba(0, 242, 254, 0.2);
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 0.8rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            pointer-events: none;
+        }
+
+        /* Charts Grid (War Room Layout) */
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1.5rem;
+            width: 100%;
+        }
+
+        @media (max-width: 1024px) {
+            .charts-grid {
+                grid-template-columns: 1fr;
+                gap: 1.5rem;
+            }
+        }
+
+        .chart-card {
+            background: var(--panel-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--border-color);
+            padding: 1.5rem;
+            border-radius: 16px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            transition: transform 0.2s ease, border-color 0.2s ease;
+        }
+
+        .chart-card:hover {
+            border-color: rgba(255, 255, 255, 0.12);
+            transform: translateY(-2px);
+        }
+
+        .chart-title {
+            font-size: 0.95rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .chart-container {
+            width: 100%;
+            position: relative;
+        }
+
+        .no-data-msg {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            padding: 4rem 0;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.01);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header>
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <a href="/online/" class="btn-back">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+                    <span>回控制台</span>
+                </a>
+                <h1>
+                    📊 <span>{{ stock_data.stock_id }}</span> {{ stock_data.stock_name }} 
+                    <span style="font-size: 0.8rem; color: var(--text-muted); padding: 0.2rem 0.5rem; background: rgba(255,255,255,0.05); border-radius: 4px; border: 1px solid var(--border-color);">{{ stock_data.market }}</span>
+                </h1>
+            </div>
+            <div class="actions">
+                <div class="search-box">
+                    <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    <input type="text" id="header-search-stock" placeholder="快速切換股票查詢 (代號)..." onkeydown="if(event.key==='Enter') quickSearch()">
+                </div>
+            </div>
+        </header>
+
+        <!-- Charts War Room Grid -->
+        <div class="charts-grid">
+            <!-- 1. Daily K-line Card -->
+            <div class="chart-card">
+                <h3 class="chart-title" style="color: var(--primary);">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                    日 K 線與成交量 (最近60日)
+                </h3>
+                <div class="chart-container">
+                    <div id="chart-kline-candlestick"></div>
+                    <div id="chart-kline-volume" style="margin-top: -10px;"></div>
+                </div>
+            </div>
+
+            <!-- 2. Weekly K-line Card -->
+            <div class="chart-card">
+                <h3 class="chart-title" style="color: var(--secondary);">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                    週 K 線與成交量 (最近60週)
+                </h3>
+                <div class="chart-container">
+                    <div id="chart-kline-candlestick-week"></div>
+                    <div id="chart-kline-volume-week" style="margin-top: -10px;"></div>
+                </div>
+            </div>
+
+            <!-- 3. Shareholders Trend Card -->
+            <div class="chart-card">
+                <h3 class="chart-title" style="color: var(--primary);">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                    歷週大戶與散戶持股比例 (%)
+                </h3>
+                <div id="chart-shareholder-trend" class="chart-container"></div>
+            </div>
+
+            <!-- 4. Institutional Flows Card -->
+            <div class="chart-card">
+                <h3 class="chart-title" style="color: var(--secondary);">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="9" x2="15" y2="15"></line><line x1="15" y1="9" x2="9" y2="15"></line></svg>
+                    歷日三大法人買賣超 (張)
+                </h3>
+                <div id="chart-institutional-flows" class="chart-container"></div>
+            </div>
+
+            <!-- 5. Margins Chart Card -->
+            <div class="chart-card">
+                <h3 class="chart-title" style="color: var(--primary);">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+                    歷季三率走勢 (%)
+                </h3>
+                <div id="chart-financial-margins" class="chart-container"></div>
+            </div>
+
+            <!-- 6. Revenue Chart Card -->
+            <div class="chart-card">
+                <h3 class="chart-title" style="color: var(--secondary);">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="9" x2="15" y2="15"></line><line x1="15" y1="9" x2="9" y2="15"></line></svg>
+                    單季營收 (百萬)
+                </h3>
+                <div id="chart-financial-revenue" class="chart-container"></div>
+            </div>
+
+            <!-- 7. EPS Chart Card -->
+            <div class="chart-card">
+                <h3 class="chart-title" style="color: var(--primary);">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="9" x2="15" y2="15"></line><line x1="15" y1="9" x2="9" y2="15"></line></svg>
+                    單季 EPS (元)
+                </h3>
+                <div id="chart-financial-eps" class="chart-container"></div>
+            </div>
+
+            <!-- 8. Monthly Revenue YoY Card -->
+            <div class="chart-card">
+                <h3 class="chart-title" style="color: var(--secondary);">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="9" x2="15" y2="15"></line><line x1="15" y1="9" x2="9" y2="15"></line></svg>
+                    近一年月營收與年增率 (YoY)
+                </h3>
+                <div id="chart-monthly-revenue" class="chart-container"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 後端傳入的個股 JSON 資料
+        const currentStockData = {{ stock_data | tojson | safe }};
+
+        let activeCharts = {
+            klineDayKline: null,
+            klineDayVolume: null,
+            klineWeekKline: null,
+            klineWeekVolume: null,
+            shareholder: null,
+            institutional: null,
+            financialMargins: null,
+            financialRevenue: null,
+            financialEps: null,
+            monthlyRevenue: null
+        };
+
+        function quickSearch() {
+            const stockId = document.getElementById('header-search-stock').value.trim();
+            if (stockId) {
+                window.location.href = '/online/stock_detail?stock_id=' + stockId;
+            }
+        }
+
+        function parseDate(dateStr) {
+            if (!dateStr) return 0;
+            const parts = dateStr.trim().split('-');
+            if (parts.length === 3) {
+                let y = parseInt(parts[0]);
+                const m = parseInt(parts[1]) - 1;
+                const d = parseInt(parts[2]);
+                const year = y < 100 ? 2000 + y : y;
+                return new Date(year, m, d).getTime();
+            }
+            return new Date(dateStr).getTime();
+        }
+
+        // RENDER: Helper for K-Line Candlestick + Volume Chart
+        function renderChartGroup(dates, opens, highs, lows, closes, vols, candlestickElId, volumeElId, groupName, activeChartKeyPrefix) {
+            const targetElKline = document.getElementById(candlestickElId);
+            const targetElVol = document.getElementById(volumeElId);
+
+            if (!dates || dates.length === 0 || !opens || opens.length === 0) {
+                targetElKline.innerHTML = `
+                    <div class="no-data-msg">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                        <span>無足夠的 K 線數據。</span>
+                    </div>`;
+                targetElVol.innerHTML = '';
+                return;
+            }
+
+            targetElKline.innerHTML = '';
+            targetElVol.innerHTML = '';
+
+            const ohlcData = [];
+            const volYValues = [];
+            const volXCats = [];
+            const volUpDown = [];  // true=up, false=down
+
+            for (let i = 0; i < dates.length; i++) {
+                ohlcData.push({
+                    x: dates[i],
+                    y: [opens[i], highs[i], lows[i], closes[i]]
+                });
+                const isUp = (closes[i] != null && opens[i] != null) ? closes[i] >= opens[i] : true;
+                const v = (vols && vols[i] != null && vols[i] !== undefined) ? Math.round(vols[i]) : 0;
+                volYValues.push(v);
+                volXCats.push(dates[i]);
+                volUpDown.push(isUp);
+            }
+
+            console.log('[VOL DEBUG]', volumeElId, '| dates:', dates.length, '| vols:', vols ? vols.length : 'null', '| sample:', volYValues.slice(0,3));
+
+            const klineHeight = 220;
+            const volumeHeight = 100;
+
+            const klineOptions = {
+                series: [{ name: 'K線', data: ohlcData }],
+                chart: {
+                    type: 'candlestick',
+                    height: klineHeight,
+                    zoom: { enabled: false },
+                    toolbar: { show: false },
+                    animations: { enabled: false },
+                    background: 'transparent'
+                },
+                plotOptions: {
+                    candlestick: {
+                        colors: { upward: '#ef4444', downward: '#10b981' },
+                        wick: { useFillColor: true }
+                    }
+                },
+                xaxis: {
+                    type: 'category',
+                    labels: { show: false },
+                    axisBorder: { show: false },
+                    axisTicks: { show: false }
+                },
+                yaxis: {
+                    tooltip: { enabled: true },
+                    labels: {
+                        style: { colors: '#9ca3af' },
+                        formatter: val => (val !== null && !isNaN(val)) ? val.toFixed(1) : ''
+                    }
+                },
+                grid: { borderColor: 'rgba(255,255,255,0.06)' },
+                tooltip: { theme: 'dark' }
+            };
+
+            const volOptions = {
+                series: [{ name: '成交量', data: volYValues }],
+                chart: {
+                    type: 'bar',
+                    height: volumeHeight,
+                    toolbar: { show: false },
+                    animations: { enabled: false }
+                },
+                colors: ['#00b4d8'],
+                dataLabels: { enabled: false },
+                plotOptions: { bar: { columnWidth: '80%' } },
+                xaxis: {
+                    categories: volXCats,
+                    tickAmount: 8,
+                    labels: { style: { colors: '#9ca3af' }, rotate: 0 }
+                },
+                yaxis: {
+                    labels: {
+                        style: { colors: '#9ca3af' },
+                        formatter: val => val >= 1000 ? (val/1000).toFixed(0)+'K' : val
+                    }
+                },
+                tooltip: { theme: 'dark' }
+            };
+
+            const klineChart = new ApexCharts(targetElKline, klineOptions);
+            const volChart = new ApexCharts(targetElVol, volOptions);
+
+            klineChart.render();
+            volChart.render();
+
+            activeCharts[activeChartKeyPrefix + 'Kline'] = klineChart;
+            activeCharts[activeChartKeyPrefix + 'Volume'] = volChart;
+        }
+
+        // 1. K-line Charts
+        function renderKCharts() {
+            renderChartGroup(
+                currentStockData.dayDates,
+                currentStockData.dayOpen,
+                currentStockData.dayHigh,
+                currentStockData.dayLow,
+                currentStockData.dayClose,
+                currentStockData.dayVol,
+                'chart-kline-candlestick',
+                'chart-kline-volume',
+                'day-group',
+                'klineDay'
+            );
+
+            renderChartGroup(
+                currentStockData.weekDates,
+                currentStockData.weekOpen,
+                currentStockData.weekHigh,
+                currentStockData.weekLow,
+                currentStockData.weekClose,
+                currentStockData.weekVol,
+                'chart-kline-candlestick-week',
+                'chart-kline-volume-week',
+                'week-group',
+                'klineWeek'
+            );
+        }
+
+        // 2. Shareholders Distribution (集保大戶散戶比)
+        function renderChipCharts() {
+            const targetEl = document.getElementById('chart-shareholder-trend');
+            const dates = currentStockData.chipDates;
+            const bigs = currentStockData.bigHolders;
+            const smalls = currentStockData.smallHolders;
+
+            if (!dates || dates.length === 0 || !bigs || bigs.length === 0) {
+                targetEl.innerHTML = `
+                    <div class="no-data-msg">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                        <span>無股權分散 (集保籌碼) 數據。</span>
+                    </div>`;
+                return;
+            }
+
+            const bigSeries = [];
+            const smallSeries = [];
+            for (let i = 0; i < dates.length; i++) {
+                const ts = parseDate(dates[i]);
+                bigSeries.push({ x: ts, y: bigs[i] });
+                smallSeries.push({ x: ts, y: smalls[i] });
+            }
+
+            const options = {
+                series: [
+                    { name: '大戶持股比 (>1000張)', data: bigSeries },
+                    { name: '散戶持股比 (<400張)', data: smallSeries }
+                ],
+                chart: {
+                    type: 'line',
+                    height: 320,
+                    zoom: { enabled: false },
+                    toolbar: { show: false }
+                },
+                colors: ['#ef4444', '#3b82f6'],
+                stroke: { width: 3, curve: 'smooth' },
+                xaxis: {
+                    type: 'datetime',
+                    labels: { datetimeUTC: false, style: { colors: '#9ca3af' } }
+                },
+                yaxis: {
+                    labels: {
+                        style: { colors: '#9ca3af' },
+                        formatter: val => val.toFixed(2) + '%'
+                    }
+                },
+                grid: { borderColor: 'rgba(255,255,255,0.06)' },
+                tooltip: { theme: 'dark' }
+            };
+
+            activeCharts.shareholder = new ApexCharts(targetEl, options);
+            activeCharts.shareholder.render();
+        }
+
+        // 3. Institutional Flows (三大法人買賣超)
+        function renderInstCharts() {
+            const targetEl = document.getElementById('chart-institutional-flows');
+            const dates = currentStockData.instDates;
+            const foreign = currentStockData.foreign;
+            const it = currentStockData.it;
+            const prop = currentStockData.prop;
+
+            if (!dates || dates.length === 0) {
+                targetEl.innerHTML = `
+                    <div class="no-data-msg">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="9" x2="15" y2="15"></line><line x1="15" y1="9" x2="9" y2="15"></line></svg>
+                        <span>無三大法人買賣超數據。</span>
+                    </div>`;
+                return;
+            }
+
+            const foreignSeries = [];
+            const itSeries = [];
+            const propSeries = [];
+
+            for (let i = 0; i < dates.length; i++) {
+                const ts = parseDate(dates[i]);
+                foreignSeries.push({ x: ts, y: Math.round(foreign[i]) });
+                itSeries.push({ x: ts, y: Math.round(it[i]) });
+                propSeries.push({ x: ts, y: Math.round(prop[i]) });
+            }
+
+            const options = {
+                series: [
+                    { name: '外資 (張)', data: foreignSeries },
+                    { name: '投信 (張)', data: itSeries },
+                    { name: '自營商 (張)', data: propSeries }
+                ],
+                chart: {
+                    type: 'bar',
+                    height: 320,
+                    zoom: { enabled: false },
+                    toolbar: { show: false }
+                },
+                colors: ['#4facfe', '#e11d48', '#f59e0b'],
+                xaxis: {
+                    type: 'datetime',
+                    labels: { datetimeUTC: false, style: { colors: '#9ca3af' } }
+                },
+                yaxis: {
+                    labels: {
+                        style: { colors: '#9ca3af' },
+                        formatter: val => (val > 0 ? '+' : '') + Math.round(val).toLocaleString()
+                    }
+                },
+                grid: { borderColor: 'rgba(255,255,255,0.06)' },
+                tooltip: { theme: 'dark' }
+            };
+
+            activeCharts.institutional = new ApexCharts(targetEl, options);
+            activeCharts.institutional.render();
+        }
+
+        // 4. Fundamental Margins & EPS & Revenue
+        function renderFinancialCharts() {
+            const marginsEl = document.getElementById('chart-financial-margins');
+            const revEl = document.getElementById('chart-financial-revenue');
+            const epsEl = document.getElementById('chart-financial-eps');
+
+            const f = currentStockData;
+            if (!f.financeQuarters || f.financeQuarters.length === 0) {
+                marginsEl.innerHTML = `<div class="no-data-msg"><span>無財務基本面數據。</span></div>`;
+                revEl.innerHTML = '';
+                epsEl.innerHTML = '';
+                return;
+            }
+
+            // Margins (三率)
+            const marginsOptions = {
+                series: [
+                    { name: '毛利率', data: f.financeGross },
+                    { name: '營利率', data: f.financeOperating },
+                    { name: '淨利率', data: f.financeNet }
+                ],
+                chart: {
+                    type: 'bar',
+                    height: 320,
+                    zoom: { enabled: false },
+                    toolbar: { show: false }
+                },
+                dataLabels: {
+                    enabled: true,
+                    formatter: val => (val !== null && !isNaN(val)) ? val.toFixed(1) + '%' : '',
+                    offsetY: -20,
+                    style: { fontSize: '9px', colors: ['#fff'] }
+                },
+                colors: ['#3b82f6', '#ef4444', '#10b981'],
+                xaxis: {
+                    categories: f.financeQuarters,
+                    labels: { style: { colors: '#9ca3af' } }
+                },
+                yaxis: {
+                    labels: {
+                        style: { colors: '#9ca3af' },
+                        formatter: val => (val !== null && !isNaN(val)) ? val.toFixed(1) + '%' : ''
+                    }
+                },
+                grid: { borderColor: 'rgba(255,255,255,0.06)' },
+                tooltip: { theme: 'dark' }
+            };
+
+            // Revenue (單季營收)
+            const revOptions = {
+                series: [{ name: '單季營收 (百萬)', data: f.financeRevenue }],
+                chart: {
+                    type: 'bar',
+                    height: 320,
+                    zoom: { enabled: false },
+                    toolbar: { show: false }
+                },
+                dataLabels: {
+                    enabled: true,
+                    formatter: val => val !== null ? Math.round(val).toLocaleString() : '',
+                    offsetY: -20,
+                    style: { fontSize: '9px', colors: ['#fff'] }
+                },
+                colors: ['#ef4444'],
+                xaxis: {
+                    categories: f.financeQuarters,
+                    labels: { style: { colors: '#9ca3af' } }
+                },
+                yaxis: {
+                    labels: {
+                        style: { colors: '#ef4444' },
+                        formatter: val => (val !== null && !isNaN(val)) ? Math.round(val).toLocaleString() : ''
+                    }
+                },
+                grid: { borderColor: 'rgba(255,255,255,0.06)' },
+                tooltip: { theme: 'dark' }
+            };
+
+            // EPS (單季每股盈餘)
+            const epsOptions = {
+                series: [{ name: '單季 EPS (元)', data: f.financeEps }],
+                chart: {
+                    type: 'line',
+                    height: 320,
+                    zoom: { enabled: false },
+                    toolbar: { show: false }
+                },
+                stroke: { width: 3, curve: 'smooth' },
+                markers: { size: 5 },
+                dataLabels: {
+                    enabled: true,
+                    formatter: val => val !== null ? val.toFixed(2) : '',
+                    offsetY: -10,
+                    style: { fontSize: '9px', colors: ['#fff'] }
+                },
+                colors: ['#3b82f6'],
+                xaxis: {
+                    categories: f.financeQuarters,
+                    labels: { style: { colors: '#9ca3af' } }
+                },
+                yaxis: {
+                    labels: {
+                        style: { colors: '#3b82f6' },
+                        formatter: val => (val !== null && !isNaN(val)) ? val.toFixed(2) : ''
+                    }
+                },
+                grid: { borderColor: 'rgba(255,255,255,0.06)' },
+                tooltip: { theme: 'dark' }
+            };
+
+            activeCharts.financialMargins = new ApexCharts(marginsEl, marginsOptions);
+            activeCharts.financialRevenue = new ApexCharts(revEl, revOptions);
+            activeCharts.financialEps = new ApexCharts(epsEl, epsOptions);
+
+            activeCharts.financialMargins.render();
+            activeCharts.financialRevenue.render();
+            activeCharts.financialEps.render();
+        }
+
+        // 5. Monthly Revenue YoY YoY (近一年月營收與年增率)
+        function renderMonthlyRevenueChart() {
+            const targetEl = document.getElementById('chart-monthly-revenue');
+            const f = currentStockData;
+
+            if (!f.monthlyRevenueMonths || f.monthlyRevenueMonths.length === 0) {
+                targetEl.innerHTML = `<div class="no-data-msg"><span>無月營收趨勢數據。</span></div>`;
+                return;
+            }
+
+            const options = {
+                series: [
+                    { name: '月營收 (百萬)', type: 'column', data: f.monthlyRevenueValues },
+                    { name: '年增率 (YoY %)', type: 'line', data: f.monthlyRevenueYoy }
+                ],
+                chart: {
+                    height: 320,
+                    type: 'line',
+                    zoom: { enabled: false },
+                    toolbar: { show: false }
+                },
+                stroke: { width: [0, 3], curve: 'smooth' },
+                colors: ['#ef4444', '#f59e0b'],
+                xaxis: {
+                    categories: f.monthlyRevenueMonths,
+                    labels: { style: { colors: '#9ca3af' } }
+                },
+                yaxis: [
+                    {
+                        seriesName: '月營收 (百萬)',
+                        axisBorder: { show: true, color: '#ef4444' },
+                        labels: {
+                            style: { colors: '#ef4444' },
+                            formatter: val => Math.round(val).toLocaleString()
+                        },
+                        title: { text: "月營收 (百萬)", style: { color: '#ef4444' } }
+                    },
+                    {
+                        seriesName: '年增率 (YoY %)',
+                        opposite: true,
+                        axisBorder: { show: true, color: '#f59e0b' },
+                        labels: {
+                            style: { colors: '#f59e0b' },
+                            formatter: val => val.toFixed(1) + '%'
+                        },
+                        title: { text: "年增率 (%)", style: { color: '#f59e0b' } }
+                    }
+                ],
+                grid: { borderColor: 'rgba(255,255,255,0.06)' },
+                tooltip: {
+                    theme: 'dark',
+                    shared: true,
+                    intersect: false,
+                    y: {
+                        formatter: function (y, { seriesIndex }) {
+                            if (y !== undefined && y !== null) {
+                                return seriesIndex === 0 ? Math.round(y).toLocaleString() + " 百萬" : y.toFixed(1) + "%";
+                            }
+                            return y;
+                        }
+                    }
+                }
+            };
+
+            activeCharts.monthlyRevenue = new ApexCharts(targetEl, options);
+            activeCharts.monthlyRevenue.render();
+        }
+
+        // Render all charts on window load
+        window.addEventListener('DOMContentLoaded', () => {
+            renderKCharts();
+            renderChipCharts();
+            renderInstCharts();
+            renderFinancialCharts();
+            renderMonthlyRevenueChart();
+        });
+    </script>
+</body>
+</html>

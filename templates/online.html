@@ -377,6 +377,16 @@
             <div class="panel">
                 <h2 class="panel-title">操作面板</h2>
 
+                <!-- Control 0: Stock Analysis -->
+                <div class="control-group">
+                    <span class="control-label">個股綜合分析 (K線/籌碼/基本面)</span>
+                    <span class="control-desc">輸入股票代號，立刻開啟新視窗查詢個股之日K/週K、集保分佈、三大法人、營收與三率EPS等8大圖表。</span>
+                    <div class="input-row" style="margin-top: 0.5rem;">
+                        <input type="text" id="search-stock-id" placeholder="例如：2330, 2454..." value="2330" onkeydown="if(event.key==='Enter') openStockDetail()">
+                    </div>
+                    <button id="btn-stock-detail" class="btn" onclick="openStockDetail()">進行個股分析</button>
+                </div>
+
                 <!-- Control 1: Run Stock Picker -->
                 <div class="control-group">
                     <span class="control-label">執行選股腳本 (gg_stock.py)</span>
@@ -616,6 +626,15 @@
             } catch (err) {
                 console.error("Failed to stop task:", err);
             }
+        }
+
+        function openStockDetail() {
+            const stockId = document.getElementById('search-stock-id').value.trim();
+            if (!stockId) {
+                alert("請輸入股票代號！");
+                return;
+            }
+            window.open('/online/stock_detail?stock_id=' + stockId, '_blank');
         }
 
         // Initial check on load

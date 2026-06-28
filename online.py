@@ -8,6 +8,11 @@ import pandas as pd
 import numpy as np
 from flask import Flask, render_template, redirect, url_for, jsonify, request, send_from_directory
 from werkzeug.utils import safe_join
+import sqlite3
+import stock_comm as comm
+import kline as kline_tool
+import stock_big3
+import director
 
 app = Flask(__name__)
 
@@ -66,6 +71,233 @@ def top():
 @app.route('/online/kline')
 def kline():
     return render_template('kline.html')
+
+@app.route('/online/stock_detail')
+def stock_detail():
+    stock_id = request.args.get('stock_id', '').strip()
+    if not stock_id:
+        return "請提供股票代號", 400
+
+    # 1. 檢查是否存在於日K資料庫
+    db_path = "sql/stock_data.db"
+    if not os.path.exists(db_path):
+        return "股價資料庫不存在，請先執行爬蟲或下載快照資料", 400
+
+    # 為了防護，先查詢表格是否存在
+    con = sqlite3.connect(db_path)
+    try:
+        tables = con.execute("SELECT name FROM sqlite_master WHERE type='table' AND name=?", (stock_id,)).fetchall()
+        if not tables:
+            con.close()
+            return f"找不到股票代號 {stock_id}，請確認是否已爬取該股日K線", 400
+            
+        # 找出最大日期
+        row = con.execute(f'SELECT MAX(date) FROM "{stock_id}"').fetchone()
+        latest_date_str = row[0] if row else None
+        con.close()
+    except Exception as e:
+        con.close()
+        return f"讀取股價資料庫時出錯: {str(e)}", 500
+
+    if not latest_date_str:
+        return f"股票代號 {stock_id} 查無資料", 400
+
+    base_date = datetime.strptime(latest_date_str[:10], '%Y-%m-%d')
+
+    # 2. 獲取日K與週K資料
+    try:
+        df1 = comm.get_stock_df_bydate_nums(stock_id, 300, base_date)
+        if df1.empty:
+            return f"無法讀取股票 {stock_id} 的K線資料", 400
+            
+        # 複製並轉換 vol (日K取最近60天)
+        day_df = df1.tail(60).reset_index(drop=True).copy()
+        day_df['vol'] = day_df['vol'] / 1000  # 轉為張數
+
+        # 週K取最近60週
+        df_for_week = df1.copy()
+        df_for_week['vol'] = df_for_week['vol'] / 1000
+        week_df = kline_tool.resample(df_for_week, 'W-FRI', 60).reset_index(drop=True).copy()
+        
+        # 轉換日期字串格式
+        def format_date_str(x):
+            if hasattr(x, 'strftime'):
+                return x.strftime('%Y-%m-%d')
+            return str(x)[:10]
+
+        day_dates = [format_date_str(d) for d in day_df['date'].values]
+        day_open = [float(v) if pd.notna(v) else None for v in day_df['open'].values]
+        day_high = [float(v) if pd.notna(v) else None for v in day_df['high'].values]
+        day_low = [float(v) if pd.notna(v) else None for v in day_df['low'].values]
+        day_close = [float(v) if pd.notna(v) else None for v in day_df['close'].values]
+        day_vol = [float(v) if pd.notna(v) else None for v in day_df['vol'].values]
+
+        # 週K
+        week_dates = [format_date_str(d) for d in week_df['date'].values]
+        week_open = [float(v) if pd.notna(v) else None for v in week_df['open'].values]
+        week_high = [float(v) if pd.notna(v) else None for v in week_df['high'].values]
+        week_low = [float(v) if pd.notna(v) else None for v in week_df['low'].values]
+        week_close = [float(v) if pd.notna(v) else None for v in week_df['close'].values]
+        week_vol = [float(v) if pd.notna(v) else None for v in week_df['vol'].values]
+        
+        try:
+            csv_path = f"data/stock_data/{stock_id}.csv"
+            if os.path.exists(csv_path):
+                temp_df = pd.read_csv(csv_path, nrows=2, header=None)
+                if len(temp_df) > 1:
+                    stock_name = str(temp_df.iloc[1].values[-1]).strip()
+                else:
+                    stock_name = str(temp_df.iloc[0].values[-1]).strip()
+            else:
+                stock_name = stock_id
+        except:
+            stock_name = stock_id
+    except Exception as e:
+        return f"處理K線數據時發生錯誤: {str(e)}", 500
+
+    # 3. 獲取集保大戶散戶比 (tdcc)
+    class FakeRow:
+        def __init__(self, s_id):
+            self.stock_id = s_id
+    r_obj = FakeRow(stock_id)
+
+    chip_dates = []
+    big_holders = []
+    small_holders = []
+    try:
+        tdcc_df = comm.get_stock_tdcc_dist_df(r_obj)
+        if not tdcc_df.empty:
+            cols = ['15','16','17','18','19','20','21','22','23','24','25','26','27','28','29']
+            s_cols = ['15','16','17','18','19','20','21','22','23','24','25']
+            tdcc_sub = tdcc_df.tail(24).copy()
+            for i in range(len(tdcc_sub)):
+                row_data = tdcc_sub.iloc[i]
+                total_stock = sum([float(row_data[c]) for c in cols if pd.notna(row_data[c])])
+                if total_stock > 0:
+                    b_val = float(row_data['29']) / total_stock * 100 if pd.notna(row_data['29']) else 0.0
+                    s_val = sum([float(row_data[c]) for c in s_cols if pd.notna(row_data[c])]) / total_stock * 100
+                    chip_dates.append(format_date_str(row_data['date']))
+                    big_holders.append(round(b_val, 2))
+                    small_holders.append(round(s_val, 2))
+    except Exception as e:
+        print(f"Warn: failed to load TDCC dist for {stock_id}: {str(e)}")
+
+    # 4. 三大法人買賣超 (最近60日)
+    inst_dates = []
+    inst_foreign = []
+    inst_it = []
+    inst_prop = []
+    try:
+        market = 'tse'
+        tse_conn = sqlite3.connect("sql/tse_exchange_data.db")
+        tse_tables = tse_conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='tse_list'").fetchall()
+        if tse_tables:
+            tse_list = tse_conn.execute("SELECT stock_id FROM tse_list WHERE stock_id=?", (stock_id,)).fetchone()
+            if not tse_list:
+                market = 'otc'
+        tse_conn.close()
+        
+        stock_3big_df = stock_big3.get_stock_3big(stock_id, base_date, 60, market)
+        if not stock_3big_df.empty:
+            stock_3big_df = stock_3big_df.iloc[::-1]
+            for i in range(len(stock_3big_df)):
+                row_data = stock_3big_df.iloc[i]
+                inst_dates.append(format_date_str(row_data['日期']))
+                inst_foreign.append(round(float(row_data['外資']), 1) if pd.notna(row_data['外資']) else 0.0)
+                inst_it.append(round(float(row_data['投信']), 1) if pd.notna(row_data['投信']) else 0.0)
+                inst_prop.append(round(float(row_data['自營商']), 1) if pd.notna(row_data['自營商']) else 0.0)
+    except Exception as e:
+        print(f"Warn: failed to load Big 3 for {stock_id}: {str(e)}")
+
+    # 5. 財務季報三率走勢、單季營收、單季 EPS (最近8季)
+    finance_quarters = []
+    finance_eps = []
+    finance_gross = []
+    finance_operating = []
+    finance_net = []
+    finance_revenue = []
+    try:
+        season_df = comm.get_stock_season_df(r_obj)
+        if not season_df.empty:
+            season_sub = season_df.head(8).iloc[::-1]
+            for i in range(len(season_sub)):
+                row_data = season_sub.iloc[i]
+                yr = int(row_data['ys'] // 4) + 1911
+                sea = int(row_data['ys'] % 4) + 1
+                q_str = f"{yr}Q{sea}"
+                finance_quarters.append(q_str)
+                finance_eps.append(round(float(row_data['單季EPS']), 2) if pd.notna(row_data['單季EPS']) else 0.0)
+                
+                def py_calc_ratio(num, den):
+                    if pd.isna(num) or pd.isna(den) or den == 0:
+                        return 0.0
+                    return round((float(num) / float(den)) * 100, 2)
+                    
+                rev = row_data['單季營收']
+                finance_gross.append(py_calc_ratio(row_data['單季毛利淨額'], rev))
+                finance_operating.append(py_calc_ratio(row_data['單季營業利益淨額'], rev))
+                finance_net.append(py_calc_ratio(row_data['單季綜合損益總額'], rev))
+                finance_revenue.append(round(float(row_data['單季營收']) / 1000, 1) if pd.notna(row_data['單季營收']) else 0.0)
+    except Exception as e:
+        print(f"Warn: failed to load fundamental metrics for {stock_id}: {str(e)}")
+
+    # 6. 近一年月營收與年增率 (YoY) (最近12個月)
+    monthly_revenue_months = []
+    monthly_revenue_values = []
+    monthly_revenue_yoy = []
+    try:
+        rev_df = comm.get_stock_revenue_df(r_obj)
+        if not rev_df.empty:
+            rev_sub = rev_df.head(12).iloc[::-1]
+            for i in range(len(rev_sub)):
+                row_data = rev_sub.iloc[i]
+                try:
+                    dt = pd.to_datetime(row_data['date'])
+                    yymm = dt.strftime('%y-%m')
+                except:
+                    yymm = str(row_data['date'])[:7]
+                monthly_revenue_months.append(yymm)
+                monthly_revenue_values.append(round(float(row_data['當月營收']) / 1000, 1) if pd.notna(row_data['當月營收']) else 0.0)
+                monthly_revenue_yoy.append(round(float(row_data['去年同月增減(%)']), 1) if pd.notna(row_data['去年同月增減(%)']) else 0.0)
+    except Exception as e:
+        print(f"Warn: failed to load monthly revenue for {stock_id}: {str(e)}")
+
+    # 彙整為 dictionary
+    stock_data = {
+        "stock_id": stock_id,
+        "stock_name": stock_name,
+        "market": market.upper() if 'market' in locals() else 'TSE',
+        "dayDates": day_dates,
+        "dayOpen": day_open,
+        "dayHigh": day_high,
+        "dayLow": day_low,
+        "dayClose": day_close,
+        "dayVol": day_vol,
+        "weekDates": week_dates,
+        "weekOpen": week_open,
+        "weekHigh": week_high,
+        "weekLow": week_low,
+        "weekClose": week_close,
+        "weekVol": week_vol,
+        "chipDates": chip_dates,
+        "bigHolders": big_holders,
+        "smallHolders": small_holders,
+        "instDates": inst_dates,
+        "foreign": inst_foreign,
+        "it": inst_it,
+        "prop": inst_prop,
+        "financeQuarters": finance_quarters,
+        "financeEps": finance_eps,
+        "financeGross": finance_gross,
+        "financeOperating": finance_operating,
+        "financeNet": finance_net,
+        "financeRevenue": finance_revenue,
+        "monthlyRevenueMonths": monthly_revenue_months,
+        "monthlyRevenueValues": monthly_revenue_values,
+        "monthlyRevenueYoy": monthly_revenue_yoy
+    }
+
+    return render_template('stock_detail.html', stock_data=stock_data)
 
 @app.route('/online/run', methods=['POST'])
 def run_task():
