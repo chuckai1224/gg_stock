@@ -1384,7 +1384,7 @@
 
 
 
-        // Helper to render a K-line + Volume Chart Group
+        // Helper to render a K-line + Volume mixed chart (single ApexCharts instance)
         function renderChartGroup(dates, opens, highs, lows, closes, vols, candlestickElId, volumeElId, groupName, activeChartKeyPrefix) {
             const targetElKline = document.getElementById(candlestickElId);
             const targetElVol = document.getElementById(volumeElId);
@@ -1395,14 +1395,13 @@
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
                         <span>無足夠的 K 線數據可供繪製。</span>
                     </div>`;
-                targetElVol.innerHTML = '';
+                targetElVol.style.display = 'none';
                 return;
             }
 
             targetElKline.innerHTML = '';
-            targetElVol.innerHTML = '';
+            targetElVol.style.display = 'none';
 
-            // Clone data to avoid mutating original state
             let rDates = [...dates];
             let rOpens = [...opens];
             let rHighs = [...highs];
@@ -1410,46 +1409,49 @@
             let rCloses = [...closes];
             let rVols = [...vols];
 
-            // If the series is in reverse chronological order (newest to oldest), reverse it to chronological order (oldest to newest)
             if (rDates.length > 1 && parseDate(rDates[0]) > parseDate(rDates[rDates.length - 1])) {
-                rDates.reverse();
-                rOpens.reverse();
-                rHighs.reverse();
-                rLows.reverse();
-                rCloses.reverse();
-                rVols.reverse();
+                rDates.reverse(); rOpens.reverse(); rHighs.reverse();
+                rLows.reverse(); rCloses.reverse(); rVols.reverse();
             }
 
             const ohlcData = [];
-            const volData = [];
-            const volColors = [];
+            const volUpData = [];
+            const volDownData = [];
+            let maxVol = 1;
 
             for (let i = 0; i < rDates.length; i++) {
-                const dateStr = rDates[i];
                 const hasOHLC = rOpens[i] !== null && rHighs[i] !== null && rLows[i] !== null && rCloses[i] !== null;
-                // Always push both arrays in sync so category indices stay aligned for grouped charts
                 ohlcData.push({
-                    x: dateStr,
+                    x: rDates[i],
                     y: hasOHLC ? [rOpens[i], rHighs[i], rLows[i], rCloses[i]] : [null, null, null, null]
                 });
-                const isUp = hasOHLC ? (rCloses[i] >= rOpens[i]) : true;
-                volData.push({
-                    x: dateStr,
-                    y: rVols[i] !== null && rVols[i] !== undefined ? Math.round(rVols[i]) : 0
-                });
-                volColors.push(isUp ? 'rgba(239, 68, 68, 0.7)' : 'rgba(16, 185, 129, 0.7)');
+                const isUp = hasOHLC ? rCloses[i] >= rOpens[i] : true;
+                const v = (rVols[i] != null) ? Math.round(rVols[i]) : 0;
+                if (v > maxVol) maxVol = v;
+                volUpData.push({ x: rDates[i], y: isUp ? v : null });
+                volDownData.push({ x: rDates[i], y: !isUp ? v : null });
             }
 
             const isMobile = window.innerWidth <= 768;
             const klineHeight = isMobile ? 160 : 220;
             const volumeHeight = isMobile ? 70 : 100;
+            const totalHeight = klineHeight + volumeHeight;
+            const volYMax = maxVol * (totalHeight / volumeHeight);
 
-            const klineOptions = {
-                series: [{ name: 'K線', data: ohlcData }],
+            if (typeof ApexCharts === 'undefined') {
+                targetElKline.innerHTML = '<div style="color: var(--warning); padding: 1rem;">❌ 無法載入圖表套件，請檢查網路連線。</div>';
+                return;
+            }
+
+            const chart = new ApexCharts(targetElKline, {
+                series: [
+                    { name: 'K線', type: 'candlestick', data: ohlcData },
+                    { name: 'Vol↑', type: 'bar', data: volUpData },
+                    { name: 'Vol↓', type: 'bar', data: volDownData }
+                ],
                 chart: {
                     type: 'candlestick',
-                    height: klineHeight,
-                    zoom: { enabled: false },
+                    height: totalHeight,
                     toolbar: { show: false },
                     animations: { enabled: false },
                     background: 'transparent'
@@ -1458,39 +1460,12 @@
                     candlestick: {
                         colors: { upward: '#ef4444', downward: '#10b981' },
                         wick: { useFillColor: true }
-                    }
+                    },
+                    bar: { columnWidth: '80%' }
                 },
+                colors: ['#ef4444', 'rgba(239,68,68,0.7)', 'rgba(16,185,129,0.7)'],
                 xaxis: {
                     type: 'category',
-                    labels: { show: false },
-                    axisBorder: { show: false },
-                    axisTicks: { show: false }
-                },
-                yaxis: {
-                    tooltip: { enabled: true },
-                    labels: {
-                        style: { colors: '#9ca3af' },
-                        formatter: val => val.toFixed(1)
-                    }
-                },
-                grid: { borderColor: 'rgba(255,255,255,0.06)' },
-                tooltip: { theme: 'dark' }
-            };
-
-            const volYValues = volData.map(d => d.y);
-            const volOptions = {
-                series: [{ name: '成交量', data: volYValues }],
-                chart: {
-                    type: 'bar',
-                    height: volumeHeight,
-                    toolbar: { show: false },
-                    animations: { enabled: false }
-                },
-                colors: volColors,
-                dataLabels: { enabled: false },
-                plotOptions: { bar: { columnWidth: '80%', distributed: true } },
-                legend: { show: false },
-                xaxis: {
                     categories: rDates,
                     tickAmount: isMobile ? 4 : 8,
                     labels: {
@@ -1499,35 +1474,33 @@
                         hideOverlappingLabels: true,
                         formatter: val => {
                             if (!val) return '';
-                            const str = String(val);
-                            const p = str.split('-');
-                            return p.length >= 3 ? p[1] + '-' + p[2] : str;
+                            const p = String(val).split('-');
+                            return p.length >= 3 ? p[1] + '-' + p[2] : val;
                         }
-                    }
+                    },
+                    axisBorder: { show: false },
+                    axisTicks: { show: false }
                 },
-                yaxis: {
-                    labels: {
-                        style: { colors: '#9ca3af' },
-                        formatter: val => val >= 1000 ? (val / 1000).toFixed(0) + 'K' : val
-                    }
-                },
+                yaxis: [
+                    {
+                        seriesName: 'K線',
+                        tooltip: { enabled: true },
+                        labels: {
+                            style: { colors: '#9ca3af' },
+                            formatter: val => (val != null && !isNaN(val)) ? val.toFixed(1) : ''
+                        }
+                    },
+                    { seriesName: 'Vol↑', show: false, min: 0, max: volYMax },
+                    { seriesName: 'Vol↓', show: false, min: 0, max: volYMax }
+                ],
+                legend: { show: false },
                 grid: { borderColor: 'rgba(255,255,255,0.06)' },
                 tooltip: { theme: 'dark' }
-            };
+            });
 
-            if (typeof ApexCharts === 'undefined') {
-                targetElKline.innerHTML = '<div style="color: var(--warning); padding: 1rem;">❌ 無法載入圖表套件，請檢查網路連線。</div>';
-                return;
-            }
-
-            const klineChart = new ApexCharts(targetElKline, klineOptions);
-            const volChart = new ApexCharts(targetElVol, volOptions);
-
-            klineChart.render();
-            volChart.render();
-
-            activeCharts[activeChartKeyPrefix + 'Kline'] = klineChart;
-            activeCharts[activeChartKeyPrefix + 'Volume'] = volChart;
+            chart.render();
+            activeCharts[activeChartKeyPrefix + 'Kline'] = chart;
+            activeCharts[activeChartKeyPrefix + 'Volume'] = null;
         }
 
         // RENDER: Daily and Weekly K-Line & Volume Charts Simultaneously

@@ -387,7 +387,7 @@
             return new Date(dateStr).getTime();
         }
 
-        // RENDER: Helper for K-Line Candlestick + Volume Chart
+        // RENDER: Helper for K-Line Candlestick + Volume Chart (single mixed chart)
         function renderChartGroup(dates, opens, highs, lows, closes, vols, candlestickElId, volumeElId, groupName, activeChartKeyPrefix) {
             const targetElKline = document.getElementById(candlestickElId);
             const targetElVol = document.getElementById(volumeElId);
@@ -398,39 +398,46 @@
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
                         <span>無足夠的 K 線數據。</span>
                     </div>`;
-                targetElVol.innerHTML = '';
+                targetElVol.style.display = 'none';
                 return;
             }
 
             targetElKline.innerHTML = '';
-            targetElVol.innerHTML = '';
+            targetElVol.style.display = 'none';
 
             const ohlcData = [];
-            const volYValues = [];
-            const volXCats = [];
-            const volColors = [];
+            const volUpData = [];
+            const volDownData = [];
+            let maxVol = 1;
 
             for (let i = 0; i < dates.length; i++) {
+                const hasOHLC = opens[i] != null && highs[i] != null && lows[i] != null && closes[i] != null;
                 ohlcData.push({
                     x: dates[i],
-                    y: [opens[i], highs[i], lows[i], closes[i]]
+                    y: hasOHLC ? [opens[i], highs[i], lows[i], closes[i]] : [null, null, null, null]
                 });
-                const isUp = (closes[i] != null && opens[i] != null) ? closes[i] >= opens[i] : true;
-                const v = (vols && vols[i] != null && vols[i] !== undefined) ? Math.round(vols[i]) : 0;
-                volYValues.push(v);
-                volXCats.push(dates[i]);
-                volColors.push(isUp ? '#ef4444' : '#10b981');  // 紅漲綠跌
+                const isUp = hasOHLC ? closes[i] >= opens[i] : true;
+                const v = (vols && vols[i] != null) ? Math.round(vols[i]) : 0;
+                if (v > maxVol) maxVol = v;
+                volUpData.push({ x: dates[i], y: isUp ? v : null });
+                volDownData.push({ x: dates[i], y: !isUp ? v : null });
             }
 
             const klineHeight = 220;
             const volumeHeight = 100;
+            const totalHeight = klineHeight + volumeHeight;
+            // Scale so volume bars occupy the bottom volumeHeight/totalHeight portion
+            const volYMax = maxVol * (totalHeight / volumeHeight);
 
-            const klineOptions = {
-                series: [{ name: 'K線', data: ohlcData }],
+            const options = {
+                series: [
+                    { name: 'K線', type: 'candlestick', data: ohlcData },
+                    { name: 'Vol↑', type: 'bar', data: volUpData },
+                    { name: 'Vol↓', type: 'bar', data: volDownData }
+                ],
                 chart: {
                     type: 'candlestick',
-                    height: klineHeight,
-                    zoom: { enabled: false },
+                    height: totalHeight,
                     toolbar: { show: false },
                     animations: { enabled: false },
                     background: 'transparent'
@@ -439,39 +446,13 @@
                     candlestick: {
                         colors: { upward: '#ef4444', downward: '#10b981' },
                         wick: { useFillColor: true }
-                    }
+                    },
+                    bar: { columnWidth: '80%' }
                 },
+                colors: ['#ef4444', 'rgba(239,68,68,0.7)', 'rgba(16,185,129,0.7)'],
                 xaxis: {
                     type: 'category',
-                    labels: { show: false },
-                    axisBorder: { show: false },
-                    axisTicks: { show: false }
-                },
-                yaxis: {
-                    tooltip: { enabled: true },
-                    labels: {
-                        style: { colors: '#9ca3af' },
-                        formatter: val => (val !== null && !isNaN(val)) ? val.toFixed(1) : ''
-                    }
-                },
-                grid: { borderColor: 'rgba(255,255,255,0.06)' },
-                tooltip: { theme: 'dark' }
-            };
-
-            const volOptions = {
-                series: [{ name: '成交量', data: volYValues }],
-                chart: {
-                    type: 'bar',
-                    height: volumeHeight,
-                    toolbar: { show: false },
-                    animations: { enabled: false }
-                },
-                colors: volColors,
-                dataLabels: { enabled: false },
-                plotOptions: { bar: { columnWidth: '80%', distributed: true } },
-                legend: { show: false },
-                xaxis: {
-                    categories: volXCats,
+                    categories: dates,
                     tickAmount: 8,
                     labels: {
                         style: { colors: '#9ca3af' },
@@ -479,29 +460,35 @@
                         hideOverlappingLabels: true,
                         formatter: val => {
                             if (!val) return '';
-                            const str = String(val);
-                            const p = str.split('-');
-                            return p.length >= 3 ? p[1] + '-' + p[2] : str;
+                            const p = String(val).split('-');
+                            return p.length >= 3 ? p[1] + '-' + p[2] : val;
                         }
-                    }
+                    },
+                    axisBorder: { show: false },
+                    axisTicks: { show: false }
                 },
-                yaxis: {
-                    labels: {
-                        style: { colors: '#9ca3af' },
-                        formatter: val => val >= 1000 ? (val/1000).toFixed(0)+'K' : val
-                    }
-                },
+                yaxis: [
+                    {
+                        seriesName: 'K線',
+                        tooltip: { enabled: true },
+                        labels: {
+                            style: { colors: '#9ca3af' },
+                            formatter: val => (val != null && !isNaN(val)) ? val.toFixed(1) : ''
+                        }
+                    },
+                    { seriesName: 'Vol↑', show: false, min: 0, max: volYMax },
+                    { seriesName: 'Vol↓', show: false, min: 0, max: volYMax }
+                ],
+                legend: { show: false },
+                grid: { borderColor: 'rgba(255,255,255,0.06)' },
                 tooltip: { theme: 'dark' }
             };
 
-            const klineChart = new ApexCharts(targetElKline, klineOptions);
-            const volChart = new ApexCharts(targetElVol, volOptions);
+            const chart = new ApexCharts(targetElKline, options);
+            chart.render();
 
-            klineChart.render();
-            volChart.render();
-
-            activeCharts[activeChartKeyPrefix + 'Kline'] = klineChart;
-            activeCharts[activeChartKeyPrefix + 'Volume'] = volChart;
+            activeCharts[activeChartKeyPrefix + 'Kline'] = chart;
+            activeCharts[activeChartKeyPrefix + 'Volume'] = null;
         }
 
         // 1. K-line Charts
