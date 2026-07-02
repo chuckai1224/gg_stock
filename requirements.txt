@@ -20,3 +20,6 @@ loguru==0.7.3
 finmind==1.9.10
 ta==0.5.25
 truststore==0.10.4
+PyQt5
+pyqtgraph
+shioaji

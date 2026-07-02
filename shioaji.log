@@ -1,0 +1,172 @@
+[pid:45928] 2026-07-02T03:44:30.226995Z  INFO shioaji::api::api_v1::auth::token_login: No cached token available, performing new login
+[pid:45928] 2026-07-02T03:44:30.498925Z  INFO shioaji::api::api_v1::auth::token_login: Stored new token in slot 1
+[pid:45928] 2026-07-02T03:44:30.522507Z  INFO shioaji::api::api_v1::contracts::api: Fetched 127 IND contracts (1 pages)
+[pid:45928] 2026-07-02T03:44:35.003701Z  INFO shioaji::api::api_v1::contracts::api: Fetched 41542 STK contracts (9 pages)
+[pid:45928] 2026-07-02T03:44:35.370820Z  INFO shioaji::api::api_v1::contracts::api: Fetched 2501 FUT contracts (1 pages)
+[pid:45928] 2026-07-02T03:44:36.766333Z  INFO shioaji::api::api_v1::contracts::api: Fetched 9151 OPT contracts (2 pages)
+[pid:45928] 2026-07-02T03:44:36.788588Z  INFO _core::api::auth::login: Loaded 53321 contracts after login
+[pid:41836] 2026-07-02T03:53:27.248683Z  INFO shioaji::api::api_v1::auth::token_login: Found cached token from slot 1, verifying...
+[pid:41836] 2026-07-02T03:53:27.288294Z  INFO shioaji::api::api_v1::auth::token_login: Cached token is valid, using it
+[pid:41836] 2026-07-02T03:53:27.296925Z  INFO shioaji::api::api_v1::contracts::api: Loaded 127 IND contracts from cache
+[pid:41836] 2026-07-02T03:53:27.301034Z  INFO shioaji::api::api_v1::contracts::api: Loaded 41542 STK contracts from cache
+[pid:41836] 2026-07-02T03:53:27.302492Z  INFO shioaji::api::api_v1::contracts::api: Loaded 2501 FUT contracts from cache
+[pid:41836] 2026-07-02T03:53:27.304335Z  INFO shioaji::api::api_v1::contracts::api: Loaded 9151 OPT contracts from cache
+[pid:41836] 2026-07-02T03:53:27.304396Z  INFO _core::api::auth::login: Loaded 53321 contracts after login
+[pid:41836] 2026-07-02T03:54:22.589725Z  INFO shioaji::api::token_pool: Removed invalid token from slot 1
+[pid:41836] 2026-07-02T03:54:22.610182Z  INFO shioaji::api: msg receiver error: Closed
+[pid:41836] 2026-07-02T03:54:22.610249Z  INFO shioaji::api: P2P receiver closed: Closed
+[pid:38320] 2026-07-02T03:58:38.836416Z  INFO shioaji::api::api_v1::auth::token_login: No cached token available, performing new login
+[pid:38320] 2026-07-02T03:58:38.981916Z  INFO shioaji::api::api_v1::auth::token_login: Stored new token in slot 1
+[pid:38320] 2026-07-02T03:58:38.991856Z  INFO shioaji::api::api_v1::contracts::api: Loaded 127 IND contracts from cache
+[pid:38320] 2026-07-02T03:58:39.003422Z  INFO shioaji::api::api_v1::contracts::api: Loaded 41542 STK contracts from cache
+[pid:38320] 2026-07-02T03:58:39.004920Z  INFO shioaji::api::api_v1::contracts::api: Loaded 2501 FUT contracts from cache
+[pid:38320] 2026-07-02T03:58:39.007867Z  INFO shioaji::api::api_v1::contracts::api: Loaded 9151 OPT contracts from cache
+[pid:38320] 2026-07-02T03:58:39.008075Z  INFO _core::api::auth::login: Loaded 53321 contracts after login
+[pid:38320] 2026-07-02T03:59:50.897745Z  INFO shioaji::api::token_pool: Removed invalid token from slot 1
+[pid:38320] 2026-07-02T03:59:50.904746Z  INFO shioaji::api: msg receiver error: Closed
+[pid:38320] 2026-07-02T03:59:50.904837Z  INFO shioaji::api: P2P receiver closed: Closed
+[pid:30608] 2026-07-02T04:01:15.191943Z  INFO shioaji::api::api_v1::auth::token_login: No cached token available, performing new login
+[pid:30608] 2026-07-02T04:01:15.341413Z  INFO shioaji::api::api_v1::auth::token_login: Stored new token in slot 1
+[pid:30608] 2026-07-02T04:01:15.354378Z  INFO shioaji::api::api_v1::contracts::api: Loaded 127 IND contracts from cache
+[pid:30608] 2026-07-02T04:01:15.358486Z  INFO shioaji::api::api_v1::contracts::api: Loaded 41542 STK contracts from cache
+[pid:30608] 2026-07-02T04:01:15.360498Z  INFO shioaji::api::api_v1::contracts::api: Loaded 2501 FUT contracts from cache
+[pid:30608] 2026-07-02T04:01:15.364249Z  INFO shioaji::api::api_v1::contracts::api: Loaded 9151 OPT contracts from cache
+[pid:30608] 2026-07-02T04:01:15.364486Z  INFO _core::api::auth::login: Loaded 53321 contracts after login
+[pid:30608] 2026-07-02T04:01:45.352043Z ERROR _core::api::stream::handlers::tick_stk: Tick STK callback error: PyErr { type: <class 'TypeError'>, value: TypeError("Invalid value '37.95' for dtype 'float64'"), traceback: Some("Traceback (most recent call last):\n  File \"D:\\gg_stock\\stock_worker_gg.py\", line 362, in tick_callback\n    self.df_daily = update_kbar_array_daily(self.df_daily, dt, tick.close, tick.volume)\n                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\gg_stock\\stock_worker_gg.py\", line 186, in update_kbar_array_daily\n    df.loc[last_idx, 'close'] = price\n    ~~~~~~^^^^^^^^^^^^^^^^^^^\n  File \"D:\\gg_stock\\venv\\Lib\\site-packages\\pandas\\core\\indexing.py\", line 938, in __setitem__\n    iloc._setitem_with_indexer(indexer, value, self.name)\n  File \"D:\\gg_stock\\venv\\Lib\\site-packages\\pandas\\core\\indexing.py\", line 1953, in _setitem_with_indexer\n    self._setitem_with_indexer_split_path(indexer, value, name)\n  File \"D:\\gg_stock\\venv\\Lib\\site-packages\\pandas\\core\\indexing.py\", line 2044, in _setitem_with_indexer_split_path\n    self._setitem_single_column(loc, value, pi)\n  File \"D:\\gg_stock\\venv\\Lib\\site-packages\\pandas\\core\\indexing.py\", line 2181, in _setitem_single_column\n    self.obj._mgr.column_setitem(loc, plane_indexer, value)\n  File \"D:\\gg_stock\\venv\\Lib\\site-packages\\pandas\\core\\internals\\managers.py\", line 1528, in column_setitem\n    new_mgr = col_mgr.setitem((idx,), value)\n              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\gg_stock\\venv\\Lib\\site-packages\\pandas\\core\\internals\\managers.py\", line 607, in setitem\n    return self.apply(\"setitem\", indexer=indexer, value=value)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\gg_stock\\venv\\Lib\\site-packages\\pandas\\core\\internals\\managers.py\", line 445, in apply\n    applied = getattr(b, f)(**kwargs)\n              ^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\gg_stock\\venv\\Lib\\site-packages\\pandas\\core\\internals\\blocks.py\", line 1118, in setitem\n    nb = self.coerce_to_target_dtype(value, raise_on_upcast=True)\n         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\gg_stock\\venv\\Lib\\site-packages\\pandas\\core\\internals\\blocks.py\", line 468, in coerce_to_target_dtype\n    raise TypeError(f\"Invalid value '{other}' for dtype '{self.values.dtype}'\")\n") }
+[pid:30608] 2026-07-02T04:01:50.377913Z ERROR _core::api::stream::handlers::tick_stk: Tick STK callback error: PyErr { type: <class 'TypeError'>, value: TypeError("Invalid value '37.95' for dtype 'float64'"), traceback: Some("Traceback (most recent call last):\n  File \"D:\\gg_stock\\stock_worker_gg.py\", line 362, in tick_callback\n    self.df_daily = update_kbar_array_daily(self.df_daily, dt, tick.close, tick.volume)\n                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\gg_stock\\stock_worker_gg.py\", line 186, in update_kbar_array_daily\n    df.loc[last_idx, 'close'] = price\n    ~~~~~~^^^^^^^^^^^^^^^^^^^\n  File \"D:\\gg_stock\\venv\\Lib\\site-packages\\pandas\\core\\indexing.py\", line 938, in __setitem__\n    iloc._setitem_with_indexer(indexer, value, self.name)\n  File \"D:\\gg_stock\\venv\\Lib\\site-packages\\pandas\\core\\indexing.py\", line 1953, in _setitem_with_indexer\n    self._setitem_with_indexer_split_path(indexer, value, name)\n  File \"D:\\gg_stock\\venv\\Lib\\site-packages\\pandas\\core\\indexing.py\", line 2044, in _setitem_with_indexer_split_path\n    self._setitem_single_column(loc, value, pi)\n  File \"D:\\gg_stock\\venv\\Lib\\site-packages\\pandas\\core\\indexing.py\", line 2181, in _setitem_single_column\n    self.obj._mgr.column_setitem(loc, plane_indexer, value)\n  File \"D:\\gg_stock\\venv\\Lib\\site-packages\\pandas\\core\\internals\\managers.py\", line 1528, in column_setitem\n    new_mgr = col_mgr.setitem((idx,), value)\n              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\gg_stock\\venv\\Lib\\site-packages\\pandas\\core\\internals\\managers.py\", line 607, in setitem\n    return self.apply(\"setitem\", indexer=indexer, value=value)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\gg_stock\\venv\\Lib\\site-packages\\pandas\\core\\internals\\managers.py\", line 445, in apply\n    applied = getattr(b, f)(**kwargs)\n              ^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\gg_stock\\venv\\Lib\\site-packages\\pandas\\core\\internals\\blocks.py\", line 1118, in setitem\n    nb = self.coerce_to_target_dtype(value, raise_on_upcast=True)\n         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\gg_stock\\venv\\Lib\\site-packages\\pandas\\core\\internals\\blocks.py\", line 468, in coerce_to_target_dtype\n    raise TypeError(f\"Invalid value '{other}' for dtype '{self.values.dtype}'\")\n") }
+[pid:30608] 2026-07-02T04:02:00.395391Z ERROR _core::api::stream::handlers::tick_stk: Tick STK callback error: PyErr { type: <class 'TypeError'>, value: TypeError("Invalid value '37.95' for dtype 'float64'"), traceback: Some("Traceback (most recent call last):\n  File \"D:\\gg_stock\\stock_worker_gg.py\", line 362, in tick_callback\n    self.df_daily = update_kbar_array_daily(self.df_daily, dt, tick.close, tick.volume)\n                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\gg_stock\\stock_worker_gg.py\", line 186, in update_kbar_array_daily\n    df.loc[last_idx, 'close'] = price\n    ~~~~~~^^^^^^^^^^^^^^^^^^^\n  File \"D:\\gg_stock\\venv\\Lib\\site-packages\\pandas\\core\\indexing.py\", line 938, in __setitem__\n    iloc._setitem_with_indexer(indexer, value, self.name)\n  File \"D:\\gg_stock\\venv\\Lib\\site-packages\\pandas\\core\\indexing.py\", line 1953, in _setitem_with_indexer\n    self._setitem_with_indexer_split_path(indexer, value, name)\n  File \"D:\\gg_stock\\venv\\Lib\\site-packages\\pandas\\core\\indexing.py\", line 2044, in _setitem_with_indexer_split_path\n    self._setitem_single_column(loc, value, pi)\n  File \"D:\\gg_stock\\venv\\Lib\\site-packages\\pandas\\core\\indexing.py\", line 2181, in _setitem_single_column\n    self.obj._mgr.column_setitem(loc, plane_indexer, value)\n  File \"D:\\gg_stock\\venv\\Lib\\site-packages\\pandas\\core\\internals\\managers.py\", line 1528, in column_setitem\n    new_mgr = col_mgr.setitem((idx,), value)\n              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\gg_stock\\venv\\Lib\\site-packages\\pandas\\core\\internals\\managers.py\", line 607, in setitem\n    return self.apply(\"setitem\", indexer=indexer, value=value)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\gg_stock\\venv\\Lib\\site-packages\\pandas\\core\\internals\\managers.py\", line 445, in apply\n    applied = getattr(b, f)(**kwargs)\n              ^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\gg_stock\\venv\\Lib\\site-packages\\pandas\\core\\internals\\blocks.py\", line 1118, in setitem\n    nb = self.coerce_to_target_dtype(value, raise_on_upcast=True)\n         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\gg_stock\\venv\\Lib\\site-packages\\pandas\\core\\internals\\blocks.py\", line 468, in coerce_to_target_dtype\n    raise TypeError(f\"Invalid value '{other}' for dtype '{self.values.dtype}'\")\n") }
+[pid:30608] 2026-07-02T04:02:10.447074Z ERROR _core::api::stream::handlers::tick_stk: Tick STK callback error: PyErr { type: <class 'TypeError'>, value: TypeError("Invalid value '37.95' for dtype 'float64'"), traceback: Some("Traceback (most recent call last):\n  File \"D:\\gg_stock\\stock_worker_gg.py\", line 362, in tick_callback\n    self.df_daily = update_kbar_array_daily(self.df_daily, dt, tick.close, tick.volume)\n                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\gg_stock\\stock_worker_gg.py\", line 186, in update_kbar_array_daily\n    df.loc[last_idx, 'close'] = price\n    ~~~~~~^^^^^^^^^^^^^^^^^^^\n  File \"D:\\gg_stock\\venv\\Lib\\site-packages\\pandas\\core\\indexing.py\", line 938, in __setitem__\n    iloc._setitem_with_indexer(indexer, value, self.name)\n  File \"D:\\gg_stock\\venv\\Lib\\site-packages\\pandas\\core\\indexing.py\", line 1953, in _setitem_with_indexer\n    self._setitem_with_indexer_split_path(indexer, value, name)\n  File \"D:\\gg_stock\\venv\\Lib\\site-packages\\pandas\\core\\indexing.py\", line 2044, in _setitem_with_indexer_split_path\n    self._setitem_single_column(loc, value, pi)\n  File \"D:\\gg_stock\\venv\\Lib\\site-packages\\pandas\\core\\indexing.py\", line 2181, in _setitem_single_column\n    self.obj._mgr.column_setitem(loc, plane_indexer, value)\n  File \"D:\\gg_stock\\venv\\Lib\\site-packages\\pandas\\core\\internals\\managers.py\", line 1528, in column_setitem\n    new_mgr = col_mgr.setitem((idx,), value)\n              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\gg_stock\\venv\\Lib\\site-packages\\pandas\\core\\internals\\managers.py\", line 607, in setitem\n    return self.apply(\"setitem\", indexer=indexer, value=value)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\gg_stock\\venv\\Lib\\site-packages\\pandas\\core\\internals\\managers.py\", line 445, in apply\n    applied = getattr(b, f)(**kwargs)\n              ^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\gg_stock\\venv\\Lib\\site-packages\\pandas\\core\\internals\\blocks.py\", line 1118, in setitem\n    nb = self.coerce_to_target_dtype(value, raise_on_upcast=True)\n         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\gg_stock\\venv\\Lib\\site-packages\\pandas\\core\\internals\\blocks.py\", line 468, in coerce_to_target_dtype\n    raise TypeError(f\"Invalid value '{other}' for dtype '{self.values.dtype}'\")\n") }
+[pid:30608] 2026-07-02T04:02:11.741815Z  INFO shioaji::api::token_pool: Removed invalid token from slot 1
+[pid:30608] 2026-07-02T04:02:11.759386Z  INFO shioaji::api: msg receiver error: Closed
+[pid:30608] 2026-07-02T04:02:11.759489Z  INFO shioaji::api: P2P receiver closed: Closed
+[pid:46916] 2026-07-02T04:03:31.509573Z  INFO shioaji::api::api_v1::auth::token_login: No cached token available, performing new login
+[pid:46916] 2026-07-02T04:03:31.638521Z  INFO shioaji::api::api_v1::auth::token_login: Stored new token in slot 1
+[pid:46916] 2026-07-02T04:03:31.649614Z  INFO shioaji::api::api_v1::contracts::api: Loaded 127 IND contracts from cache
+[pid:46916] 2026-07-02T04:03:31.656292Z  INFO shioaji::api::api_v1::contracts::api: Loaded 41542 STK contracts from cache
+[pid:46916] 2026-07-02T04:03:31.658535Z  INFO shioaji::api::api_v1::contracts::api: Loaded 2501 FUT contracts from cache
+[pid:46916] 2026-07-02T04:03:31.661594Z  INFO shioaji::api::api_v1::contracts::api: Loaded 9151 OPT contracts from cache
+[pid:46916] 2026-07-02T04:03:31.661717Z  INFO _core::api::auth::login: Loaded 53321 contracts after login
+[pid:46916] 2026-07-02T04:03:45.753750Z ERROR _core::api::stream::handlers::tick_stk: Tick STK callback error: PyErr { type: <class 'TypeError'>, value: TypeError("Invalid value '38' for dtype 'float64'"), traceback: Some("Traceback (most recent call last):\n  File \"D:\\gg_stock\\stock_worker_gg.py\", line 370, in tick_callback\n    self.df_daily = update_kbar_array_daily(self.df_daily, dt, tick.close, tick.volume)\n                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\gg_stock\\stock_worker_gg.py\", line 186, in update_kbar_array_daily\n    df.loc[last_idx, 'close'] = price\n    ~~~~~~^^^^^^^^^^^^^^^^^^^\n  File \"D:\\gg_stock\\venv\\Lib\\site-packages\\pandas\\core\\indexing.py\", line 938, in __setitem__\n    iloc._setitem_with_indexer(indexer, value, self.name)\n  File \"D:\\gg_stock\\venv\\Lib\\site-packages\\pandas\\core\\indexing.py\", line 1953, in _setitem_with_indexer\n    self._setitem_with_indexer_split_path(indexer, value, name)\n  File \"D:\\gg_stock\\venv\\Lib\\site-packages\\pandas\\core\\indexing.py\", line 2044, in _setitem_with_indexer_split_path\n    self._setitem_single_column(loc, value, pi)\n  File \"D:\\gg_stock\\venv\\Lib\\site-packages\\pandas\\core\\indexing.py\", line 2181, in _setitem_single_column\n    self.obj._mgr.column_setitem(loc, plane_indexer, value)\n  File \"D:\\gg_stock\\venv\\Lib\\site-packages\\pandas\\core\\internals\\managers.py\", line 1528, in column_setitem\n    new_mgr = col_mgr.setitem((idx,), value)\n              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\gg_stock\\venv\\Lib\\site-packages\\pandas\\core\\internals\\managers.py\", line 607, in setitem\n    return self.apply(\"setitem\", indexer=indexer, value=value)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\gg_stock\\venv\\Lib\\site-packages\\pandas\\core\\internals\\managers.py\", line 445, in apply\n    applied = getattr(b, f)(**kwargs)\n              ^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\gg_stock\\venv\\Lib\\site-packages\\pandas\\core\\internals\\blocks.py\", line 1118, in setitem\n    nb = self.coerce_to_target_dtype(value, raise_on_upcast=True)\n         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\gg_stock\\venv\\Lib\\site-packages\\pandas\\core\\internals\\blocks.py\", line 468, in coerce_to_target_dtype\n    raise TypeError(f\"Invalid value '{other}' for dtype '{self.values.dtype}'\")\n") }
+[pid:46916] 2026-07-02T04:03:53.119828Z  INFO shioaji::api::token_pool: Removed invalid token from slot 1
+[pid:46916] 2026-07-02T04:03:53.131435Z  INFO shioaji::api: msg receiver error: Closed
+[pid:46916] 2026-07-02T04:03:53.131522Z  INFO shioaji::api: P2P receiver closed: Closed
+[pid:45940] 2026-07-02T05:35:31.112343Z  INFO shioaji::api::api_v1::auth::token_login: No cached token available, performing new login
+[pid:45940] 2026-07-02T05:35:31.423180Z  INFO shioaji::api::api_v1::auth::token_login: Stored new token in slot 1
+[pid:45940] 2026-07-02T05:35:31.433532Z  INFO shioaji::api::api_v1::contracts::api: Loaded 127 IND contracts from cache
+[pid:45940] 2026-07-02T05:35:31.438251Z  INFO shioaji::api::api_v1::contracts::api: Loaded 41542 STK contracts from cache
+[pid:45940] 2026-07-02T05:35:31.440251Z  INFO shioaji::api::api_v1::contracts::api: Loaded 2501 FUT contracts from cache
+[pid:45940] 2026-07-02T05:35:31.442663Z  INFO shioaji::api::api_v1::contracts::api: Loaded 9151 OPT contracts from cache
+[pid:45940] 2026-07-02T05:35:31.442734Z  INFO _core::api::auth::login: Loaded 53321 contracts after login
+[pid:44276] 2026-07-02T05:38:42.278355Z  INFO shioaji::api::api_v1::auth::token_login: No cached token available, performing new login
+[pid:44276] 2026-07-02T05:38:42.457016Z  INFO shioaji::api::api_v1::auth::token_login: Stored new token in slot 2
+[pid:44276] 2026-07-02T05:38:42.468389Z  INFO shioaji::api::api_v1::contracts::api: Loaded 127 IND contracts from cache
+[pid:44276] 2026-07-02T05:38:42.472640Z  INFO shioaji::api::api_v1::contracts::api: Loaded 41542 STK contracts from cache
+[pid:44276] 2026-07-02T05:38:42.474077Z  INFO shioaji::api::api_v1::contracts::api: Loaded 2501 FUT contracts from cache
+[pid:44276] 2026-07-02T05:38:42.476619Z  INFO shioaji::api::api_v1::contracts::api: Loaded 9151 OPT contracts from cache
+[pid:44276] 2026-07-02T05:38:42.476801Z  INFO _core::api::auth::login: Loaded 53321 contracts after login
+[pid:45940] 2026-07-02T05:39:55.839313Z  INFO shioaji::api::token_pool: Removed invalid token from slot 1
+[pid:45940] 2026-07-02T05:39:55.843029Z  INFO shioaji::api: msg receiver error: Closed
+[pid:45940] 2026-07-02T05:39:55.843034Z  INFO shioaji::api: P2P receiver closed: Closed
+[pid:44276] 2026-07-02T05:39:58.981260Z  INFO shioaji::api::token_pool: Removed invalid token from slot 2
+[pid:44276] 2026-07-02T05:39:58.986086Z  INFO shioaji::api: msg receiver error: Closed
+[pid:44276] 2026-07-02T05:39:58.986101Z  INFO shioaji::api: P2P receiver closed: Closed
+[pid:47248] 2026-07-02T05:41:36.003692Z  INFO shioaji::api::api_v1::auth::token_login: No cached token available, performing new login
+[pid:47248] 2026-07-02T05:41:36.165611Z  INFO shioaji::api::api_v1::auth::token_login: Stored new token in slot 1
+[pid:47248] 2026-07-02T05:41:36.179720Z  INFO shioaji::api::api_v1::contracts::api: Loaded 127 IND contracts from cache
+[pid:47248] 2026-07-02T05:41:36.184850Z  INFO shioaji::api::api_v1::contracts::api: Loaded 41542 STK contracts from cache
+[pid:47248] 2026-07-02T05:41:36.186489Z  INFO shioaji::api::api_v1::contracts::api: Loaded 2501 FUT contracts from cache
+[pid:47248] 2026-07-02T05:41:36.188524Z  INFO shioaji::api::api_v1::contracts::api: Loaded 9151 OPT contracts from cache
+[pid:47248] 2026-07-02T05:41:36.188588Z  INFO _core::api::auth::login: Loaded 53321 contracts after login
+[pid:47248] 2026-07-02T05:41:36.305191Z  INFO shioaji::api::token_pool: Removed invalid token from slot 1
+[pid:47248] 2026-07-02T05:41:36.308166Z  INFO shioaji::api: msg receiver error: Closed
+[pid:47248] 2026-07-02T05:41:36.308161Z  INFO shioaji::api: P2P receiver closed: Closed
+[pid:41404] 2026-07-02T05:42:46.164344Z  INFO shioaji::api::api_v1::auth::token_login: No cached token available, performing new login
+[pid:41404] 2026-07-02T05:42:46.374319Z  INFO shioaji::api::api_v1::auth::token_login: Stored new token in slot 1
+[pid:41404] 2026-07-02T05:42:46.386485Z  INFO shioaji::api::api_v1::contracts::api: Loaded 127 IND contracts from cache
+[pid:41404] 2026-07-02T05:42:46.389941Z  INFO shioaji::api::api_v1::contracts::api: Loaded 41542 STK contracts from cache
+[pid:41404] 2026-07-02T05:42:46.391215Z  INFO shioaji::api::api_v1::contracts::api: Loaded 2501 FUT contracts from cache
+[pid:41404] 2026-07-02T05:42:46.393285Z  INFO shioaji::api::api_v1::contracts::api: Loaded 9151 OPT contracts from cache
+[pid:41404] 2026-07-02T05:42:46.393517Z  INFO _core::api::auth::login: Loaded 53321 contracts after login
+[pid:41404] 2026-07-02T05:45:34.040564Z  INFO shioaji::api::token_pool: Removed invalid token from slot 1
+[pid:41404] 2026-07-02T05:45:34.044359Z  INFO shioaji::api: msg receiver error: Closed
+[pid:41404] 2026-07-02T05:45:34.044401Z  INFO shioaji::api: P2P receiver closed: Closed
+[pid:45780] 2026-07-02T05:45:39.940187Z  INFO shioaji::api::api_v1::auth::token_login: No cached token available, performing new login
+[pid:45780] 2026-07-02T05:45:40.092240Z  INFO shioaji::api::api_v1::auth::token_login: Stored new token in slot 1
+[pid:45780] 2026-07-02T05:45:40.111925Z  INFO shioaji::api::api_v1::contracts::api: Loaded 127 IND contracts from cache
+[pid:45780] 2026-07-02T05:45:40.128007Z  INFO shioaji::api::api_v1::contracts::api: Loaded 41542 STK contracts from cache
+[pid:45780] 2026-07-02T05:45:40.129559Z  INFO shioaji::api::api_v1::contracts::api: Loaded 2501 FUT contracts from cache
+[pid:45780] 2026-07-02T05:45:40.131471Z  INFO shioaji::api::api_v1::contracts::api: Loaded 9151 OPT contracts from cache
+[pid:45780] 2026-07-02T05:45:40.131541Z  INFO _core::api::auth::login: Loaded 53321 contracts after login
+[pid:45780] 2026-07-02T05:47:50.583570Z  INFO shioaji::api::token_pool: Removed invalid token from slot 1
+[pid:45780] 2026-07-02T05:47:50.587115Z  INFO shioaji::api: msg receiver error: Closed
+[pid:45780] 2026-07-02T05:47:50.587170Z  INFO shioaji::api: P2P receiver closed: Closed
+[pid:41352] 2026-07-02T05:47:56.295927Z  INFO shioaji::api::api_v1::auth::token_login: No cached token available, performing new login
+[pid:41352] 2026-07-02T05:47:56.438568Z  INFO shioaji::api::api_v1::auth::token_login: Stored new token in slot 1
+[pid:41352] 2026-07-02T05:47:56.451527Z  INFO shioaji::api::api_v1::contracts::api: Loaded 127 IND contracts from cache
+[pid:41352] 2026-07-02T05:47:56.459196Z  INFO shioaji::api::api_v1::contracts::api: Loaded 41542 STK contracts from cache
+[pid:41352] 2026-07-02T05:47:56.460852Z  INFO shioaji::api::api_v1::contracts::api: Loaded 2501 FUT contracts from cache
+[pid:41352] 2026-07-02T05:47:56.463816Z  INFO shioaji::api::api_v1::contracts::api: Loaded 9151 OPT contracts from cache
+[pid:41352] 2026-07-02T05:47:56.463914Z  INFO _core::api::auth::login: Loaded 53321 contracts after login
+[pid:47860] 2026-07-02T05:50:26.968504Z  INFO shioaji::api::api_v1::auth::token_login: No cached token available, performing new login
+[pid:47860] 2026-07-02T05:50:27.097625Z  INFO shioaji::api::api_v1::auth::token_login: Stored new token in slot 2
+[pid:47860] 2026-07-02T05:50:27.117981Z  INFO shioaji::api::api_v1::contracts::api: Loaded 127 IND contracts from cache
+[pid:47860] 2026-07-02T05:50:27.127710Z  INFO shioaji::api::api_v1::contracts::api: Loaded 41542 STK contracts from cache
+[pid:47860] 2026-07-02T05:50:27.129530Z  INFO shioaji::api::api_v1::contracts::api: Loaded 2501 FUT contracts from cache
+[pid:47860] 2026-07-02T05:50:27.132037Z  INFO shioaji::api::api_v1::contracts::api: Loaded 9151 OPT contracts from cache
+[pid:47860] 2026-07-02T05:50:27.132126Z  INFO _core::api::auth::login: Loaded 53321 contracts after login
+[pid:47860] 2026-07-02T05:50:27.235803Z  INFO shioaji::api::token_pool: Removed invalid token from slot 2
+[pid:47860] 2026-07-02T05:50:27.238901Z  INFO shioaji::api: msg receiver error: Closed
+[pid:47860] 2026-07-02T05:50:27.238905Z  INFO shioaji::api: P2P receiver closed: Closed
+[pid:41352] 2026-07-02T05:52:39.070474Z  INFO shioaji::api::token_pool: Removed invalid token from slot 1
+[pid:41352] 2026-07-02T05:52:39.073620Z  INFO shioaji::api: msg receiver error: Closed
+[pid:41352] 2026-07-02T05:52:39.073628Z  INFO shioaji::api: P2P receiver closed: Closed
+[pid:45484] 2026-07-02T05:56:38.044259Z  INFO shioaji::api::api_v1::auth::token_login: No cached token available, performing new login
+[pid:45484] 2026-07-02T05:56:38.167126Z  INFO shioaji::api::api_v1::auth::token_login: Stored new token in slot 1
+[pid:45484] 2026-07-02T05:56:38.179982Z  INFO shioaji::api::api_v1::contracts::api: Loaded 127 IND contracts from cache
+[pid:45484] 2026-07-02T05:56:38.191402Z  INFO shioaji::api::api_v1::contracts::api: Loaded 41542 STK contracts from cache
+[pid:45484] 2026-07-02T05:56:38.192797Z  INFO shioaji::api::api_v1::contracts::api: Loaded 2501 FUT contracts from cache
+[pid:45484] 2026-07-02T05:56:38.195612Z  INFO shioaji::api::api_v1::contracts::api: Loaded 9151 OPT contracts from cache
+[pid:45484] 2026-07-02T05:56:38.195697Z  INFO _core::api::auth::login: Loaded 53321 contracts after login
+[pid:45484] 2026-07-02T06:00:20.548715Z  INFO shioaji::api::token_pool: Removed invalid token from slot 1
+[pid:45484] 2026-07-02T06:00:20.551947Z  INFO shioaji::api: msg receiver error: Closed
+[pid:45484] 2026-07-02T06:00:20.552004Z  INFO shioaji::api: P2P receiver closed: Closed
+[pid:36176] 2026-07-02T06:00:25.416682Z  INFO shioaji::api::api_v1::auth::token_login: No cached token available, performing new login
+[pid:36176] 2026-07-02T06:00:25.550630Z  INFO shioaji::api::api_v1::auth::token_login: Stored new token in slot 1
+[pid:36176] 2026-07-02T06:00:25.561450Z  INFO shioaji::api::api_v1::contracts::api: Loaded 127 IND contracts from cache
+[pid:36176] 2026-07-02T06:00:25.566200Z  INFO shioaji::api::api_v1::contracts::api: Loaded 41542 STK contracts from cache
+[pid:36176] 2026-07-02T06:00:25.567606Z  INFO shioaji::api::api_v1::contracts::api: Loaded 2501 FUT contracts from cache
+[pid:36176] 2026-07-02T06:00:25.570290Z  INFO shioaji::api::api_v1::contracts::api: Loaded 9151 OPT contracts from cache
+[pid:36176] 2026-07-02T06:00:25.570429Z  INFO _core::api::auth::login: Loaded 53321 contracts after login
+[pid:36176] 2026-07-02T06:06:48.667030Z  INFO shioaji::api::token_pool: Removed invalid token from slot 1
+[pid:36176] 2026-07-02T06:06:48.671118Z  INFO shioaji::api: msg receiver error: Closed
+[pid:36176] 2026-07-02T06:06:48.671127Z  INFO shioaji::api: P2P receiver closed: Closed
+[pid:32364] 2026-07-02T06:41:35.481940Z  INFO shioaji::api::api_v1::auth::token_login: No cached token available, performing new login
+[pid:32364] 2026-07-02T06:41:35.631089Z  INFO shioaji::api::api_v1::auth::token_login: Stored new token in slot 1
+[pid:32364] 2026-07-02T06:41:35.641621Z  INFO shioaji::api::api_v1::contracts::api: Loaded 127 IND contracts from cache
+[pid:32364] 2026-07-02T06:41:35.647787Z  INFO shioaji::api::api_v1::contracts::api: Loaded 41542 STK contracts from cache
+[pid:32364] 2026-07-02T06:41:35.650480Z  INFO shioaji::api::api_v1::contracts::api: Loaded 2501 FUT contracts from cache
+[pid:32364] 2026-07-02T06:41:35.653017Z  INFO shioaji::api::api_v1::contracts::api: Loaded 9151 OPT contracts from cache
+[pid:32364] 2026-07-02T06:41:35.653162Z  INFO _core::api::auth::login: Loaded 53321 contracts after login
+[pid:32364] 2026-07-02T06:41:42.689751Z  INFO shioaji::api::token_pool: Removed invalid token from slot 1
+[pid:32364] 2026-07-02T06:41:42.694288Z  INFO shioaji::api: msg receiver error: Closed
+[pid:32364] 2026-07-02T06:41:42.694333Z  INFO shioaji::api: P2P receiver closed: Closed
+[pid:43972] 2026-07-02T09:36:22.855171Z  INFO shioaji::api::api_v1::auth::token_login: No cached token available, performing new login
+[pid:43972] 2026-07-02T09:36:23.250922Z  INFO shioaji::api::api_v1::auth::token_login: Stored new token in slot 1
+[pid:43972] 2026-07-02T09:36:23.276395Z  INFO shioaji::api::api_v1::contracts::api: Fetched 127 IND contracts (1 pages)
+[pid:43972] 2026-07-02T09:36:27.491808Z  INFO shioaji::api::api_v1::contracts::api: Fetched 41542 STK contracts (9 pages)
+[pid:43972] 2026-07-02T09:36:27.812652Z  INFO shioaji::api::api_v1::contracts::api: Fetched 2479 FUT contracts (1 pages)
+[pid:43972] 2026-07-02T09:36:28.913301Z  INFO shioaji::api::api_v1::contracts::api: Fetched 9151 OPT contracts (2 pages)
+[pid:43972] 2026-07-02T09:36:28.936759Z  INFO _core::api::auth::login: Loaded 53299 contracts after login
+[pid:43972] 2026-07-02T09:39:19.834899Z  INFO shioaji::api::token_pool: Removed invalid token from slot 1
+[pid:43972] 2026-07-02T09:39:19.839471Z  INFO shioaji::api: msg receiver error: Closed
+[pid:43972] 2026-07-02T09:39:19.839562Z  INFO shioaji::api: P2P receiver closed: Closed
+[pid:35208] 2026-07-02T09:39:35.041967Z  INFO shioaji::api::api_v1::auth::token_login: No cached token available, performing new login
+[pid:35208] 2026-07-02T09:39:35.210529Z  INFO shioaji::api::api_v1::auth::token_login: Stored new token in slot 1
+[pid:35208] 2026-07-02T09:39:35.222406Z  INFO shioaji::api::api_v1::contracts::api: Loaded 127 IND contracts from cache
+[pid:35208] 2026-07-02T09:39:35.229742Z  INFO shioaji::api::api_v1::contracts::api: Loaded 41542 STK contracts from cache
+[pid:35208] 2026-07-02T09:39:35.231686Z  INFO shioaji::api::api_v1::contracts::api: Loaded 2479 FUT contracts from cache
+[pid:35208] 2026-07-02T09:39:35.235258Z  INFO shioaji::api::api_v1::contracts::api: Loaded 9151 OPT contracts from cache
+[pid:35208] 2026-07-02T09:39:35.235327Z  INFO _core::api::auth::login: Loaded 53299 contracts after login
+[pid:35208] 2026-07-02T12:31:59.792279Z  INFO shioaji::api::token_pool: Removed invalid token from slot 1
+[pid:35208] 2026-07-02T12:31:59.795699Z  INFO shioaji::api: msg receiver error: Closed
+[pid:35208] 2026-07-02T12:31:59.795769Z  INFO shioaji::api: P2P receiver closed: Closed
