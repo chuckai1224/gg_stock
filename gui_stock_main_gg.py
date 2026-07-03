@@ -232,8 +232,10 @@ class StockPlotWindow(QtWidgets.QMainWindow):
         self.force_visible = False
         self.profile_visible = False
         self.bigvol_visible = True           # 大量點 (成交量高峰黃點)
-        self.df_1m_source = pd.DataFrame()   # Volume Profile 分箱來源 (1 分 K)
-        self._last_plot_30m = None           # 最近一次 30 分視窗，供 VP 重繪錨定
+        self.df_1m_source = pd.DataFrame()       # 30分 VP 分箱來源 (1 分 K，近 7 天)
+        self.df_daily_1m_source = pd.DataFrame() # 日K VP 分箱來源 (1 分 K，全區間)
+        self._last_plot_30m = None               # 最近一次 30 分視窗，供 VP 重繪錨定
+        self._last_df_daily = None               # 最近一次日K，供日K VP 重繪錨定
 
         # 建立主 Layout
         self.central_widget = QtWidgets.QWidget()
@@ -331,7 +333,7 @@ class StockPlotWindow(QtWidgets.QMainWindow):
             self.plot_30m, self.plot_30m_vol,
         ]
         for p in plots_list:
-            p.showGrid(x=True, y=True, alpha=0.15)
+            p.showGrid(x=False, y=False)
             p.setLabel('left', '價格' if p in [self.plot_daily, self.plot_30m] else '成交量')
             p.getViewBox().setMouseEnabled(x=True, y=True)
             p.setContentsMargins(0, 0, 0, 0)
@@ -369,11 +371,19 @@ class StockPlotWindow(QtWidgets.QMainWindow):
         self.plot_30m.addItem(self.ma20_30m)
 
         self.force_line_30m = pg.PlotCurveItem(pen=pg.mkPen(color=(200, 0, 200, 180), width=1.5, style=QtCore.Qt.DashLine))
-        self.profile_line_30m = pg.PlotCurveItem(pen=pg.mkPen(color=(180, 180, 180, 150), width=1.5))
+        # Volume Profile 以水平量柱呈現 (取代原本連線，較符合 VP 樣式)
+        self.profile_vp_30m = pg.BarGraphItem(
+            x0=[], y=[], width=[], height=[],
+            brush=pg.mkBrush(120, 160, 210, 90), pen=pg.mkPen(None))
+        self.profile_vp_daily = pg.BarGraphItem(
+            x0=[], y=[], width=[], height=[],
+            brush=pg.mkBrush(120, 160, 210, 90), pen=pg.mkPen(None))
         self.force_line_30m.setVisible(self.force_visible)
-        self.profile_line_30m.setVisible(self.profile_visible)
+        self.profile_vp_30m.setVisible(self.profile_visible)
+        self.profile_vp_daily.setVisible(self.profile_visible)
         self.plot_30m.addItem(self.force_line_30m)
-        self.plot_30m.addItem(self.profile_line_30m)
+        self.plot_30m.addItem(self.profile_vp_30m)
+        self.plot_daily.addItem(self.profile_vp_daily)
 
         # 大量點 (成交量局部高峰且高於均量) — 黃色圓點，畫在該棒 open 價
         self.bigvol_daily = pg.ScatterPlotItem(
@@ -427,10 +437,17 @@ class StockPlotWindow(QtWidgets.QMainWindow):
 
     @QtCore.pyqtSlot(pd.DataFrame)
     def on_profile_data(self, df_1m):
-        """收到 1 分 K，作為 Volume Profile 分箱來源並重繪。"""
+        """收到 1 分 K，作為 30 分 Volume Profile 分箱來源並重繪。"""
         self.df_1m_source = df_1m
         if self._last_plot_30m is not None:
             self.update_volume_profile(self._last_plot_30m)
+
+    @QtCore.pyqtSlot(pd.DataFrame)
+    def on_daily_profile_data(self, df_daily_1m):
+        """收到全區間 1 分 K，作為日K Volume Profile 分箱來源並重繪。"""
+        self.df_daily_1m_source = df_daily_1m
+        if self._last_df_daily is not None:
+            self.update_daily_volume_profile(self._last_df_daily)
 
     @QtCore.pyqtSlot(str)
     def on_status_msg(self, msg):
@@ -466,6 +483,10 @@ class StockPlotWindow(QtWidgets.QMainWindow):
             return
         if event.key() == QtCore.Qt.Key_B:
             self.toggle_bigvol()
+            event.accept()
+            return
+        if event.key() == QtCore.Qt.Key_9:
+            self.reset_view()
             event.accept()
             return
         super().keyPressEvent(event)
@@ -511,9 +532,10 @@ class StockPlotWindow(QtWidgets.QMainWindow):
 
     def toggle_volume_profile(self):
         self.profile_visible = not self.profile_visible
-        self.profile_line_30m.setVisible(self.profile_visible)
+        self.profile_vp_30m.setVisible(self.profile_visible)
+        self.profile_vp_daily.setVisible(self.profile_visible)
         state = "顯示" if self.profile_visible else "隱藏"
-        self.statusBar().showMessage(f"30分 Volume Profile 已{state}。按 V 切換。")
+        self.statusBar().showMessage(f"日K/30分 Volume Profile 已{state}。按 V 切換。")
 
     def toggle_bigvol(self):
         self.bigvol_visible = not self.bigvol_visible
@@ -521,6 +543,17 @@ class StockPlotWindow(QtWidgets.QMainWindow):
         self.bigvol_30m.setVisible(self.bigvol_visible)
         state = "顯示" if self.bigvol_visible else "隱藏"
         self.statusBar().showMessage(f"大量點(黃點)已{state}。按 B 切換。")
+
+    def reset_view(self):
+        """恢復最大畫面：取消手動縮放，四張圖重新自動貼齊全部資料 (參考 fut2026 按 9)。"""
+        # autoRange() 立即依所有項目邊界重算範圍 (enableAutoRange 只設旗標會延後)
+        self.plot_daily.getViewBox().autoRange()
+        self.plot_30m.getViewBox().autoRange()
+        if self._last_df_daily is not None and len(self._last_df_daily):
+            self._fit_volume_axis(self.plot_daily_vol, self._last_df_daily, force=True)
+        if self._last_plot_30m is not None and len(self._last_plot_30m):
+            self._fit_volume_axis(self.plot_30m_vol, self._last_plot_30m, force=True)
+        self.statusBar().showMessage("已恢復最大畫面。按 9 重設。")
 
     def update_force_line(self, data):
         if len(data) < 2:
@@ -544,18 +577,17 @@ class StockPlotWindow(QtWidgets.QMainWindow):
         scaled = lo + (force - np.nanmin(force)) / (np.nanmax(force) - np.nanmin(force)) * max(0.01, hi - lo)
         self.force_line_30m.setData(np.arange(len(data)), scaled)
 
-    def update_volume_profile(self, anchor_data):
-        """畫 Volume Profile。
+    def _draw_vp_bars(self, bar_item, source, anchor_data):
+        """以 1 分 K 收盤+成交量分箱畫水平量柱 Volume Profile。
 
-        價量分箱優先用 1 分 K (self.df_1m_source，較精確)，並對齊目前 30 分
-        視窗的時間範圍；若無 1 分 K 則退回用 30 分 close 近似。水平量柱的幾何
-        (右緣位置、寬度) 仍錨定於 30 分視窗 anchor_data。
+        source: 1 分 K 分箱來源；會對齊 anchor_data 的起始時間。無 source 時
+        退回用 anchor_data 的 close 近似。量柱幾何 (右緣位置、寬度、厚度) 錨定
+        於 anchor_data。30 分與日K 共用此方法。
         """
-        if len(anchor_data) == 0:
-            self.profile_line_30m.setData([], [])
+        if anchor_data is None or len(anchor_data) == 0:
+            bar_item.setOpts(x0=[], y=[], width=[], height=[])
             return
 
-        source = self.df_1m_source
         if source is not None and len(source) > 0:
             t0 = pd.to_datetime(anchor_data['date'].values[0])
             source = source[pd.to_datetime(source['date']) >= t0]
@@ -567,14 +599,29 @@ class StockPlotWindow(QtWidgets.QMainWindow):
         profile = profile.sort_values('_price')
         max_vol = float(profile['volume'].max()) if len(profile) else 0
         if max_vol <= 0:
-            self.profile_line_30m.setData([], [])
+            bar_item.setOpts(x0=[], y=[], width=[], height=[])
             return
 
         base_x = max(1, len(anchor_data) - 1)
-        width = max(3, len(anchor_data) * 0.16)
-        x = base_x + profile['volume'].astype(float).to_numpy() / max_vol * width
+        max_width = max(3, len(anchor_data) * 0.16)
         y = profile['_price'].astype(float).to_numpy()
-        self.profile_line_30m.setData(x, y)
+        widths = profile['volume'].astype(float).to_numpy() / max_vol * max_width
+        # 量柱厚度：取相鄰價位中位間距，讓柱體接近連續又不重疊
+        if len(y) > 1:
+            bar_h = float(np.median(np.diff(np.sort(y)))) * 0.9
+        else:
+            bar_h = max(y[0] * 0.001, 0.01)
+        if bar_h <= 0:
+            bar_h = 0.01
+        bar_item.setOpts(x0=base_x, y=y, width=widths, height=bar_h)
+
+    def update_volume_profile(self, anchor_data):
+        """30 分 Volume Profile：用近 7 天 1 分 K，錨定於 30 分視窗。"""
+        self._draw_vp_bars(self.profile_vp_30m, self.df_1m_source, anchor_data)
+
+    def update_daily_volume_profile(self, anchor_daily):
+        """日K Volume Profile：用全區間 1 分 K 收盤+成交量，錨定於日K。"""
+        self._draw_vp_bars(self.profile_vp_daily, self.df_daily_1m_source, anchor_daily)
 
     def setup_inspector(self):
         self.inspect_targets = [
@@ -697,6 +744,9 @@ class StockPlotWindow(QtWidgets.QMainWindow):
 
             bvx, bvy = get_volume_peak_markers(df_daily)
             self.bigvol_daily.setData(x=bvx, y=bvy)
+
+            self._last_df_daily = df_daily
+            self.update_daily_volume_profile(df_daily)
 
             if auto_range:
                 self.plot_daily.enableAutoRange(axis=pg.ViewBox.XYAxes, enable=True)

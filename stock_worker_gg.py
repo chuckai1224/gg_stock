@@ -333,7 +333,8 @@ class StockWorker(QThread):
     # PyQt5 訊號定義
     initial_data = pyqtSignal(pd.DataFrame, pd.DataFrame, pd.DataFrame)  # (df_daily, df_30m, df_5m)
     update_data = pyqtSignal(pd.DataFrame, pd.DataFrame, pd.DataFrame)   # (df_daily, df_30m, df_5m)
-    profile_data = pyqtSignal(pd.DataFrame)                              # 1 分 K (Volume Profile 分箱來源)
+    profile_data = pyqtSignal(pd.DataFrame)                              # 1 分 K (30分 Volume Profile 分箱來源，近 7 天)
+    daily_profile_data = pyqtSignal(pd.DataFrame)                        # 1 分 K (日K Volume Profile 分箱來源，全區間 ~180 天)
     tick_info = pyqtSignal(dict)                                         # 最新成交單 (顯示於股票名稱旁)
     status_msg = pyqtSignal(str)                                         # 狀態訊息
     
@@ -459,6 +460,8 @@ class StockWorker(QThread):
 
             self.initial_data.emit(self.df_daily, self.df_30m, self.df_5m)
             self.profile_data.emit(self.df_1m.copy())
+            # 日K VP 用全區間 1 分 K (收盤+成交量)，資料量大且歷史為主，載入時送一次即可
+            self.daily_profile_data.emit(base_df.copy())
             self.status_msg.emit(f"成功載入 {target_symbol} {stock_name} 的歷史 K 線。正在訂閱即時報價...")
             
             # 5. 訂閱即時 Tick
