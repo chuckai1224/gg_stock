@@ -165,6 +165,9 @@ class VolumeBarItem(pg.GraphicsObject):
     def set_data(self, data):
         self.data = data
         self.picture = None
+        # boundingRect 會隨資料改變，必須通知場景重算幾何，否則 ViewBox
+        # 會沿用舊的快取邊界 (換股票後成交量 Y 軸不會更新)。
+        self.prepareGeometryChange()
         self.update()
 
     def paint(self, p, *args):
@@ -697,6 +700,7 @@ class StockPlotWindow(QtWidgets.QMainWindow):
 
             if auto_range:
                 self.plot_daily.enableAutoRange(axis=pg.ViewBox.XYAxes, enable=True)
+            self._fit_volume_axis(self.plot_daily_vol, df_daily, force=auto_range)
                 
         # 2. 更新 30分K
         if len(df_30m) > 0:
@@ -723,5 +727,22 @@ class StockPlotWindow(QtWidgets.QMainWindow):
                 
             if auto_range:
                 self.plot_30m.enableAutoRange(axis=pg.ViewBox.XYAxes, enable=True)
-                self.plot_30m_vol.enableAutoRange(axis=pg.ViewBox.XYAxes, enable=True)
+            self._fit_volume_axis(self.plot_30m_vol, plot_30m, force=auto_range)
+
+    def _fit_volume_axis(self, vol_plot, data, force=False):
+        """調整成交量副圖 Y 軸上限。
+
+        force=True (換股票時) 直接貼齊當前資料 (可放大也可縮小)；
+        force=False (盤中即時) 只在需要時放大，避免與使用者縮放互搏、也避免抖動。
+        VolumeBarItem 為自繪項目，autorange 會沿用舊快取邊界而失效，故改用明確 setYRange。
+        """
+        if data is None or len(data) == 0:
+            return
+        vmax = float(data['volume'].astype(float).max())
+        if vmax <= 0:
+            return
+        target = vmax * 1.08
+        cur_min, cur_max = vol_plot.getViewBox().viewRange()[1]
+        if force or target > cur_max:
+            vol_plot.setYRange(0, target, padding=0)
                 
