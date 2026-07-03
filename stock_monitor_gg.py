@@ -39,6 +39,8 @@ def main():
     # 3. 串接訊號與槽函數
     worker.initial_data.connect(window.on_initial_data)
     worker.update_data.connect(window.on_update_data)
+    worker.profile_data.connect(window.on_profile_data)
+    worker.tick_info.connect(window.on_tick_info)
     worker.status_msg.connect(window.on_status_msg)
     
     # 關鍵：將 UI 的查詢代號訊號綁定到背景 Worker 的切換股票槽函數

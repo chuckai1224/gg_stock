@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import json
+import time
 import datetime
 import threading
 import pandas as pd
@@ -32,8 +33,93 @@ def load_sj_credentials():
     if not ca_filepath.exists():
         raise FileNotFoundError(f"找不到 CA 憑證檔案: {ca_filepath}")
     ca_data["ca_path"] = str(ca_filepath)
-    
+
     return login_data, ca_data
+
+CACHE_DIR = Path("kbar_cache")
+
+def _kbar_cache_path(symbol):
+    return CACHE_DIR / f"{symbol}.parquet"
+
+def _kbar_cache_path_legacy(symbol):
+    return CACHE_DIR / f"{symbol}.pkl"
+
+def load_kbar_cache(symbol):
+    """讀取本地 1 分 K 快取；若不存在或損毀則回傳 None。
+
+    優先讀 parquet；若只剩舊版 .pkl 則沿用一次(下次寫入即升級為 parquet)。
+    """
+    path = _kbar_cache_path(symbol)
+    legacy = _kbar_cache_path_legacy(symbol)
+    if path.exists():
+        reader, src = pd.read_parquet, path
+    elif legacy.exists():
+        reader, src = pd.read_pickle, legacy
+    else:
+        return None
+    try:
+        df = reader(src)
+        if 'date' not in df.columns or len(df) == 0:
+            return None
+        df['date'] = pd.to_datetime(df['date'])
+        cols = ['date', 'open', 'high', 'low', 'close', 'volume']
+        return df[cols].sort_values('date').reset_index(drop=True)
+    except Exception as e:
+        print(f"讀取 K 線快取失敗 ({symbol}): {e}", flush=True)
+        return None
+
+def save_kbar_cache(symbol, df):
+    """將 1 分 K base_df 寫入本地快取 (parquet)。"""
+    try:
+        CACHE_DIR.mkdir(parents=True, exist_ok=True)
+        df.to_parquet(_kbar_cache_path(symbol), index=False)
+        # 升級成功後移除舊版 .pkl，避免殘留
+        legacy = _kbar_cache_path_legacy(symbol)
+        if legacy.exists():
+            legacy.unlink()
+    except Exception as e:
+        print(f"寫入 K 線快取失敗 ({symbol}): {e}", flush=True)
+
+def fetch_base_df_cached(api, contract, symbol, start_date, end_date, cache_max_days=400):
+    """帶本地快取的 1 分 K 下載。
+
+    讀取快取後只向 API 補抓「快取最後一天 ~ 今天」的缺口，合併去重後回存，
+    大幅降低重複下載的 API 用量。回傳裁切到 [start_date, end_date] 的 base_df。
+    """
+    start_ts = pd.to_datetime(start_date)
+    end_ts = pd.to_datetime(end_date)
+
+    cached = load_kbar_cache(symbol)
+    if cached is not None and len(cached) > 0:
+        last_date = cached['date'].max()
+        # 從快取最後一天當天起重抓：覆蓋可能不完整的當日 K 棒並補上新交易日
+        fetch_start = min(last_date.date(), end_ts.date())
+        print(
+            f"K 線快取命中 {symbol}: {cached['date'].min():%Y-%m-%d} ~ "
+            f"{last_date:%Y-%m-%d} ({len(cached)} 筆)，補抓 "
+            f"{fetch_start:%Y-%m-%d} ~ {end_ts:%Y-%m-%d}",
+            flush=True
+        )
+        fresh = fetch_kbars_df(api, contract, fetch_start.strftime('%Y-%m-%d'), end_date)
+        merged = pd.concat([cached, fresh], ignore_index=True)
+    else:
+        print(f"K 線快取未命中 {symbol}，完整下載 {start_date} ~ {end_date}", flush=True)
+        merged = fetch_kbars_df(api, contract, start_date, end_date)
+
+    if len(merged) == 0:
+        return merged
+    merged['date'] = pd.to_datetime(merged['date'])
+    # 相同時間戳保留最新一筆（補抓資料覆蓋舊快取）
+    merged = merged.drop_duplicates(subset=['date'], keep='last')
+    merged = merged.sort_values('date').reset_index(drop=True)
+
+    # 回存時保留較長歷史供下次沿用，但設上限避免無限增長
+    cache_floor = end_ts - pd.Timedelta(days=cache_max_days)
+    save_kbar_cache(symbol, merged[merged['date'] >= cache_floor])
+
+    # 只回傳本次需要的區間
+    window = (merged['date'] >= start_ts) & (merged['date'] < end_ts + pd.Timedelta(days=1))
+    return merged[window].reset_index(drop=True)
 
 def kbars_to_df(kbars):
     """將 Shioaji API kbars 轉為標準 DataFrame"""
@@ -78,8 +164,13 @@ def resample_kbars(df, rule):
     agg = agg.dropna(subset=['open', 'high', 'low', 'close']).reset_index()
     return agg[['date', 'open', 'high', 'low', 'close', 'volume']]
 
-def fetch_kbars_df(api, contract, start_date, end_date, max_days=30):
-    """分段下載 Shioaji KBars，避開單次日期區間 30 天限制。"""
+def fetch_kbars_df(api, contract, start_date, end_date, max_days=30,
+                   timeout=30000, retries=3):
+    """分段下載 Shioaji KBars，避開單次日期區間 30 天限制。
+
+    timeout: 單次 api.kbars 逾時毫秒數 (預設 30 秒，避開預設 5 秒過短)。
+    retries: 逾時或連線錯誤時的重試次數。
+    """
     start = pd.to_datetime(start_date).date()
     end = pd.to_datetime(end_date).date()
     chunks = []
@@ -91,11 +182,25 @@ def fetch_kbars_df(api, contract, start_date, end_date, max_days=30):
             f"下載 K 線區間: {chunk_start:%Y-%m-%d} ~ {chunk_end:%Y-%m-%d}",
             flush=True
         )
-        kbars = api.kbars(
-            contract,
-            chunk_start.strftime('%Y-%m-%d'),
-            chunk_end.strftime('%Y-%m-%d')
-        )
+        kbars = None
+        for attempt in range(1, retries + 1):
+            try:
+                kbars = api.kbars(
+                    contract,
+                    chunk_start.strftime('%Y-%m-%d'),
+                    chunk_end.strftime('%Y-%m-%d'),
+                    timeout=timeout,
+                )
+                break
+            except sj.ShioajiTimeoutError as exc:
+                if attempt >= retries:
+                    raise
+                wait = 2 * attempt
+                print(
+                    f"  K 線下載逾時 (第 {attempt}/{retries} 次)，{wait} 秒後重試… ({exc})",
+                    flush=True
+                )
+                time.sleep(wait)
         df = kbars_to_df(kbars)
         if len(df) > 0:
             chunks.append(df)
@@ -132,6 +237,33 @@ def update_kbar_array_5m(df, dt, price, vol):
     last_idx = df.index[-1]
     last_date = df.loc[last_idx, 'date']
     
+    if t_start == last_date:
+        df.loc[last_idx, 'high'] = max(df.loc[last_idx, 'high'], price)
+        df.loc[last_idx, 'low'] = min(df.loc[last_idx, 'low'], price)
+        df.loc[last_idx, 'close'] = price
+        df.loc[last_idx, 'volume'] += vol
+    elif t_start > last_date:
+        new_row = pd.DataFrame([{
+            'date': t_start, 'open': price, 'high': price, 'low': price, 'close': price, 'volume': vol
+        }])
+        df = pd.concat([df, new_row], ignore_index=True)
+    return df
+
+def update_kbar_array_1m(df, dt, price, vol):
+    """增量更新 1分K 棒 (供 Volume Profile 分箱用)"""
+    if dt.time() >= datetime.time(13, 30, 0):
+        dt = dt.replace(hour=13, minute=29, second=59, microsecond=0)
+    t_start = dt.replace(second=0, microsecond=0)
+
+    if len(df) == 0:
+        new_row = pd.DataFrame([{
+            'date': t_start, 'open': price, 'high': price, 'low': price, 'close': price, 'volume': vol
+        }])
+        return pd.concat([df, new_row], ignore_index=True)
+
+    last_idx = df.index[-1]
+    last_date = df.loc[last_idx, 'date']
+
     if t_start == last_date:
         df.loc[last_idx, 'high'] = max(df.loc[last_idx, 'high'], price)
         df.loc[last_idx, 'low'] = min(df.loc[last_idx, 'low'], price)
@@ -201,6 +333,8 @@ class StockWorker(QThread):
     # PyQt5 訊號定義
     initial_data = pyqtSignal(pd.DataFrame, pd.DataFrame, pd.DataFrame)  # (df_daily, df_30m, df_5m)
     update_data = pyqtSignal(pd.DataFrame, pd.DataFrame, pd.DataFrame)   # (df_daily, df_30m, df_5m)
+    profile_data = pyqtSignal(pd.DataFrame)                              # 1 分 K (Volume Profile 分箱來源)
+    tick_info = pyqtSignal(dict)                                         # 最新成交單 (顯示於股票名稱旁)
     status_msg = pyqtSignal(str)                                         # 狀態訊息
     
     def __init__(self, default_symbol='2330'):
@@ -213,7 +347,9 @@ class StockWorker(QThread):
         self.df_daily = pd.DataFrame()
         self.df_30m = pd.DataFrame()
         self.df_5m = pd.DataFrame()
-        
+        self.df_1m = pd.DataFrame()
+        self.latest_tick = None
+
         self.running = True
         self.need_update = False
         self.api = None
@@ -257,7 +393,12 @@ class StockWorker(QThread):
                         df_d = self.df_daily.copy()
                         df_30 = self.df_30m.copy()
                         df_5 = self.df_5m.copy()
+                        df_1 = self.df_1m.copy()
+                        tick_snap = dict(self.latest_tick) if self.latest_tick else None
                     self.update_data.emit(df_d, df_30, df_5)
+                    self.profile_data.emit(df_1)
+                    if tick_snap is not None:
+                        self.tick_info.emit(tick_snap)
                     
                 self.msleep(100)
                 
@@ -299,9 +440,12 @@ class StockWorker(QThread):
             start_5m = (today - datetime.timedelta(days=7)).strftime('%Y-%m-%d')
             end_date = today.strftime('%Y-%m-%d')
             
-            # 4. 分段下載歷史 KBars。Shioaji 1.5.x 單次 kbars 區間不可超過 30 天。
+            # 4. 分段下載歷史 KBars（帶本地快取，僅補抓近期缺口）。
+            #    Shioaji 1.5.x 單次 kbars 區間不可超過 30 天，由 fetch_kbars_df 分段處理。
             self.emit_api_usage("下載 K 線前")
-            base_df = fetch_kbars_df(self.api, self.current_contract, start_daily, end_date)
+            base_df = fetch_base_df_cached(
+                self.api, self.current_contract, target_symbol, start_daily, end_date
+            )
             self.emit_api_usage("下載 K 線後")
             df_30m_base = base_df[base_df['date'] >= pd.to_datetime(start_30m)]
             df_5m_base = base_df[base_df['date'] >= pd.to_datetime(start_5m)]
@@ -310,8 +454,11 @@ class StockWorker(QThread):
                 self.df_daily = resample_kbars(base_df, '1D')
                 self.df_30m = resample_kbars(df_30m_base, '30min')
                 self.df_5m = resample_kbars(df_5m_base, '5min')
+                # df_5m_base 本身即為近 7 天的 1 分 K，直接留作 Volume Profile 分箱來源
+                self.df_1m = df_5m_base[['date', 'open', 'high', 'low', 'close', 'volume']].reset_index(drop=True)
 
             self.initial_data.emit(self.df_daily, self.df_30m, self.df_5m)
+            self.profile_data.emit(self.df_1m.copy())
             self.status_msg.emit(f"成功載入 {target_symbol} {stock_name} 的歷史 K 線。正在訂閱即時報價...")
             
             # 5. 訂閱即時 Tick
@@ -371,10 +518,32 @@ class StockWorker(QThread):
             if not (datetime.time(9, 0, 0) <= dt.time() < datetime.time(13, 35, 0)):
                 return
 
+            # Shioaji 的 tick.close 為 Decimal，直接寫入 float64 K 棒欄位會拋
+            # TypeError 並被 Shioaji 吞掉，導致 K 棒不會即時更新。先轉 float。
+            price = float(tick.close)
+            vol = float(tick.volume)
+
+            # 最新成交單資訊 (顯示於股票名稱旁)。pct_chg 原始值單位不一致，
+            # 這裡用 price_chg 與前收自行計算漲跌幅較可靠。
+            chg = float(getattr(tick, 'price_chg', 0) or 0)
+            prev_close = price - chg
+            pct = (chg / prev_close * 100) if prev_close else 0.0
+            tick_snapshot = {
+                'time': dt.strftime('%H:%M:%S'),
+                'price': price,
+                'chg': chg,
+                'pct': pct,
+                'volume': int(tick.volume),
+                'total_volume': int(getattr(tick, 'total_volume', 0) or 0),
+                'tick_type': int(getattr(tick, 'tick_type', 0) or 0),
+            }
+
             with self.lock:
-                self.df_daily = update_kbar_array_daily(self.df_daily, dt, tick.close, tick.volume)
-                self.df_30m = update_kbar_array_30m(self.df_30m, dt, tick.close, tick.volume)
-                self.df_5m = update_kbar_array_5m(self.df_5m, dt, tick.close, tick.volume)
+                self.df_daily = update_kbar_array_daily(self.df_daily, dt, price, vol)
+                self.df_30m = update_kbar_array_30m(self.df_30m, dt, price, vol)
+                self.df_5m = update_kbar_array_5m(self.df_5m, dt, price, vol)
+                self.df_1m = update_kbar_array_1m(self.df_1m, dt, price, vol)
+                self.latest_tick = tick_snapshot
                 self.need_update = True
             
     def stop(self):

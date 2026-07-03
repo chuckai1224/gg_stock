@@ -191,7 +191,9 @@ class StockPlotWindow(QtWidgets.QMainWindow):
         self.ma_visible = True
         self.force_visible = False
         self.profile_visible = False
-        
+        self.df_1m_source = pd.DataFrame()   # Volume Profile 分箱來源 (1 分 K)
+        self._last_plot_30m = None           # 最近一次 30 分視窗，供 VP 重繪錨定
+
         # 建立主 Layout
         self.central_widget = QtWidgets.QWidget()
         self.setCentralWidget(self.central_widget)
@@ -244,11 +246,17 @@ class StockPlotWindow(QtWidgets.QMainWindow):
         self.info_label = QtWidgets.QLabel("載入中...")
         self.info_label.setFont(QtGui.QFont("Microsoft JhengHei", 12, QtGui.QFont.Bold))
         self.info_label.setStyleSheet("color: #00e6ff; margin-left: 20px;")
-        
+
+        # 最新成交單標籤 (顯示於股票名稱旁)
+        self.tick_label = QtWidgets.QLabel("")
+        self.tick_label.setFont(QtGui.QFont("Consolas", 11, QtGui.QFont.Bold))
+        self.tick_label.setStyleSheet("color: #dddddd; margin-left: 16px;")
+
         self.control_layout.addWidget(self.input_label)
         self.control_layout.addWidget(self.symbol_input)
         self.control_layout.addWidget(self.query_button)
         self.control_layout.addWidget(self.info_label)
+        self.control_layout.addWidget(self.tick_label)
         self.control_layout.addStretch()
         
         self.main_layout.addLayout(self.control_layout)
@@ -347,6 +355,32 @@ class StockPlotWindow(QtWidgets.QMainWindow):
         self.update_plots(df_daily, df_30m, df_5m, auto_range=False)
         self.statusBar().showMessage(f"行情即時更新中... 最後更新時間: {datetime.datetime.now().strftime('%H:%M:%S')}")
         
+    @QtCore.pyqtSlot(dict)
+    def on_tick_info(self, info):
+        """更新股票名稱旁的最新成交單顯示。"""
+        chg = info.get('chg', 0.0)
+        # 台股慣例：漲紅、跌綠、平白
+        color = "#ff3333" if chg > 0 else ("#00d060" if chg < 0 else "#dddddd")
+        arrow = "▲" if chg > 0 else ("▼" if chg < 0 else "－")
+        side_map = {1: "外", 2: "內"}
+        side = side_map.get(info.get('tick_type', 0), "")
+        side_txt = f" [{side}盤]" if side else ""
+        text = (
+            f"成交 {info.get('price', 0):.2f} "
+            f"{arrow}{abs(chg):.2f} ({info.get('pct', 0):+.2f}%) "
+            f"單量 {info.get('volume', 0)} 總量 {info.get('total_volume', 0)}"
+            f"{side_txt}  {info.get('time', '')}"
+        )
+        self.tick_label.setText(text)
+        self.tick_label.setStyleSheet(f"color: {color}; margin-left: 16px;")
+
+    @QtCore.pyqtSlot(pd.DataFrame)
+    def on_profile_data(self, df_1m):
+        """收到 1 分 K，作為 Volume Profile 分箱來源並重繪。"""
+        self.df_1m_source = df_1m
+        if self._last_plot_30m is not None:
+            self.update_volume_profile(self._last_plot_30m)
+
     @QtCore.pyqtSlot(str)
     def on_status_msg(self, msg):
         """接收背景狀態資訊"""
@@ -355,6 +389,8 @@ class StockPlotWindow(QtWidgets.QMainWindow):
         if "已選定股票:" in msg:
             info = msg.split("已選定股票:")[1].split("，")[0].strip()
             self.info_label.setText(info)
+            # 切換股票時清掉舊的成交單顯示，避免殘留前一檔資料
+            self.tick_label.setText("")
 
     def keyPressEvent(self, event):
         if event.key() == QtCore.Qt.Key_C:
@@ -444,21 +480,34 @@ class StockPlotWindow(QtWidgets.QMainWindow):
         scaled = lo + (force - np.nanmin(force)) / (np.nanmax(force) - np.nanmin(force)) * max(0.01, hi - lo)
         self.force_line_30m.setData(np.arange(len(data)), scaled)
 
-    def update_volume_profile(self, data):
-        if len(data) == 0:
+    def update_volume_profile(self, anchor_data):
+        """畫 Volume Profile。
+
+        價量分箱優先用 1 分 K (self.df_1m_source，較精確)，並對齊目前 30 分
+        視窗的時間範圍；若無 1 分 K 則退回用 30 分 close 近似。水平量柱的幾何
+        (右緣位置、寬度) 仍錨定於 30 分視窗 anchor_data。
+        """
+        if len(anchor_data) == 0:
             self.profile_line_30m.setData([], [])
             return
 
-        closes = data['close'].astype(float).round(2)
-        profile = data.assign(_price=closes).groupby('_price', as_index=False)['volume'].sum()
+        source = self.df_1m_source
+        if source is not None and len(source) > 0:
+            t0 = pd.to_datetime(anchor_data['date'].values[0])
+            source = source[pd.to_datetime(source['date']) >= t0]
+        if source is None or len(source) == 0:
+            source = anchor_data
+
+        closes = source['close'].astype(float).round(2)
+        profile = source.assign(_price=closes).groupby('_price', as_index=False)['volume'].sum()
         profile = profile.sort_values('_price')
         max_vol = float(profile['volume'].max()) if len(profile) else 0
         if max_vol <= 0:
             self.profile_line_30m.setData([], [])
             return
 
-        base_x = max(1, len(data) - 1)
-        width = max(3, len(data) * 0.16)
+        base_x = max(1, len(anchor_data) - 1)
+        width = max(3, len(anchor_data) * 0.16)
         x = base_x + profile['volume'].astype(float).to_numpy() / max_vol * width
         y = profile['_price'].astype(float).to_numpy()
         self.profile_line_30m.setData(x, y)
@@ -602,6 +651,7 @@ class StockPlotWindow(QtWidgets.QMainWindow):
                 self.ma20_30m.setData(np.arange(len(plot_30m)), ma20)
 
             self.update_force_line(plot_30m)
+            self._last_plot_30m = plot_30m
             self.update_volume_profile(plot_30m)
                 
             if auto_range:
