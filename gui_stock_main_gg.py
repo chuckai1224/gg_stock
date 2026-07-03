@@ -2,12 +2,49 @@
 import datetime
 import numpy as np
 import pandas as pd
+from scipy.signal import find_peaks
 from PyQt5 import QtCore, QtGui, QtWidgets
 import pyqtgraph as pg
 
 # 設定 pyqtgraph 深色背景主題
 pg.setConfigOption('background', '#151515')
 pg.setConfigOption('foreground', '#dcdcdc')
+
+
+def _filter_peaks_with_edges(peaks, volume_data):
+    """移植自 fut2026 vol_profile.filter_peaks_with_edges：
+    去掉相鄰兩側量能更大的峰，只留下相對突出的大量點。"""
+    if len(peaks) <= 1:
+        return peaks
+    peak_volumes = volume_data[peaks]
+    filtered = []
+    for idx in range(len(peaks)):
+        left_ok = True if idx == 0 else peak_volumes[idx] > peak_volumes[idx - 1]
+        right_ok = True if idx == len(peaks) - 1 else peak_volumes[idx] > peak_volumes[idx + 1]
+        if left_ok and right_ok:
+            filtered.append(peaks[idx])
+    return np.asarray(filtered, dtype=peaks.dtype)
+
+
+def get_volume_peak_markers(df):
+    """回傳「大量點」的 (x 索引, y 價位)。
+
+    移植自 fut2026 vol_profile.get_volume_peaks_dxdy：找成交量的局部高峰
+    (find_peaks) 且高於均量者，點畫在該棒 open 價。
+    """
+    empty = (np.array([]), np.array([]))
+    if df is None or len(df) < 3:
+        return empty
+    volume = df['volume'].astype(float).to_numpy()
+    if volume.size == 0 or not np.any(volume > 0):
+        return empty
+    avg_vol = volume.mean()
+    peaks, _ = find_peaks(volume, height=avg_vol)
+    peaks = _filter_peaks_with_edges(peaks, volume)
+    if peaks.size == 0:
+        return empty
+    opens = df['open'].astype(float).to_numpy()
+    return peaks.astype(float), opens[peaks]
 
 class TimeIndexAxis(pg.AxisItem):
     """自定義 X 軸，將 KBar 索引值對齊轉換為美觀的時間/日期標籤"""
@@ -191,6 +228,7 @@ class StockPlotWindow(QtWidgets.QMainWindow):
         self.ma_visible = True
         self.force_visible = False
         self.profile_visible = False
+        self.bigvol_visible = True           # 大量點 (成交量高峰黃點)
         self.df_1m_source = pd.DataFrame()   # Volume Profile 分箱來源 (1 分 K)
         self._last_plot_30m = None           # 最近一次 30 分視窗，供 VP 重繪錨定
 
@@ -333,7 +371,17 @@ class StockPlotWindow(QtWidgets.QMainWindow):
         self.profile_line_30m.setVisible(self.profile_visible)
         self.plot_30m.addItem(self.force_line_30m)
         self.plot_30m.addItem(self.profile_line_30m)
-        
+
+        # 大量點 (成交量局部高峰且高於均量) — 黃色圓點，畫在該棒 open 價
+        self.bigvol_daily = pg.ScatterPlotItem(
+            size=10, symbol='o', pen=pg.mkPen(None), brush=pg.mkBrush(255, 255, 0, 255))
+        self.bigvol_30m = pg.ScatterPlotItem(
+            size=10, symbol='o', pen=pg.mkPen(None), brush=pg.mkBrush(255, 255, 0, 255))
+        self.bigvol_daily.setVisible(self.bigvol_visible)
+        self.bigvol_30m.setVisible(self.bigvol_visible)
+        self.plot_daily.addItem(self.bigvol_daily)
+        self.plot_30m.addItem(self.bigvol_30m)
+
         self.setup_inspector()
         
     def on_query_click(self):
@@ -413,13 +461,17 @@ class StockPlotWindow(QtWidgets.QMainWindow):
             self.toggle_volume_profile()
             event.accept()
             return
+        if event.key() == QtCore.Qt.Key_B:
+            self.toggle_bigvol()
+            event.accept()
+            return
         super().keyPressEvent(event)
 
     def eventFilter(self, obj, event):
         if (
             obj is self.symbol_input
             and event.type() == QtCore.QEvent.KeyPress
-            and event.key() in (QtCore.Qt.Key_C, QtCore.Qt.Key_I, QtCore.Qt.Key_M, QtCore.Qt.Key_F, QtCore.Qt.Key_V)
+            and event.key() in (QtCore.Qt.Key_C, QtCore.Qt.Key_I, QtCore.Qt.Key_M, QtCore.Qt.Key_F, QtCore.Qt.Key_V, QtCore.Qt.Key_B)
             and event.modifiers() == QtCore.Qt.NoModifier
         ):
             if event.key() == QtCore.Qt.Key_C:
@@ -430,6 +482,8 @@ class StockPlotWindow(QtWidgets.QMainWindow):
                 self.toggle_moving_averages()
             elif event.key() == QtCore.Qt.Key_F:
                 self.toggle_force_line()
+            elif event.key() == QtCore.Qt.Key_B:
+                self.toggle_bigvol()
             else:
                 self.toggle_volume_profile()
             return True
@@ -457,6 +511,13 @@ class StockPlotWindow(QtWidgets.QMainWindow):
         self.profile_line_30m.setVisible(self.profile_visible)
         state = "顯示" if self.profile_visible else "隱藏"
         self.statusBar().showMessage(f"30分 Volume Profile 已{state}。按 V 切換。")
+
+    def toggle_bigvol(self):
+        self.bigvol_visible = not self.bigvol_visible
+        self.bigvol_daily.setVisible(self.bigvol_visible)
+        self.bigvol_30m.setVisible(self.bigvol_visible)
+        state = "顯示" if self.bigvol_visible else "隱藏"
+        self.statusBar().showMessage(f"大量點(黃點)已{state}。按 B 切換。")
 
     def update_force_line(self, data):
         if len(data) < 2:
@@ -630,7 +691,10 @@ class StockPlotWindow(QtWidgets.QMainWindow):
             if len(close_prices) >= 60:
                 ma60 = pd.Series(close_prices).rolling(60).mean().values
                 self.ma60_daily.setData(np.arange(len(df_daily)), ma60)
-                
+
+            bvx, bvy = get_volume_peak_markers(df_daily)
+            self.bigvol_daily.setData(x=bvx, y=bvy)
+
             if auto_range:
                 self.plot_daily.enableAutoRange(axis=pg.ViewBox.XYAxes, enable=True)
                 
@@ -649,6 +713,9 @@ class StockPlotWindow(QtWidgets.QMainWindow):
             if len(close_prices_30m) >= 20:
                 ma20 = pd.Series(close_prices_30m).rolling(20).mean().values
                 self.ma20_30m.setData(np.arange(len(plot_30m)), ma20)
+
+            bvx30, bvy30 = get_volume_peak_markers(plot_30m)
+            self.bigvol_30m.setData(x=bvx30, y=bvy30)
 
             self.update_force_line(plot_30m)
             self._last_plot_30m = plot_30m
