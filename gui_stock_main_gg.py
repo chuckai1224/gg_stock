@@ -603,7 +603,7 @@ class StockPlotWindow(QtWidgets.QMainWindow):
             return
 
         base_x = max(1, len(anchor_data) - 1)
-        max_width = max(3, len(anchor_data) * 0.16)
+        max_width = 10.0  # 最大量的量柱固定 10 格寬，其餘依比例縮放
         y = profile['_price'].astype(float).to_numpy()
         widths = profile['volume'].astype(float).to_numpy() / max_vol * max_width
         # 量柱厚度：取相鄰價位中位間距，讓柱體接近連續又不重疊
