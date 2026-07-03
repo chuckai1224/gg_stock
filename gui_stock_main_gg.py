@@ -236,6 +236,7 @@ class StockPlotWindow(QtWidgets.QMainWindow):
         self.df_daily_1m_source = pd.DataFrame() # 日K VP 分箱來源 (1 分 K，全區間)
         self._last_plot_30m = None               # 最近一次 30 分視窗，供 VP 重繪錨定
         self._last_df_daily = None               # 最近一次日K，供日K VP 重繪錨定
+        self.shortcut_help = None                # 快捷鍵說明疊層 (按 H 切換)
 
         # 建立主 Layout
         self.central_widget = QtWidgets.QWidget()
@@ -378,12 +379,23 @@ class StockPlotWindow(QtWidgets.QMainWindow):
         self.profile_vp_daily = pg.BarGraphItem(
             x0=[], y=[], width=[], height=[],
             brush=pg.mkBrush(120, 160, 210, 90), pen=pg.mkPen(None))
+        # 力道段 VP：檢視模式(I)下滑鼠所在力道段的 VP，畫於 30 分 K 右側 (橘色)
+        self.force_seg_vp_30m = pg.BarGraphItem(
+            x0=[], y=[], width=[], height=[],
+            brush=pg.mkBrush(255, 165, 0, 130), pen=pg.mkPen(None))
+        self.force_seg_region = pg.LinearRegionItem(
+            values=(0, 0), movable=False,
+            brush=pg.mkBrush(255, 165, 0, 30), pen=pg.mkPen(255, 165, 0, 90))
         self.force_line_30m.setVisible(self.force_visible)
         self.profile_vp_30m.setVisible(self.profile_visible)
         self.profile_vp_daily.setVisible(self.profile_visible)
+        self.force_seg_vp_30m.setVisible(False)
+        self.force_seg_region.setVisible(False)
         self.plot_30m.addItem(self.force_line_30m)
         self.plot_30m.addItem(self.profile_vp_30m)
         self.plot_daily.addItem(self.profile_vp_daily)
+        self.plot_30m.addItem(self.force_seg_region, ignoreBounds=True)
+        self.plot_30m.addItem(self.force_seg_vp_30m)
 
         # 大量點 (成交量局部高峰且高於均量) — 黃色圓點，畫在該棒 open 價
         self.bigvol_daily = pg.ScatterPlotItem(
@@ -489,13 +501,17 @@ class StockPlotWindow(QtWidgets.QMainWindow):
             self.reset_view()
             event.accept()
             return
+        if event.key() == QtCore.Qt.Key_H:
+            self.toggle_shortcut_help()
+            event.accept()
+            return
         super().keyPressEvent(event)
 
     def eventFilter(self, obj, event):
         if (
             obj is self.symbol_input
             and event.type() == QtCore.QEvent.KeyPress
-            and event.key() in (QtCore.Qt.Key_C, QtCore.Qt.Key_I, QtCore.Qt.Key_M, QtCore.Qt.Key_F, QtCore.Qt.Key_V, QtCore.Qt.Key_B)
+            and event.key() in (QtCore.Qt.Key_C, QtCore.Qt.Key_I, QtCore.Qt.Key_M, QtCore.Qt.Key_F, QtCore.Qt.Key_V, QtCore.Qt.Key_B, QtCore.Qt.Key_H)
             and event.modifiers() == QtCore.Qt.NoModifier
         ):
             if event.key() == QtCore.Qt.Key_C:
@@ -508,6 +524,8 @@ class StockPlotWindow(QtWidgets.QMainWindow):
                 self.toggle_force_line()
             elif event.key() == QtCore.Qt.Key_B:
                 self.toggle_bigvol()
+            elif event.key() == QtCore.Qt.Key_H:
+                self.toggle_shortcut_help()
             else:
                 self.toggle_volume_profile()
             return True
@@ -555,6 +573,55 @@ class StockPlotWindow(QtWidgets.QMainWindow):
             self._fit_volume_axis(self.plot_30m_vol, self._last_plot_30m, force=True)
         self.statusBar().showMessage("已恢復最大畫面。按 9 重設。")
 
+    def _position_shortcut_help(self):
+        if self.shortcut_help is None:
+            return
+        margin = 16
+        x = max(margin, self.width() - self.shortcut_help.width() - margin)
+        self.shortcut_help.move(x, margin + 40)
+
+    def toggle_shortcut_help(self):
+        """按 H 顯示/隱藏快捷鍵說明疊層 (參考 fut2026)。"""
+        if self.shortcut_help is None:
+            help_text = (
+                "快捷鍵說明\n\n"
+                "H       顯示 / 隱藏本說明\n"
+                "9       恢復最大畫面 (取消縮放)\n"
+                "C       截圖存檔 stock.png\n"
+                "I       檢視游標 (十字線/K棒資訊) + 滑鼠所在力道段VP(30分)\n"
+                "M       均線 (MA)\n"
+                "F       30分 量價力道線\n"
+                "V       Volume Profile (日K / 30分)\n"
+                "B       大量點 (成交量高峰黃點)"
+            )
+            self.shortcut_help = QtWidgets.QLabel(help_text, self)
+            self.shortcut_help.setAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignTop)
+            self.shortcut_help.setAttribute(QtCore.Qt.WA_TransparentForMouseEvents, True)
+            self.shortcut_help.setStyleSheet(
+                "QLabel {"
+                "background-color: rgba(12, 12, 12, 235);"
+                "color: #f2f2f2;"
+                "border: 1px solid #777;"
+                "border-radius: 4px;"
+                "padding: 14px 18px;"
+                "font-family: 'Consolas', 'Microsoft JhengHei';"
+                "font-size: 14px;"
+                "}"
+            )
+            self.shortcut_help.adjustSize()
+
+        if self.shortcut_help.isVisible():
+            self.shortcut_help.hide()
+            return
+        self._position_shortcut_help()
+        self.shortcut_help.raise_()
+        self.shortcut_help.show()
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        if self.shortcut_help is not None and self.shortcut_help.isVisible():
+            self._position_shortcut_help()
+
     def update_force_line(self, data):
         if len(data) < 2:
             self.force_line_30m.setData([], [])
@@ -577,12 +644,38 @@ class StockPlotWindow(QtWidgets.QMainWindow):
         scaled = lo + (force - np.nanmin(force)) / (np.nanmax(force) - np.nanmin(force)) * max(0.01, hi - lo)
         self.force_line_30m.setData(np.arange(len(data)), scaled)
 
+    def _render_vp_bars(self, bar_item, source, base_x):
+        """把 source (含 close/volume) 依價位分箱，畫成水平量柱。
+
+        最大量的量柱固定 10 格寬，其餘依比例縮放；量柱自 base_x 往右延伸。
+        """
+        if source is None or len(source) == 0:
+            bar_item.setOpts(x0=[], y=[], width=[], height=[])
+            return
+        closes = source['close'].astype(float).round(2)
+        profile = source.assign(_price=closes).groupby('_price', as_index=False)['volume'].sum()
+        profile = profile.sort_values('_price')
+        max_vol = float(profile['volume'].max()) if len(profile) else 0
+        if max_vol <= 0:
+            bar_item.setOpts(x0=[], y=[], width=[], height=[])
+            return
+        y = profile['_price'].astype(float).to_numpy()
+        widths = profile['volume'].astype(float).to_numpy() / max_vol * 10.0
+        # 量柱厚度：取相鄰價位中位間距，讓柱體接近連續又不重疊
+        if len(y) > 1:
+            bar_h = float(np.median(np.diff(np.sort(y)))) * 0.9
+        else:
+            bar_h = max(y[0] * 0.001, 0.01)
+        if bar_h <= 0:
+            bar_h = 0.01
+        bar_item.setOpts(x0=base_x, y=y, width=widths, height=bar_h)
+
     def _draw_vp_bars(self, bar_item, source, anchor_data):
         """以 1 分 K 收盤+成交量分箱畫水平量柱 Volume Profile。
 
         source: 1 分 K 分箱來源；會對齊 anchor_data 的起始時間。無 source 時
-        退回用 anchor_data 的 close 近似。量柱幾何 (右緣位置、寬度、厚度) 錨定
-        於 anchor_data。30 分與日K 共用此方法。
+        退回用 anchor_data 的 close 近似。量柱錨定於 anchor_data 右緣。
+        30 分與日K 共用此方法。
         """
         if anchor_data is None or len(anchor_data) == 0:
             bar_item.setOpts(x0=[], y=[], width=[], height=[])
@@ -593,27 +686,7 @@ class StockPlotWindow(QtWidgets.QMainWindow):
             source = source[pd.to_datetime(source['date']) >= t0]
         if source is None or len(source) == 0:
             source = anchor_data
-
-        closes = source['close'].astype(float).round(2)
-        profile = source.assign(_price=closes).groupby('_price', as_index=False)['volume'].sum()
-        profile = profile.sort_values('_price')
-        max_vol = float(profile['volume'].max()) if len(profile) else 0
-        if max_vol <= 0:
-            bar_item.setOpts(x0=[], y=[], width=[], height=[])
-            return
-
-        base_x = max(1, len(anchor_data) - 1)
-        max_width = 10.0  # 最大量的量柱固定 10 格寬，其餘依比例縮放
-        y = profile['_price'].astype(float).to_numpy()
-        widths = profile['volume'].astype(float).to_numpy() / max_vol * max_width
-        # 量柱厚度：取相鄰價位中位間距，讓柱體接近連續又不重疊
-        if len(y) > 1:
-            bar_h = float(np.median(np.diff(np.sort(y)))) * 0.9
-        else:
-            bar_h = max(y[0] * 0.001, 0.01)
-        if bar_h <= 0:
-            bar_h = 0.01
-        bar_item.setOpts(x0=base_x, y=y, width=widths, height=bar_h)
+        self._render_vp_bars(bar_item, source, base_x=max(1, len(anchor_data) - 1))
 
     def update_volume_profile(self, anchor_data):
         """30 分 Volume Profile：用近 7 天 1 分 K，錨定於 30 分視窗。"""
@@ -622,6 +695,46 @@ class StockPlotWindow(QtWidgets.QMainWindow):
     def update_daily_volume_profile(self, anchor_daily):
         """日K Volume Profile：用全區間 1 分 K 收盤+成交量，錨定於日K。"""
         self._draw_vp_bars(self.profile_vp_daily, self.df_daily_1m_source, anchor_daily)
+
+    def _clear_force_segment_vp(self):
+        self.force_seg_vp_30m.setVisible(False)
+        self.force_seg_region.setVisible(False)
+
+    def _update_force_segment_vp(self, data_30m, idx):
+        """畫出滑鼠所在「力道段」的 VP 到 30 分 K 右側 (參考 fut2026 按 I 力道段 VP)。
+
+        力道段 = 連續同向 (close>=open 為漲) 的一段 30 分 K，對應量價力道線的一段
+        單向走勢。取該段時間範圍內的 1 分 K 收盤+成交量做 VP，畫在 K 線右側 10 格內。
+        """
+        if data_30m is None or len(data_30m) < 1 or idx < 0 or idx >= len(data_30m):
+            self._clear_force_segment_vp()
+            return
+        closes = data_30m['close'].astype(float).to_numpy()
+        opens = data_30m['open'].astype(float).to_numpy()
+        up = closes >= opens
+        n = len(up)
+        d = bool(up[idx])
+        x0 = idx
+        while x0 > 0 and bool(up[x0 - 1]) == d:
+            x0 -= 1
+        x1 = idx
+        while x1 < n - 1 and bool(up[x1 + 1]) == d:
+            x1 += 1
+
+        seg_start = pd.to_datetime(data_30m['date'].values[x0])
+        seg_end = pd.to_datetime(data_30m['date'].values[x1]) + pd.Timedelta(minutes=30)
+        src = self.df_1m_source
+        if src is not None and len(src) > 0:
+            ds = pd.to_datetime(src['date'])
+            src = src[(ds >= seg_start) & (ds < seg_end)]
+        if src is None or len(src) == 0:
+            src = data_30m.iloc[x0:x1 + 1]  # 無 1 分資料則退回用該段 30 分 K
+
+        base_x = max(1, len(data_30m) - 1)
+        self._render_vp_bars(self.force_seg_vp_30m, src, base_x)
+        self.force_seg_region.setRegion((x0 - 0.5, x1 + 0.5))
+        self.force_seg_region.setVisible(True)
+        self.force_seg_vp_30m.setVisible(True)
 
     def setup_inspector(self):
         self.inspect_targets = [
@@ -657,6 +770,7 @@ class StockPlotWindow(QtWidgets.QMainWindow):
         for _, plot, _, _ in self.inspect_targets:
             plot._inspect_vline.hide()
             plot._inspect_label.hide()
+        self._clear_force_segment_vp()
 
     def on_mouse_moved(self, scene_pos):
         if not self.inspect_enabled:
@@ -708,6 +822,9 @@ class StockPlotWindow(QtWidgets.QMainWindow):
             plot._inspect_label.setPos(idx, label_y)
             plot._inspect_vline.show()
             plot._inspect_label.show()
+            # 30 分圖：另外畫出滑鼠所在力道段的 VP 到 K 線右側
+            if not is_daily:
+                self._update_force_segment_vp(data, idx)
             self.statusBar().showMessage(msg)
             return
 

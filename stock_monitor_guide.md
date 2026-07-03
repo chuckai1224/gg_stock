@@ -107,3 +107,12 @@ graph TD
 - **缺少套件**：若啟動時出現 `ModuleNotFoundError`，請重新執行 `.\venv\Scripts\pip.exe install -r requirements.txt`。
 - **登入失敗**：確認 `~/.fut/login.json`、`~/.fut/ca.json` 或 `trade/login.txt`、`trade/ca.txt` 的 JSON 格式與 CA 路徑正確。
 - **歷史 K 線有資料但即時不更新**：優先檢查 Shioaji 股票 Tick callback 與訂閱版本是否與目前安裝的 `shioaji` 版本相符。
+
+---
+
+## 未來規劃
+
+- **歷史 ticks 快取**：若未來要用 `api.ticks()` 建立 1分K、5分K、買賣力道或更精準的 volume profile，必須先做本機快取，避免每次啟動重抓逐筆成交導致 API 用量快速消耗。
+  - 建議路徑：`data/ticks/{symbol}/{yyyy-mm-dd}.csv` 或 `.parquet`
+  - 流程：先讀本機快取，缺資料才呼叫 Shioaji `api.ticks()` 補抓。
+  - 盤中資料：用即時 tick 追加到當日快取；收盤後固化，隔天不重抓。

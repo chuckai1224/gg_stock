@@ -96,3 +96,13 @@
 - [ ] **13. `outdf['date']` 轉成 object dtype 後排序不可靠**
   - `stock_comm.py` `get_stock_df_bydate_nums()` — `outdf['date']` 被 cast 成 object dtype，填入 datetime64 scalar 後呼叫 `sort_values(by='date')`；object dtype 欄位的排序語義跨 pandas 版本不穩定，若有 NaN 殘留會觸發 TypeError
   - 修法：填完資料後改回 `outdf['date'] = pd.to_datetime(outdf['date'])`，再 sort
+
+---
+
+## Stock Monitor 未來項目
+
+- [ ] **14. 歷史 ticks 本機快取**
+  - 未來若要用 Shioaji `api.ticks()` 產生 1分K、5分K、買賣力道或更精準的 volume profile，必須先建立本機快取，避免每次啟動重抓逐筆成交造成 API 用量快速消耗。
+  - 建議快取路徑：`data/ticks/{symbol}/{yyyy-mm-dd}.csv` 或 `.parquet`
+  - 啟動流程：先讀本機快取；缺日期或缺時間區段時才呼叫 `api.ticks()` 補抓。
+  - 盤中流程：即時 tick 追加到當日快取；收盤後固化，隔天不重抓。
