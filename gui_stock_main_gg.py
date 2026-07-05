@@ -236,6 +236,8 @@ class StockPlotWindow(QtWidgets.QMainWindow):
         self.df_daily_1m_source = pd.DataFrame() # 日K VP 分箱來源 (1 分 K，全區間)
         self._last_plot_30m = None               # 最近一次 30 分視窗，供 VP 重繪錨定
         self._last_df_daily = None               # 最近一次日K，供日K VP 重繪錨定
+        self._vp_ref_30m = None                  # 30分藍色 VP 的分箱範圍/量能基準 (橘色沿用)
+        self._vp_ref_daily = None                # 日K 藍色 VP 的分箱範圍/量能基準 (橘色沿用)
         self.shortcut_help = None                # 快捷鍵說明疊層 (按 H 切換)
 
         # 建立主 Layout
@@ -379,23 +381,35 @@ class StockPlotWindow(QtWidgets.QMainWindow):
         self.profile_vp_daily = pg.BarGraphItem(
             x0=[], y=[], width=[], height=[],
             brush=pg.mkBrush(120, 160, 210, 90), pen=pg.mkPen(None))
-        # 力道段 VP：檢視模式(I)下滑鼠所在力道段的 VP，畫於 30 分 K 右側 (橘色)
-        self.force_seg_vp_30m = pg.BarGraphItem(
-            x0=[], y=[], width=[], height=[],
-            brush=pg.mkBrush(255, 165, 0, 130), pen=pg.mkPen(None))
-        self.force_seg_region = pg.LinearRegionItem(
-            values=(0, 0), movable=False,
-            brush=pg.mkBrush(255, 165, 0, 30), pen=pg.mkPen(255, 165, 0, 90))
+        # 游標 K 棒 VP：檢視模式(I)下滑鼠所在單一 K 棒的 VP，畫於 K 線右側 (橘色)
+        def _mk_hover_vp():
+            return pg.BarGraphItem(x0=[], y=[], width=[], height=[],
+                                   brush=pg.mkBrush(255, 150, 0, 205),
+                                   pen=pg.mkPen(255, 120, 0, 230, width=1))
+        self.hover_vp_30m = _mk_hover_vp()
+        self.hover_vp_daily = _mk_hover_vp()
+        # VP 成交量數字標註 (藍色標 POC 量、橘色標游標 K 棒量)
+        def _mk_vp_label(color):
+            t = pg.TextItem(text="", color=color, anchor=(0, 0.5))
+            t.setVisible(False)
+            return t
+        self.vp_label_30m = _mk_vp_label((150, 195, 240))
+        self.vp_label_daily = _mk_vp_label((150, 195, 240))
+        self.hover_label_30m = _mk_vp_label((255, 185, 90))
+        self.hover_label_daily = _mk_vp_label((255, 185, 90))
         self.force_line_30m.setVisible(self.force_visible)
         self.profile_vp_30m.setVisible(self.profile_visible)
         self.profile_vp_daily.setVisible(self.profile_visible)
-        self.force_seg_vp_30m.setVisible(False)
-        self.force_seg_region.setVisible(False)
+        self.hover_vp_30m.setVisible(False)
+        self.hover_vp_daily.setVisible(False)
         self.plot_30m.addItem(self.force_line_30m)
         self.plot_30m.addItem(self.profile_vp_30m)
         self.plot_daily.addItem(self.profile_vp_daily)
-        self.plot_30m.addItem(self.force_seg_region, ignoreBounds=True)
-        self.plot_30m.addItem(self.force_seg_vp_30m)
+        self.plot_30m.addItem(self.hover_vp_30m)
+        self.plot_daily.addItem(self.hover_vp_daily)
+        for lb, pl in ((self.vp_label_30m, self.plot_30m), (self.vp_label_daily, self.plot_daily),
+                       (self.hover_label_30m, self.plot_30m), (self.hover_label_daily, self.plot_daily)):
+            pl.addItem(lb, ignoreBounds=True)
 
         # 大量點 (成交量局部高峰且高於均量) — 黃色圓點，畫在該棒 open 價
         self.bigvol_daily = pg.ScatterPlotItem(
@@ -552,6 +566,9 @@ class StockPlotWindow(QtWidgets.QMainWindow):
         self.profile_visible = not self.profile_visible
         self.profile_vp_30m.setVisible(self.profile_visible)
         self.profile_vp_daily.setVisible(self.profile_visible)
+        # 藍色 POC 成交量標註跟著 V 切換 (空字串時本來就不顯示內容)
+        self.vp_label_30m.setVisible(self.profile_visible)
+        self.vp_label_daily.setVisible(self.profile_visible)
         state = "顯示" if self.profile_visible else "隱藏"
         self.statusBar().showMessage(f"日K/30分 Volume Profile 已{state}。按 V 切換。")
 
@@ -562,14 +579,20 @@ class StockPlotWindow(QtWidgets.QMainWindow):
         state = "顯示" if self.bigvol_visible else "隱藏"
         self.statusBar().showMessage(f"大量點(黃點)已{state}。按 B 切換。")
 
+    def _autorange_with_right_margin(self, plot, n):
+        """價格圖自動貼齊資料，並在 K 線右側固定保留約 6 格，供 VP 量柱 (自下一根起) 顯示。"""
+        vb = plot.getViewBox()
+        vb.autoRange()  # 立即 fit 全部項目 (X+Y)
+        xr = vb.viewRange()[0]
+        vb.setXRange(min(xr[0], -1), n + 11, padding=0)  # 右側保留 VP 量柱 + 成交量標註空間
+
     def reset_view(self):
         """恢復最大畫面：取消手動縮放，四張圖重新自動貼齊全部資料 (參考 fut2026 按 9)。"""
-        # autoRange() 立即依所有項目邊界重算範圍 (enableAutoRange 只設旗標會延後)
-        self.plot_daily.getViewBox().autoRange()
-        self.plot_30m.getViewBox().autoRange()
         if self._last_df_daily is not None and len(self._last_df_daily):
+            self._autorange_with_right_margin(self.plot_daily, len(self._last_df_daily))
             self._fit_volume_axis(self.plot_daily_vol, self._last_df_daily, force=True)
         if self._last_plot_30m is not None and len(self._last_plot_30m):
+            self._autorange_with_right_margin(self.plot_30m, len(self._last_plot_30m))
             self._fit_volume_axis(self.plot_30m_vol, self._last_plot_30m, force=True)
         self.statusBar().showMessage("已恢復最大畫面。按 9 重設。")
 
@@ -588,7 +611,7 @@ class StockPlotWindow(QtWidgets.QMainWindow):
                 "H       顯示 / 隱藏本說明\n"
                 "9       恢復最大畫面 (取消縮放)\n"
                 "C       截圖存檔 stock.png\n"
-                "I       檢視游標 (十字線/K棒資訊) + 滑鼠所在力道段VP(30分)\n"
+                "I       檢視游標 (十字線/K棒資訊) + 游標所在K棒VP(日K/30分)\n"
                 "M       均線 (MA)\n"
                 "F       30分 量價力道線\n"
                 "V       Volume Profile (日K / 30分)\n"
@@ -644,31 +667,54 @@ class StockPlotWindow(QtWidgets.QMainWindow):
         scaled = lo + (force - np.nanmin(force)) / (np.nanmax(force) - np.nanmin(force)) * max(0.01, hi - lo)
         self.force_line_30m.setData(np.arange(len(data)), scaled)
 
-    def _render_vp_bars(self, bar_item, source, base_x):
-        """把 source (含 close/volume) 依價位分箱，畫成水平量柱。
+    def _render_vp_bars(self, bar_item, source, base_x, max_width=5.0, ref=None, price_round=2):
+        """依實際成交價 (round 到 price_round 位) 每個價位畫一根水平量柱。
 
-        最大量的量柱固定 10 格寬，其餘依比例縮放；量柱自 base_x 往右延伸。
+        ref=(pmin, pmax, max_vol, poc)：若提供則以其量能 (ref[2]) 為寬度基準，
+        讓橘色游標 VP 與藍色全區間 VP 用同一把尺、可直接比較；否則以 source 自算。
+        回傳 (pmin, pmax, max_vol, poc_price)；無法繪製時回傳 None。
         """
         if source is None or len(source) == 0:
             bar_item.setOpts(x0=[], y=[], width=[], height=[])
-            return
-        closes = source['close'].astype(float).round(2)
-        profile = source.assign(_price=closes).groupby('_price', as_index=False)['volume'].sum()
-        profile = profile.sort_values('_price')
-        max_vol = float(profile['volume'].max()) if len(profile) else 0
+            return None
+        prices = np.round(source['close'].astype(float).to_numpy(), price_round)
+        vols = source['volume'].astype(float).to_numpy()
+        valid = np.isfinite(prices) & np.isfinite(vols) & (vols > 0)
+        prices, vols = prices[valid], vols[valid]
+        if len(prices) == 0:
+            bar_item.setOpts(x0=[], y=[], width=[], height=[])
+            return None
+
+        # 每一個成交價位彙總成一根量柱
+        y, inv = np.unique(prices, return_inverse=True)
+        vol_by_price = np.bincount(inv, weights=vols)
+        own_max = float(vol_by_price.max())
+        max_vol = ref[2] if ref is not None else own_max  # 沿用基準或自算
         if max_vol <= 0:
             bar_item.setOpts(x0=[], y=[], width=[], height=[])
-            return
-        y = profile['_price'].astype(float).to_numpy()
-        widths = profile['volume'].astype(float).to_numpy() / max_vol * 10.0
-        # 量柱厚度：取相鄰價位中位間距，讓柱體接近連續又不重疊
+            return None
+
+        # 上限夾在 max_width：橘色若在單一價位量超過基準也不溢出量柱區
+        widths = np.minimum(vol_by_price / max_vol * max_width, max_width)
         if len(y) > 1:
-            bar_h = float(np.median(np.diff(np.sort(y)))) * 0.9
+            bar_h = float(np.median(np.diff(y)))  # 相鄰價位間距，讓量柱接近連續
         else:
-            bar_h = max(y[0] * 0.001, 0.01)
+            bar_h = max(float(y[0]) * 0.001, 0.01)
         if bar_h <= 0:
             bar_h = 0.01
         bar_item.setOpts(x0=base_x, y=y, width=widths, height=bar_h)
+        poc_price = float(y[int(np.argmax(vol_by_price))])  # 最大量價位
+        return (float(y.min()), float(y.max()), own_max, poc_price)
+
+    @staticmethod
+    def _fmt_vol(v):
+        """成交量數字格式化 (萬/億)。"""
+        v = float(v or 0)
+        if v >= 1e8:
+            return f"{v / 1e8:.2f}億"
+        if v >= 1e4:
+            return f"{v / 1e4:.1f}萬"
+        return f"{int(round(v))}"
 
     def _draw_vp_bars(self, bar_item, source, anchor_data):
         """以 1 分 K 收盤+成交量分箱畫水平量柱 Volume Profile。
@@ -679,70 +725,83 @@ class StockPlotWindow(QtWidgets.QMainWindow):
         """
         if anchor_data is None or len(anchor_data) == 0:
             bar_item.setOpts(x0=[], y=[], width=[], height=[])
-            return
+            return None
 
         if source is not None and len(source) > 0:
             t0 = pd.to_datetime(anchor_data['date'].values[0])
             source = source[pd.to_datetime(source['date']) >= t0]
         if source is None or len(source) == 0:
             source = anchor_data
-        self._render_vp_bars(bar_item, source, base_x=max(1, len(anchor_data) - 1))
+        return self._render_vp_bars(bar_item, source, base_x=len(anchor_data), max_width=5.0)
+
+    def _annotate_vp_label(self, label_item, info, base_x, visible):
+        """在 VP 最大量價位 (POC) 右側標註「價位 / 該價位成交量」。"""
+        if info is None or not visible:
+            label_item.setVisible(False)
+            return
+        poc_price, poc_vol = info[3], info[2]  # 最大量價位 與 該價位量
+        label_item.setText(f"{poc_price:.2f} / {self._fmt_vol(poc_vol)}")
+        label_item.setPos(base_x + 5.3, poc_price)
+        label_item.setVisible(True)
 
     def update_volume_profile(self, anchor_data):
         """30 分 Volume Profile：用近 7 天 1 分 K，錨定於 30 分視窗。"""
-        self._draw_vp_bars(self.profile_vp_30m, self.df_1m_source, anchor_data)
+        # 存下分箱範圍與量能基準，供橘色游標 VP 沿用同一把尺
+        self._vp_ref_30m = self._draw_vp_bars(self.profile_vp_30m, self.df_1m_source, anchor_data)
+        n = len(anchor_data) if anchor_data is not None else 0
+        self._annotate_vp_label(self.vp_label_30m, self._vp_ref_30m, n, self.profile_visible)
 
     def update_daily_volume_profile(self, anchor_daily):
         """日K Volume Profile：用全區間 1 分 K 收盤+成交量，錨定於日K。"""
-        self._draw_vp_bars(self.profile_vp_daily, self.df_daily_1m_source, anchor_daily)
+        self._vp_ref_daily = self._draw_vp_bars(self.profile_vp_daily, self.df_daily_1m_source, anchor_daily)
+        n = len(anchor_daily) if anchor_daily is not None else 0
+        self._annotate_vp_label(self.vp_label_daily, self._vp_ref_daily, n, self.profile_visible)
 
-    def _clear_force_segment_vp(self):
-        self.force_seg_vp_30m.setVisible(False)
-        self.force_seg_region.setVisible(False)
+    def _clear_hover_vp(self):
+        for it in (self.hover_vp_30m, self.hover_vp_daily,
+                   self.hover_label_30m, self.hover_label_daily):
+            it.setVisible(False)
 
-    def _update_force_segment_vp(self, data_30m, idx):
-        """畫出滑鼠所在「力道段」的 VP 到 30 分 K 右側 (參考 fut2026 按 I 力道段 VP)。
+    def _update_hover_vp(self, data, idx, bar_item, label_item, src_1m, bar_delta, ref):
+        """畫出滑鼠所在「單一 K 棒」的 VP 到 K 線右側 (橘色)，並標註該根成交量。
 
-        力道段 = 連續同向 (close>=open 為漲) 的一段 30 分 K，對應量價力道線的一段
-        單向走勢。取該段時間範圍內的 1 分 K 收盤+成交量做 VP，畫在 K 線右側 10 格內。
+        取該根 K 棒時間範圍內的 1 分 K 收盤+成交量做 VP，橘色量柱畫在最後一根 K
+        的下一根起。ref 沿用藍色全區間 VP 的分箱範圍與量能基準，讓寬度比例與
+        藍色一致、可直接比較。日K 與 30 分共用。
         """
-        if data_30m is None or len(data_30m) < 1 or idx < 0 or idx >= len(data_30m):
-            self._clear_force_segment_vp()
+        if data is None or len(data) < 1 or idx < 0 or idx >= len(data):
+            bar_item.setVisible(False)
+            label_item.setVisible(False)
             return
-        closes = data_30m['close'].astype(float).to_numpy()
-        opens = data_30m['open'].astype(float).to_numpy()
-        up = closes >= opens
-        n = len(up)
-        d = bool(up[idx])
-        x0 = idx
-        while x0 > 0 and bool(up[x0 - 1]) == d:
-            x0 -= 1
-        x1 = idx
-        while x1 < n - 1 and bool(up[x1 + 1]) == d:
-            x1 += 1
 
-        seg_start = pd.to_datetime(data_30m['date'].values[x0])
-        seg_end = pd.to_datetime(data_30m['date'].values[x1]) + pd.Timedelta(minutes=30)
-        src = self.df_1m_source
+        bar_start = pd.to_datetime(data['date'].values[idx])
+        bar_end = bar_start + bar_delta
+        src = src_1m
         if src is not None and len(src) > 0:
             ds = pd.to_datetime(src['date'])
-            src = src[(ds >= seg_start) & (ds < seg_end)]
+            src = src[(ds >= bar_start) & (ds < bar_end)]
         if src is None or len(src) == 0:
-            src = data_30m.iloc[x0:x1 + 1]  # 無 1 分資料則退回用該段 30 分 K
+            src = data.iloc[idx:idx + 1]  # 無 1 分資料則退回用該根 K
 
-        base_x = max(1, len(data_30m) - 1)
-        self._render_vp_bars(self.force_seg_vp_30m, src, base_x)
-        self.force_seg_region.setRegion((x0 - 0.5, x1 + 0.5))
-        self.force_seg_region.setVisible(True)
-        self.force_seg_vp_30m.setVisible(True)
+        base_x = len(data)  # 從最後一根 K 的下一根開始畫 (右側已保留空間)
+        info = self._render_vp_bars(bar_item, src, base_x, max_width=5.0, ref=ref)
+        if info is not None:
+            bar_item.setVisible(True)
+            self._annotate_vp_label(label_item, info, base_x, True)
+        else:
+            bar_item.setVisible(False)
+            label_item.setVisible(False)
 
     def setup_inspector(self):
         self.inspect_targets = [
-            ("日K", self.plot_daily, self.kline_daily, True),
-            ("30分K", self.plot_30m, self.kline_30m, False),
+            ("日K", self.plot_daily, self.plot_daily_vol, self.kline_daily, True),
+            ("30分K", self.plot_30m, self.plot_30m_vol, self.kline_30m, False),
         ]
-        for _, plot, _, _ in self.inspect_targets:
-            vline = pg.InfiniteLine(angle=90, movable=False, pen=pg.mkPen('#ffff00', width=1))
+        for _, plot, vol_plot, _, _ in self.inspect_targets:
+            # 價格圖：K 棒下方的有限垂直線 (只畫 K 棒下方，不穿過 K 棒、留空間)
+            vline = pg.PlotCurveItem(pen=pg.mkPen('#ffff00', width=1))
+            # 成交量副圖：整條垂直線，一路連到量柱
+            vol_vline = pg.InfiniteLine(angle=90, movable=False, pen=pg.mkPen('#ffff00', width=1))
             label = pg.TextItem(
                 text="",
                 color="#ffffff",
@@ -752,9 +811,12 @@ class StockPlotWindow(QtWidgets.QMainWindow):
             )
             plot.addItem(vline, ignoreBounds=True)
             plot.addItem(label, ignoreBounds=True)
+            vol_plot.addItem(vol_vline, ignoreBounds=True)
             vline.hide()
+            vol_vline.hide()
             label.hide()
             plot._inspect_vline = vline
+            plot._inspect_vol_vline = vol_vline
             plot._inspect_label = label
 
         self.win.scene().sigMouseMoved.connect(self.on_mouse_moved)
@@ -767,16 +829,17 @@ class StockPlotWindow(QtWidgets.QMainWindow):
         self.statusBar().showMessage(f"KBar 檢視模式已{state}。按 I 切換。")
 
     def hide_inspector(self):
-        for _, plot, _, _ in self.inspect_targets:
+        for _, plot, _, _, _ in self.inspect_targets:
             plot._inspect_vline.hide()
+            plot._inspect_vol_vline.hide()
             plot._inspect_label.hide()
-        self._clear_force_segment_vp()
+        self._clear_hover_vp()
 
     def on_mouse_moved(self, scene_pos):
         if not self.inspect_enabled:
             return
 
-        for name, plot, layer, is_daily in self.inspect_targets:
+        for name, plot, vol_plot, layer, is_daily in self.inspect_targets:
             if not plot.sceneBoundingRect().contains(scene_pos):
                 continue
 
@@ -801,7 +864,6 @@ class StockPlotWindow(QtWidgets.QMainWindow):
             )
 
             self.hide_inspector()
-            plot._inspect_vline.setPos(idx)
             plot._inspect_label.setText(msg)
             x_ratio = idx / max(1, len(data) - 1)
             label_anchor_x = 1 if x_ratio > 0.65 else 0
@@ -818,13 +880,26 @@ class StockPlotWindow(QtWidgets.QMainWindow):
                 label_y = row_high
                 label_anchor_y = 1
 
+            # 價格圖：從 K 棒下方 (留 gap) 往下畫到圖底，不穿過 K 棒
+            gap = (y_max - y_min) * 0.03
+            plot._inspect_vline.setData([idx, idx], [y_min, row_low - gap])
+            # 成交量副圖：整條垂直線，連到量柱
+            plot._inspect_vol_vline.setPos(idx)
+
             plot._inspect_label.setAnchor((label_anchor_x, label_anchor_y))
             plot._inspect_label.setPos(idx, label_y)
             plot._inspect_vline.show()
+            plot._inspect_vol_vline.show()
             plot._inspect_label.show()
-            # 30 分圖：另外畫出滑鼠所在力道段的 VP 到 K 線右側
-            if not is_daily:
-                self._update_force_segment_vp(data, idx)
+            # 另外畫出滑鼠所在力道段的 VP 到 K 線右側 (日K/30分各自的 1 分來源)
+            if is_daily:
+                self._update_hover_vp(
+                    data, idx, self.hover_vp_daily, self.hover_label_daily,
+                    self.df_daily_1m_source, pd.Timedelta(days=1), self._vp_ref_daily)
+            else:
+                self._update_hover_vp(
+                    data, idx, self.hover_vp_30m, self.hover_label_30m,
+                    self.df_1m_source, pd.Timedelta(minutes=30), self._vp_ref_30m)
             self.statusBar().showMessage(msg)
             return
 
@@ -841,8 +916,9 @@ class StockPlotWindow(QtWidgets.QMainWindow):
             print(f"保存畫面失敗: {path}", flush=True)
             
     def update_plots(self, df_daily, df_30m, df_5m, auto_range=False):
-        # 1. 更新日K
+        # 1. 更新日K (最多顯示 120 根)
         if len(df_daily) > 0:
+            df_daily = tail_kbars(df_daily, 120)
             self.axis_daily.set_time_array(df_daily['date'].values)
             self.axis_daily_vol.set_time_array(df_daily['date'].values)
             self.kline_daily.set_data(df_daily)
@@ -866,12 +942,12 @@ class StockPlotWindow(QtWidgets.QMainWindow):
             self.update_daily_volume_profile(df_daily)
 
             if auto_range:
-                self.plot_daily.enableAutoRange(axis=pg.ViewBox.XYAxes, enable=True)
+                self._autorange_with_right_margin(self.plot_daily, len(df_daily))
             self._fit_volume_axis(self.plot_daily_vol, df_daily, force=auto_range)
                 
-        # 2. 更新 30分K
+        # 2. 更新 30分K (最多顯示 120 根)
         if len(df_30m) > 0:
-            plot_30m = tail_kbars(df_30m, 60)
+            plot_30m = tail_kbars(df_30m, 120)
             self.axis_30m.set_time_array(plot_30m['date'].values)
             self.axis_30m_vol.set_time_array(plot_30m['date'].values)
             self.kline_30m.set_data(plot_30m)
@@ -893,7 +969,7 @@ class StockPlotWindow(QtWidgets.QMainWindow):
             self.update_volume_profile(plot_30m)
                 
             if auto_range:
-                self.plot_30m.enableAutoRange(axis=pg.ViewBox.XYAxes, enable=True)
+                self._autorange_with_right_margin(self.plot_30m, len(plot_30m))
             self._fit_volume_axis(self.plot_30m_vol, plot_30m, force=auto_range)
 
     def _fit_volume_axis(self, vol_plot, data, force=False):

@@ -8,6 +8,7 @@ sql/
 csv/
 download/
 kbar_cache/
+tick_cache/
 
 # 程式輸出
 final/*

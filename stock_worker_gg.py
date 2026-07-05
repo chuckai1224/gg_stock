@@ -121,6 +121,80 @@ def fetch_base_df_cached(api, contract, symbol, start_date, end_date, cache_max_
     window = (merged['date'] >= start_ts) & (merged['date'] < end_ts + pd.Timedelta(days=1))
     return merged[window].reset_index(drop=True)
 
+TICK_CACHE_DIR = Path("tick_cache")
+
+def _tick_cache_path(symbol):
+    return TICK_CACHE_DIR / f"{symbol}.parquet"
+
+def load_tick_cache(symbol):
+    """讀取本地逐筆 tick VP 快取 (每交易日/價位彙總量)；無或損毀回傳 None。"""
+    path = _tick_cache_path(symbol)
+    if not path.exists():
+        return None
+    try:
+        df = pd.read_parquet(path)
+        if not {'date', 'close', 'volume'}.issubset(df.columns) or len(df) == 0:
+            return None
+        df['date'] = pd.to_datetime(df['date'])
+        return df[['date', 'close', 'volume']]
+    except Exception as e:
+        print(f"讀取 tick 快取失敗 ({symbol}): {e}", flush=True)
+        return None
+
+def save_tick_cache(symbol, df):
+    try:
+        TICK_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+        df.to_parquet(_tick_cache_path(symbol), index=False)
+    except Exception as e:
+        print(f"寫入 tick 快取失敗 ({symbol}): {e}", flush=True)
+
+def fetch_tick_vp_cached(api, contract, symbol, trading_days, timeout=30000, progress=None):
+    """下載/快取歷史逐筆 tick，彙總成每(交易日, 價位)成交量，作為精確 VP 來源。
+
+    只補抓未快取的交易日 (今日永遠重抓以更新盤中)。回傳 columns=[date, close, volume]：
+    date=交易日(midnight)、close=價位(round 2)、volume=該日該價位總量。
+    """
+    today = datetime.date.today()
+    cached = load_tick_cache(symbol)
+    cached_days = set(pd.to_datetime(cached['date']).dt.date) if cached is not None else set()
+
+    target = sorted({d for d in trading_days})
+    to_fetch = [d for d in target if d not in cached_days or d == today]
+    if cached is not None and len(cached):
+        cached = cached[~pd.to_datetime(cached['date']).dt.date.isin(to_fetch)]
+        frames = [cached] if len(cached) else []
+    else:
+        frames = []
+
+    print(f"tick VP {symbol}: 需補抓 {len(to_fetch)} 天 (快取已有 {len(cached_days)} 天)", flush=True)
+    for i, d in enumerate(to_fetch, 1):
+        try:
+            ticks = api.ticks(contract, d.strftime('%Y-%m-%d'), timeout=timeout)
+        except Exception as e:
+            print(f"  tick 下載失敗 {d}: {e}", flush=True)
+            continue
+        if not ticks or len(ticks.ts) == 0:
+            continue
+        tdf = pd.DataFrame({
+            'close': pd.to_numeric(pd.Series(ticks.close), errors='coerce').round(2),
+            'volume': pd.to_numeric(pd.Series(ticks.volume), errors='coerce'),
+        }).dropna()
+        if len(tdf) == 0:
+            continue
+        tdf = tdf.groupby('close', as_index=False)['volume'].sum()
+        tdf['date'] = pd.Timestamp(d)
+        frames.append(tdf[['date', 'close', 'volume']])
+        if progress and (i % 20 == 0 or i == len(to_fetch)):
+            progress(i, len(to_fetch))
+
+    if not frames:
+        return pd.DataFrame(columns=['date', 'close', 'volume'])
+    merged = pd.concat(frames, ignore_index=True)
+    merged['date'] = pd.to_datetime(merged['date'])
+    merged = merged.sort_values(['date', 'close']).reset_index(drop=True)
+    save_tick_cache(symbol, merged)
+    return merged
+
 def kbars_to_df(kbars):
     """將 Shioaji API kbars 轉為標準 DataFrame"""
     if not kbars or len(kbars.ts) == 0:
@@ -435,8 +509,8 @@ class StockWorker(QThread):
             today = datetime.date.today()
             # 日K 下載 180 天 (約 120 個交易日)
             start_daily = (today - datetime.timedelta(days=180)).strftime('%Y-%m-%d')
-            # 30m 下載 20 天 (約 14 個交易日)
-            start_30m = (today - datetime.timedelta(days=20)).strftime('%Y-%m-%d')
+            # 30m 取 30 天 (約 20 個交易日 ~180 根，確保畫面 120 根足夠；由 base_df 過濾，零額外 API)
+            start_30m = (today - datetime.timedelta(days=30)).strftime('%Y-%m-%d')
             # 5m 下載 7 天 (約 5 個交易日)
             start_5m = (today - datetime.timedelta(days=7)).strftime('%Y-%m-%d')
             end_date = today.strftime('%Y-%m-%d')
@@ -460,10 +534,10 @@ class StockWorker(QThread):
 
             self.initial_data.emit(self.df_daily, self.df_30m, self.df_5m)
             self.profile_data.emit(self.df_1m.copy())
-            # 日K VP 用全區間 1 分 K (收盤+成交量)，資料量大且歷史為主，載入時送一次即可
+            # 先用全區間 1 分 K 收盤+量送一份「快速 VP」，畫面立即有 VP 可看
             self.daily_profile_data.emit(base_df.copy())
             self.status_msg.emit(f"成功載入 {target_symbol} {stock_name} 的歷史 K 線。正在訂閱即時報價...")
-            
+
             # 5. 訂閱即時 Tick
             self.api.quote.subscribe(
                 self.current_contract,
@@ -477,7 +551,32 @@ class StockWorker(QThread):
                 print(msg, flush=True)
                 self.status_msg.emit(msg)
             self.status_msg.emit(f"監控中: {target_symbol} {stock_name} | 即時行情已訂閱。")
-            
+
+            # 6. 下載/快取歷史逐筆 tick，建立精確日K VP，完成後覆蓋快速版 (漸進增強)
+            if self.symbol == target_symbol:  # 使用者未又切走
+                try:
+                    tick_usage_start = self.emit_api_usage("tick VP 前")
+                    trading_days = sorted(pd.to_datetime(base_df['date']).dt.date.unique())
+
+                    def _tick_progress(i, total):
+                        self.status_msg.emit(f"下載 {target_symbol} 歷史 tick VP... {i}/{total} 天")
+
+                    self.status_msg.emit(f"正在下載 {target_symbol} 歷史 tick 建立精確 VP ({len(trading_days)} 天)...")
+                    tick_vp = fetch_tick_vp_cached(
+                        self.api, self.current_contract, target_symbol, trading_days,
+                        progress=_tick_progress)
+                    tick_usage_end = self.emit_api_usage("tick VP 後")
+                    if tick_usage_start is not None and tick_usage_end is not None:
+                        used = max(0, tick_usage_end - tick_usage_start)
+                        self.status_msg.emit(f"tick VP 消耗 API: {format_bytes(used)}")
+                    if len(tick_vp) > 0 and self.symbol == target_symbol:
+                        self.daily_profile_data.emit(tick_vp)
+                        self.status_msg.emit(f"{target_symbol} 精確 tick VP 完成 ({len(tick_vp)} 筆價量)。")
+                except Exception as e:
+                    import traceback
+                    print(traceback.format_exc())
+                    self.status_msg.emit(f"tick VP 下載失敗 (沿用快速版): {e}")
+
         except Exception as e:
             import traceback
             print(traceback.format_exc())
