@@ -800,8 +800,9 @@ class StockPlotWindow(QtWidgets.QMainWindow):
         for _, plot, vol_plot, _, _ in self.inspect_targets:
             # 價格圖：K 棒下方的有限垂直線 (只畫 K 棒下方，不穿過 K 棒、留空間)
             vline = pg.PlotCurveItem(pen=pg.mkPen('#ffff00', width=1))
-            # 成交量副圖：整條垂直線，一路連到量柱
-            vol_vline = pg.InfiniteLine(angle=90, movable=False, pen=pg.mkPen('#ffff00', width=1))
+            # 成交量副圖：在量柱標成交量數字 (一般在上方，貼近上緣的最大量改標下方)
+            vol_label = pg.TextItem(text="", color="#ffdd33", anchor=(0.5, 1),
+                                    fill=pg.mkBrush(0, 0, 0, 160))
             label = pg.TextItem(
                 text="",
                 color="#ffffff",
@@ -811,12 +812,12 @@ class StockPlotWindow(QtWidgets.QMainWindow):
             )
             plot.addItem(vline, ignoreBounds=True)
             plot.addItem(label, ignoreBounds=True)
-            vol_plot.addItem(vol_vline, ignoreBounds=True)
+            vol_plot.addItem(vol_label, ignoreBounds=True)
             vline.hide()
-            vol_vline.hide()
+            vol_label.hide()
             label.hide()
             plot._inspect_vline = vline
-            plot._inspect_vol_vline = vol_vline
+            plot._inspect_vol_label = vol_label
             plot._inspect_label = label
 
         self.win.scene().sigMouseMoved.connect(self.on_mouse_moved)
@@ -831,7 +832,7 @@ class StockPlotWindow(QtWidgets.QMainWindow):
     def hide_inspector(self):
         for _, plot, _, _, _ in self.inspect_targets:
             plot._inspect_vline.hide()
-            plot._inspect_vol_vline.hide()
+            plot._inspect_vol_label.hide()
             plot._inspect_label.hide()
         self._clear_hover_vp()
 
@@ -880,16 +881,27 @@ class StockPlotWindow(QtWidgets.QMainWindow):
                 label_y = row_high
                 label_anchor_y = 1
 
-            # 價格圖：從 K 棒下方 (留 gap) 往下畫到圖底，不穿過 K 棒
-            gap = (y_max - y_min) * 0.03
-            plot._inspect_vline.setData([idx, idx], [y_min, row_low - gap])
-            # 成交量副圖：整條垂直線，連到量柱
-            plot._inspect_vol_vline.setPos(idx)
+            # 價格圖：從 K 棒低點下方 (留明顯 gap) 往下畫到圖底，不碰到 K 棒
+            gap = (y_max - y_min) * 0.08
+            top = row_low - gap
+            if top > y_min:
+                plot._inspect_vline.setData([idx, idx], [y_min, top])
+                plot._inspect_vline.show()
+            else:
+                plot._inspect_vline.hide()  # K 棒太靠底則不畫價格段
+            # 成交量副圖：在量柱標成交量數字。一般標在量柱上方 (往上長)；接近量圖
+            # 上緣的最大量改標在量柱下方 (往下長)，避免文字被上緣裁掉。
+            vb_vol = vol_plot.getViewBox()
+            v_min, v_max = vb_vol.viewRange()[1]
+            bar_top = float(row['volume'])
+            near_top = bar_top > v_min + (v_max - v_min) * 0.85
+            plot._inspect_vol_label.setText(self._fmt_vol(bar_top))
+            plot._inspect_vol_label.setAnchor((0.5, 0) if near_top else (0.5, 1))
+            plot._inspect_vol_label.setPos(idx, bar_top)
+            plot._inspect_vol_label.show()
 
             plot._inspect_label.setAnchor((label_anchor_x, label_anchor_y))
             plot._inspect_label.setPos(idx, label_y)
-            plot._inspect_vline.show()
-            plot._inspect_vol_vline.show()
             plot._inspect_label.show()
             # 另外畫出滑鼠所在力道段的 VP 到 K 線右側 (日K/30分各自的 1 分來源)
             if is_daily:
