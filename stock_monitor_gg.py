@@ -19,7 +19,7 @@ class MainWindow(StockPlotWindow):
         event.accept()
 
 def main():
-    parser = argparse.ArgumentParser(description="股票日K、30分K、5分K多週期即時看盤系統")
+    parser = argparse.ArgumentParser(description="股票日K、30分K雙週期即時看盤系統")
     parser.add_argument(
         "--symbol", 
         type=str, 
@@ -46,6 +46,7 @@ def main():
     
     # 關鍵：將 UI 的查詢代號訊號綁定到背景 Worker 的切換股票槽函數
     window.query_symbol_signal.connect(worker.change_symbol)
+    window.request_tick_vp_signal.connect(worker.request_tick_vp)
     
     # 4. 顯示視窗與啟動執行緒
     window.show()

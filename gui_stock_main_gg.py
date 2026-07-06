@@ -220,6 +220,7 @@ def tail_kbars(df, count=60):
 class StockPlotWindow(QtWidgets.QMainWindow):
     # 定義查詢股票事件訊號 (將代號傳給背景 Worker)
     query_symbol_signal = QtCore.pyqtSignal(str)
+    request_tick_vp_signal = QtCore.pyqtSignal()
     
     def __init__(self, default_symbol='2330'):
         super().__init__()
@@ -507,6 +508,10 @@ class StockPlotWindow(QtWidgets.QMainWindow):
             self.toggle_volume_profile()
             event.accept()
             return
+        if event.key() == QtCore.Qt.Key_P:
+            self.request_precise_tick_vp()
+            event.accept()
+            return
         if event.key() == QtCore.Qt.Key_B:
             self.toggle_bigvol()
             event.accept()
@@ -525,7 +530,7 @@ class StockPlotWindow(QtWidgets.QMainWindow):
         if (
             obj is self.symbol_input
             and event.type() == QtCore.QEvent.KeyPress
-            and event.key() in (QtCore.Qt.Key_C, QtCore.Qt.Key_I, QtCore.Qt.Key_M, QtCore.Qt.Key_F, QtCore.Qt.Key_V, QtCore.Qt.Key_B, QtCore.Qt.Key_H)
+            and event.key() in (QtCore.Qt.Key_C, QtCore.Qt.Key_I, QtCore.Qt.Key_M, QtCore.Qt.Key_F, QtCore.Qt.Key_V, QtCore.Qt.Key_P, QtCore.Qt.Key_B, QtCore.Qt.Key_H)
             and event.modifiers() == QtCore.Qt.NoModifier
         ):
             if event.key() == QtCore.Qt.Key_C:
@@ -536,6 +541,8 @@ class StockPlotWindow(QtWidgets.QMainWindow):
                 self.toggle_moving_averages()
             elif event.key() == QtCore.Qt.Key_F:
                 self.toggle_force_line()
+            elif event.key() == QtCore.Qt.Key_P:
+                self.request_precise_tick_vp()
             elif event.key() == QtCore.Qt.Key_B:
                 self.toggle_bigvol()
             elif event.key() == QtCore.Qt.Key_H:
@@ -571,6 +578,10 @@ class StockPlotWindow(QtWidgets.QMainWindow):
         self.vp_label_daily.setVisible(self.profile_visible)
         state = "顯示" if self.profile_visible else "隱藏"
         self.statusBar().showMessage(f"日K/30分 Volume Profile 已{state}。按 V 切換。")
+
+    def request_precise_tick_vp(self):
+        self.request_tick_vp_signal.emit()
+        self.statusBar().showMessage("已請求精確 tick VP。Worker 會在背景讀取/補抓快取。")
 
     def toggle_bigvol(self):
         self.bigvol_visible = not self.bigvol_visible
@@ -614,7 +625,8 @@ class StockPlotWindow(QtWidgets.QMainWindow):
                 "I       檢視游標 (十字線/K棒資訊) + 游標所在K棒VP(日K/30分)\n"
                 "M       均線 (MA)\n"
                 "F       30分 量價力道線\n"
-                "V       Volume Profile (日K / 30分)\n"
+                "V       Volume Profile (日K / 30分) 顯示/隱藏\n"
+                "P       讀取/補抓歷史 tick，覆蓋日K精確 VP\n"
                 "B       大量點 (成交量高峰黃點)"
             )
             self.shortcut_help = QtWidgets.QLabel(help_text, self)

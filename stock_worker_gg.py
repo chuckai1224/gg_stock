@@ -417,6 +417,7 @@ class StockWorker(QThread):
         self.symbol = default_symbol
         self.pending_symbol = default_symbol
         self.symbol_changed_event = threading.Event()
+        self.tick_vp_event = threading.Event()
         self.lock = threading.Lock()
         
         self.df_daily = pd.DataFrame()
@@ -435,6 +436,10 @@ class StockWorker(QThread):
         with self.lock:
             self.pending_symbol = new_symbol
         self.symbol_changed_event.set()
+
+    def request_tick_vp(self):
+        """由 GUI 按 P 觸發：在背景執行緒補抓歷史 tick VP。"""
+        self.tick_vp_event.set()
         
     def run(self):
         try:
@@ -460,6 +465,10 @@ class StockWorker(QThread):
                     with self.lock:
                         self.symbol = self.pending_symbol
                     self.process_symbol_change()
+
+                if self.tick_vp_event.is_set():
+                    self.tick_vp_event.clear()
+                    self.process_tick_vp_request()
                     
                 # 節流更新機制：每 100ms 檢查是否有即時 Tick 更新，並向 GUI 發送最新資料
                 if self.need_update:
@@ -552,35 +561,47 @@ class StockWorker(QThread):
                 self.status_msg.emit(msg)
             self.status_msg.emit(f"監控中: {target_symbol} {stock_name} | 即時行情已訂閱。")
 
-            # 6. 下載/快取歷史逐筆 tick，建立精確日K VP，完成後覆蓋快速版 (漸進增強)
-            if self.symbol == target_symbol:  # 使用者未又切走
-                try:
-                    tick_usage_start = self.emit_api_usage("tick VP 前")
-                    trading_days = sorted(pd.to_datetime(base_df['date']).dt.date.unique())
-
-                    def _tick_progress(i, total):
-                        self.status_msg.emit(f"下載 {target_symbol} 歷史 tick VP... {i}/{total} 天")
-
-                    self.status_msg.emit(f"正在下載 {target_symbol} 歷史 tick 建立精確 VP ({len(trading_days)} 天)...")
-                    tick_vp = fetch_tick_vp_cached(
-                        self.api, self.current_contract, target_symbol, trading_days,
-                        progress=_tick_progress)
-                    tick_usage_end = self.emit_api_usage("tick VP 後")
-                    if tick_usage_start is not None and tick_usage_end is not None:
-                        used = max(0, tick_usage_end - tick_usage_start)
-                        self.status_msg.emit(f"tick VP 消耗 API: {format_bytes(used)}")
-                    if len(tick_vp) > 0 and self.symbol == target_symbol:
-                        self.daily_profile_data.emit(tick_vp)
-                        self.status_msg.emit(f"{target_symbol} 精確 tick VP 完成 ({len(tick_vp)} 筆價量)。")
-                except Exception as e:
-                    import traceback
-                    print(traceback.format_exc())
-                    self.status_msg.emit(f"tick VP 下載失敗 (沿用快速版): {e}")
-
         except Exception as e:
             import traceback
             print(traceback.format_exc())
             self.status_msg.emit(f"載入股票 {target_symbol} 失敗: {e}")
+
+    def process_tick_vp_request(self):
+        """按 P 後才補抓歷史 tick VP，避免換股時自動消耗大量 API。"""
+        try:
+            if not self.api or not self.current_contract:
+                self.status_msg.emit("尚未選定股票，無法下載 tick VP。")
+                return
+
+            with self.lock:
+                target_symbol = self.symbol
+                df_daily = self.df_daily.copy()
+
+            if len(df_daily) == 0:
+                self.status_msg.emit("尚無日K資料，無法下載 tick VP。")
+                return
+
+            tick_usage_start = self.emit_api_usage("tick VP 前")
+            trading_days = sorted(pd.to_datetime(df_daily['date']).dt.date.unique())
+
+            def _tick_progress(i, total):
+                self.status_msg.emit(f"下載 {target_symbol} 歷史 tick VP... {i}/{total} 天")
+
+            self.status_msg.emit(f"正在下載 {target_symbol} 歷史 tick 建立精確 VP ({len(trading_days)} 天)...")
+            tick_vp = fetch_tick_vp_cached(
+                self.api, self.current_contract, target_symbol, trading_days,
+                progress=_tick_progress)
+            tick_usage_end = self.emit_api_usage("tick VP 後")
+            if tick_usage_start is not None and tick_usage_end is not None:
+                used = max(0, tick_usage_end - tick_usage_start)
+                self.status_msg.emit(f"tick VP 消耗 API: {format_bytes(used)}")
+            if len(tick_vp) > 0 and self.symbol == target_symbol:
+                self.daily_profile_data.emit(tick_vp)
+                self.status_msg.emit(f"{target_symbol} 精確 tick VP 完成 ({len(tick_vp)} 筆價量)。")
+        except Exception as e:
+            import traceback
+            print(traceback.format_exc())
+            self.status_msg.emit(f"tick VP 下載失敗 (沿用快速版): {e}")
 
     def emit_api_usage(self, label):
         """印出 Shioaji API 流量額度資訊。"""
