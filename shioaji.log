@@ -1147,3 +1147,30 @@
 [pid:56224] 2026-07-05T13:08:33.312015Z  INFO shioaji::api::token_pool: Removed invalid token from slot 1
 [pid:56224] 2026-07-05T13:08:33.318594Z  INFO shioaji::api: P2P receiver closed: Closed
 [pid:56224] 2026-07-05T13:08:33.318538Z  INFO shioaji::api: msg receiver error: Closed
+[pid:51632] 2026-07-06T12:45:32.227429Z  INFO shioaji::api::api_v1::auth::token_login: No cached token available, performing new login
+[pid:51632] 2026-07-06T12:45:32.405258Z  INFO shioaji::api::api_v1::auth::token_login: Stored new token in slot 1
+[pid:51632] 2026-07-06T12:45:32.439887Z  INFO shioaji::api::api_v1::contracts::api: Fetched 127 IND contracts (1 pages)
+[pid:51632] 2026-07-06T12:45:36.617948Z  INFO shioaji::api::api_v1::contracts::api: Fetched 41968 STK contracts (9 pages)
+[pid:51632] 2026-07-06T12:45:37.025512Z  INFO shioaji::api::api_v1::contracts::api: Fetched 2488 FUT contracts (1 pages)
+[pid:51632] 2026-07-06T12:45:38.067973Z  INFO shioaji::api::api_v1::contracts::api: Fetched 8807 OPT contracts (2 pages)
+[pid:51632] 2026-07-06T12:45:38.095632Z  INFO _core::api::auth::login: Loaded 53390 contracts after login
+[pid:27272] 2026-07-06T12:49:54.773513Z  INFO shioaji::api::api_v1::auth::token_login: Found cached token from slot 1, verifying...
+[pid:27272] 2026-07-06T12:49:54.796208Z  INFO shioaji::api::api_v1::auth::token_login: Cached token is valid, using it
+[pid:27272] 2026-07-06T12:49:54.822954Z  INFO shioaji::api::api_v1::contracts::api: Loaded 127 IND contracts from cache
+[pid:27272] 2026-07-06T12:49:54.828732Z  INFO shioaji::api::api_v1::contracts::api: Loaded 41968 STK contracts from cache
+[pid:27272] 2026-07-06T12:49:54.830541Z  INFO shioaji::api::api_v1::contracts::api: Loaded 2488 FUT contracts from cache
+[pid:27272] 2026-07-06T12:49:54.832825Z  INFO shioaji::api::api_v1::contracts::api: Loaded 8807 OPT contracts from cache
+[pid:27272] 2026-07-06T12:49:54.832929Z  INFO _core::api::auth::login: Loaded 53390 contracts after login
+[pid:27272] 2026-07-06T12:49:56.341264Z  INFO shioaji::api::token_pool: Removed invalid token from slot 1
+[pid:27272] 2026-07-06T12:49:56.347057Z  INFO shioaji::api: P2P receiver closed: Closed
+[pid:27272] 2026-07-06T12:49:56.347340Z  INFO shioaji::api: msg receiver error: Closed
+[pid:53364] 2026-07-06T12:51:44.067286Z  INFO shioaji::api::api_v1::auth::token_login: No cached token available, performing new login
+[pid:53364] 2026-07-06T12:51:44.204722Z  INFO shioaji::api::api_v1::auth::token_login: Stored new token in slot 1
+[pid:53364] 2026-07-06T12:51:44.214556Z  INFO shioaji::api::api_v1::contracts::api: Loaded 127 IND contracts from cache
+[pid:53364] 2026-07-06T12:51:44.218908Z  INFO shioaji::api::api_v1::contracts::api: Loaded 41968 STK contracts from cache
+[pid:53364] 2026-07-06T12:51:44.220082Z  INFO shioaji::api::api_v1::contracts::api: Loaded 2488 FUT contracts from cache
+[pid:53364] 2026-07-06T12:51:44.221824Z  INFO shioaji::api::api_v1::contracts::api: Loaded 8807 OPT contracts from cache
+[pid:53364] 2026-07-06T12:51:44.221897Z  INFO _core::api::auth::login: Loaded 53390 contracts after login
+[pid:53364] 2026-07-06T12:55:56.749676Z  INFO shioaji::api::token_pool: Removed invalid token from slot 1
+[pid:53364] 2026-07-06T12:55:56.753146Z  INFO shioaji::api: msg receiver error: Closed
+[pid:53364] 2026-07-06T12:55:56.753191Z  INFO shioaji::api: P2P receiver closed: Closed
