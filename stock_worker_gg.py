@@ -122,9 +122,20 @@ def fetch_base_df_cached(api, contract, symbol, start_date, end_date, cache_max_
     return merged[window].reset_index(drop=True)
 
 TICK_CACHE_DIR = Path("tick_cache")
+# 該日 tick 抓取時間需晚於此時刻，快取才視為完整 (13:30 收盤 + 緩衝)
+TICK_SESSION_CLOSE = datetime.time(13, 35)
 
 def _tick_cache_path(symbol):
     return TICK_CACHE_DIR / f"{symbol}.parquet"
+
+def _tick_day_complete(day, fetched_at):
+    """判斷該交易日的快取是否為收盤後抓的完整資料。
+
+    fetched_at 為 NaT 代表舊版快取 (無抓取時間欄位)，視為完整以免整批重抓。
+    """
+    if pd.isna(fetched_at):
+        return True
+    return fetched_at >= pd.Timestamp.combine(day, TICK_SESSION_CLOSE)
 
 def load_tick_cache(symbol):
     """讀取本地逐筆 tick VP 快取 (每交易日/價位彙總量)；無或損毀回傳 None。"""
@@ -136,7 +147,11 @@ def load_tick_cache(symbol):
         if not {'date', 'close', 'volume'}.issubset(df.columns) or len(df) == 0:
             return None
         df['date'] = pd.to_datetime(df['date'])
-        return df[['date', 'close', 'volume']]
+        if 'fetched_at' in df.columns:
+            df['fetched_at'] = pd.to_datetime(df['fetched_at'])
+        else:
+            df['fetched_at'] = pd.NaT
+        return df[['date', 'close', 'volume', 'fetched_at']]
     except Exception as e:
         print(f"讀取 tick 快取失敗 ({symbol}): {e}", flush=True)
         return None
@@ -151,22 +166,30 @@ def save_tick_cache(symbol, df):
 def fetch_tick_vp_cached(api, contract, symbol, trading_days, timeout=30000, progress=None):
     """下載/快取歷史逐筆 tick，彙總成每(交易日, 價位)成交量，作為精確 VP 來源。
 
-    只補抓未快取的交易日 (今日永遠重抓以更新盤中)。回傳 columns=[date, close, volume]：
+    只補抓未快取或快取不完整的交易日：今日永遠重抓；盤中抓過的歷史日
+    (fetched_at 早於該日收盤) 也會重抓，避免部分資料永久留在快取。
+    下載失敗的日子保留舊快取。回傳 columns=[date, close, volume]：
     date=交易日(midnight)、close=價位(round 2)、volume=該日該價位總量。
     """
     today = datetime.date.today()
     cached = load_tick_cache(symbol)
-    cached_days = set(pd.to_datetime(cached['date']).dt.date) if cached is not None else set()
+    if cached is not None and len(cached):
+        fetched_at_by_day = cached.groupby(cached['date'].dt.date)['fetched_at'].max()
+    else:
+        fetched_at_by_day = pd.Series(dtype='datetime64[ns]')
+    cached_days = set(fetched_at_by_day.index)
 
     target = sorted({d for d in trading_days})
-    to_fetch = [d for d in target if d not in cached_days or d == today]
-    if cached is not None and len(cached):
-        cached = cached[~pd.to_datetime(cached['date']).dt.date.isin(to_fetch)]
-        frames = [cached] if len(cached) else []
-    else:
-        frames = []
+    to_fetch = [
+        d for d in target
+        if d not in cached_days
+        or d == today
+        or not _tick_day_complete(d, fetched_at_by_day[d])
+    ]
 
     print(f"tick VP {symbol}: 需補抓 {len(to_fetch)} 天 (快取已有 {len(cached_days)} 天)", flush=True)
+    frames = []
+    fetched_days = set()
     for i, d in enumerate(to_fetch, 1):
         try:
             ticks = api.ticks(contract, d.strftime('%Y-%m-%d'), timeout=timeout)
@@ -183,17 +206,27 @@ def fetch_tick_vp_cached(api, contract, symbol, trading_days, timeout=30000, pro
             continue
         tdf = tdf.groupby('close', as_index=False)['volume'].sum()
         tdf['date'] = pd.Timestamp(d)
-        frames.append(tdf[['date', 'close', 'volume']])
+        tdf['fetched_at'] = pd.Timestamp.now()
+        frames.append(tdf[['date', 'close', 'volume', 'fetched_at']])
+        fetched_days.add(d)
         if progress and (i % 20 == 0 or i == len(to_fetch)):
             progress(i, len(to_fetch))
+
+    # 只汰換成功重抓的日子；下載失敗的日子沿用舊快取資料
+    if cached is not None and len(cached):
+        kept = cached[~cached['date'].dt.date.isin(fetched_days)]
+        if len(kept):
+            frames.insert(0, kept)
 
     if not frames:
         return pd.DataFrame(columns=['date', 'close', 'volume'])
     merged = pd.concat(frames, ignore_index=True)
     merged['date'] = pd.to_datetime(merged['date'])
     merged = merged.sort_values(['date', 'close']).reset_index(drop=True)
-    save_tick_cache(symbol, merged)
-    return merged
+    # 回存只留本次請求區間內的日子 (比最舊交易日更早的不會再被請求)，避免快取無限增長
+    cache_floor = pd.Timestamp(target[0])
+    save_tick_cache(symbol, merged[merged['date'] >= cache_floor])
+    return merged[['date', 'close', 'volume']]
 
 def kbars_to_df(kbars):
     """將 Shioaji API kbars 轉為標準 DataFrame"""
@@ -418,6 +451,7 @@ class StockWorker(QThread):
         self.pending_symbol = default_symbol
         self.symbol_changed_event = threading.Event()
         self.tick_vp_event = threading.Event()
+        self.tick_vp_thread = None
         self.lock = threading.Lock()
         
         self.df_daily = pd.DataFrame()
@@ -468,7 +502,7 @@ class StockWorker(QThread):
 
                 if self.tick_vp_event.is_set():
                     self.tick_vp_event.clear()
-                    self.process_tick_vp_request()
+                    self.start_tick_vp_download()
                     
                 # 節流更新機制：每 100ms 檢查是否有即時 Tick 更新，並向 GUI 發送最新資料
                 if self.need_update:
@@ -566,8 +600,21 @@ class StockWorker(QThread):
             print(traceback.format_exc())
             self.status_msg.emit(f"載入股票 {target_symbol} 失敗: {e}")
 
+    def start_tick_vp_download(self):
+        """在獨立執行緒補抓 tick VP，避免下載期間 worker 迴圈停擺、圖表凍結。"""
+        if self.tick_vp_thread is not None and self.tick_vp_thread.is_alive():
+            self.status_msg.emit("tick VP 下載進行中，請稍候。")
+            return
+        self.tick_vp_thread = threading.Thread(
+            target=self.process_tick_vp_request, daemon=True
+        )
+        self.tick_vp_thread.start()
+
     def process_tick_vp_request(self):
-        """按 P 後才補抓歷史 tick VP，避免換股時自動消耗大量 API。"""
+        """按 P 後才補抓歷史 tick VP，避免換股時自動消耗大量 API。
+
+        由 start_tick_vp_download 於獨立執行緒執行。
+        """
         try:
             if not self.api or not self.current_contract:
                 self.status_msg.emit("尚未選定股票，無法下載 tick VP。")
@@ -595,6 +642,7 @@ class StockWorker(QThread):
             if tick_usage_start is not None and tick_usage_end is not None:
                 used = max(0, tick_usage_end - tick_usage_start)
                 self.status_msg.emit(f"tick VP 消耗 API: {format_bytes(used)}")
+            # 下載期間使用者可能已換股，只在仍是同一檔時才覆蓋 VP
             if len(tick_vp) > 0 and self.symbol == target_symbol:
                 self.daily_profile_data.emit(tick_vp)
                 self.status_msg.emit(f"{target_symbol} 精確 tick VP 完成 ({len(tick_vp)} 筆價量)。")
