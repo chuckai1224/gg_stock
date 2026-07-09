@@ -17,6 +17,7 @@ error/
 out/
 log/
 logs/
+shioaji.log
 diagnose.py
 
 # 編輯器 / 環境
