@@ -46,6 +46,87 @@ def get_volume_peak_markers(df):
     opens = df['open'].astype(float).to_numpy()
     return peaks.astype(float), opens[peaks]
 
+
+def find_fractals(highs, lows, n=2):
+    """移植自 fut2026 gui_utils.find_fractals：Bill Williams 碎形轉折。
+
+    Peak: High[i] > High[i±k] (k=1..n)；Valley: Low[i] < Low[i±k]。
+    回傳陣列: 1=Peak, -1=Valley, 0=無。
+    """
+    l = len(highs)
+    if l < 2 * n + 1:
+        return np.zeros(l, dtype=int)
+
+    is_peak = np.ones(l, dtype=bool)
+    is_valley = np.ones(l, dtype=bool)
+    for k in range(1, n + 1):
+        is_peak &= (highs > np.roll(highs, k)) & (highs > np.roll(highs, -k))
+        is_valley &= (lows < np.roll(lows, k)) & (lows < np.roll(lows, -k))
+    is_peak[:n] = is_peak[-n:] = False
+    is_valley[:n] = is_valley[-n:] = False
+
+    result = np.zeros(l, dtype=int)
+    result[is_peak] = 1
+    result[is_valley] = -1
+    return result
+
+
+def build_force_points(df, n=2):
+    """移植自 fut2026 _draw_force_60t 的轉折點建構：碎形 → 交錯的多空轉折序列。
+
+    處理兩個細節：
+    - Outside bar (同棒又是峰又是谷)：往後找第一個突破該棒區間的轉折，
+      以突破方向決定該棒是 SH 還是 SL；無突破則用前一點的延伸方向判斷。
+    - 連續同型轉折 (連續高點/低點) 視為未完成的競逐，只留較強的極值。
+
+    回傳 list[(idx, ptype, price)]，ptype: 1=高點, -1=低點。
+    """
+    if df is None or len(df) < 2 * n + 1:
+        return []
+    highs = df['high'].astype(float).to_numpy()
+    lows = df['low'].astype(float).to_numpy()
+
+    pivots = find_fractals(highs, lows, n=n)
+    raw_idx = np.nonzero(pivots != 0)[0]
+    if len(raw_idx) < 2:
+        return []
+
+    l = len(highs)
+    is_pk = np.ones(l, dtype=bool)
+    is_vl = np.ones(l, dtype=bool)
+    for k in range(1, n + 1):
+        is_pk &= (highs > np.roll(highs, k)) & (highs > np.roll(highs, -k))
+        is_vl &= (lows < np.roll(lows, k)) & (lows < np.roll(lows, -k))
+    is_pk[:n] = is_pk[-n:] = is_vl[:n] = is_vl[-n:] = False
+    outside = is_pk & is_vl
+
+    points = []
+    for i, idx in enumerate(raw_idx):
+        ptype = int(pivots[idx])
+        if outside[idx]:
+            resolved = False
+            for j in range(i + 1, len(raw_idx)):
+                nxt = raw_idx[j]
+                if lows[nxt] < lows[idx]:    # 之後跌破 → 本棒作高點
+                    ptype = 1; resolved = True; break
+                if highs[nxt] > highs[idx]:  # 之後突破 → 本棒作低點
+                    ptype = -1; resolved = True; break
+            if not resolved:
+                if not points:
+                    ptype = 1
+                elif points[-1][1] == 1:
+                    ptype = 1 if highs[idx] > points[-1][2] else -1
+                else:
+                    ptype = -1 if lows[idx] < points[-1][2] else 1
+        price = float(highs[idx] if ptype == 1 else lows[idx])
+        if points and points[-1][1] == ptype:
+            old_price = points[-1][2]
+            if (ptype == 1 and price > old_price) or (ptype == -1 and price < old_price):
+                points[-1] = (int(idx), ptype, price)
+        else:
+            points.append((int(idx), ptype, price))
+    return points
+
 class TimeIndexAxis(pg.AxisItem):
     """自定義 X 軸，將 KBar 索引值對齊轉換為美觀的時間/日期標籤"""
     def __init__(self, orientation="bottom", is_daily=False):
@@ -231,6 +312,9 @@ class StockPlotWindow(QtWidgets.QMainWindow):
         self.inspect_targets = []
         self.ma_visible = True
         self.force_visible = False
+        self.force_mode = 0                      # 多空力道 (F): 0 關 / 1 轉折標記 / 2 多空腳
+        self._force_items = {'daily': [], '30m': []}   # 多空力道繪圖物件 (per 圖)
+        self._force_sig = {'daily': None, '30m': None} # 轉折點簽章，內容沒變就跳過重繪
         self.profile_visible = False
         self.bigvol_visible = True           # 大量點 (成交量高峰黃點)
         self.df_1m_source = pd.DataFrame()       # 30分 VP 分箱來源 (1 分 K，近 7 天)
@@ -391,7 +475,8 @@ class StockPlotWindow(QtWidgets.QMainWindow):
         self.hover_vp_daily = _mk_hover_vp()
         # VP 成交量數字標註 (藍色標 POC 量、橘色標游標 K 棒量)
         def _mk_vp_label(color):
-            t = pg.TextItem(text="", color=color, anchor=(0, 0.5))
+            # 右對齊疊在 VP 量柱上 (半透明底墊高可讀性)，避免文字懸在圖表右緣外
+            t = pg.TextItem(text="", color=color, anchor=(1, 0.5), fill=pg.mkBrush(0, 0, 0, 145))
             t.setVisible(False)
             return t
         self.vp_label_30m = _mk_vp_label((150, 195, 240))
@@ -501,6 +586,10 @@ class StockPlotWindow(QtWidgets.QMainWindow):
             event.accept()
             return
         if event.key() == QtCore.Qt.Key_F:
+            self.toggle_force()
+            event.accept()
+            return
+        if event.key() == QtCore.Qt.Key_G:
             self.toggle_force_line()
             event.accept()
             return
@@ -530,7 +619,7 @@ class StockPlotWindow(QtWidgets.QMainWindow):
         if (
             obj is self.symbol_input
             and event.type() == QtCore.QEvent.KeyPress
-            and event.key() in (QtCore.Qt.Key_C, QtCore.Qt.Key_I, QtCore.Qt.Key_M, QtCore.Qt.Key_F, QtCore.Qt.Key_V, QtCore.Qt.Key_P, QtCore.Qt.Key_B, QtCore.Qt.Key_H)
+            and event.key() in (QtCore.Qt.Key_C, QtCore.Qt.Key_I, QtCore.Qt.Key_M, QtCore.Qt.Key_F, QtCore.Qt.Key_G, QtCore.Qt.Key_V, QtCore.Qt.Key_P, QtCore.Qt.Key_B, QtCore.Qt.Key_H)
             and event.modifiers() == QtCore.Qt.NoModifier
         ):
             if event.key() == QtCore.Qt.Key_C:
@@ -540,6 +629,8 @@ class StockPlotWindow(QtWidgets.QMainWindow):
             elif event.key() == QtCore.Qt.Key_M:
                 self.toggle_moving_averages()
             elif event.key() == QtCore.Qt.Key_F:
+                self.toggle_force()
+            elif event.key() == QtCore.Qt.Key_G:
                 self.toggle_force_line()
             elif event.key() == QtCore.Qt.Key_P:
                 self.request_precise_tick_vp()
@@ -567,7 +658,108 @@ class StockPlotWindow(QtWidgets.QMainWindow):
         self.force_visible = not self.force_visible
         self.force_line_30m.setVisible(self.force_visible)
         state = "顯示" if self.force_visible else "隱藏"
-        self.statusBar().showMessage(f"30分量價力道線已{state}。按 F 切換。")
+        self.statusBar().showMessage(f"30分量價力道線已{state}。按 G 切換。")
+
+    def toggle_force(self):
+        """多空力道 (參考 fut2026 F 鍵)：關 → 轉折標記 → 多空腳 循環。"""
+        self.force_mode = (self.force_mode + 1) % 3
+        self._draw_force_chart('daily')
+        self._draw_force_chart('30m')
+        name = {0: '關閉', 1: '轉折標記', 2: '多空腳'}[self.force_mode]
+        self.statusBar().showMessage(f"多空力道: {name}。按 F 循環切換。")
+
+    def _draw_force_chart(self, key):
+        """在日K或30分圖畫多空力道；轉折點沒變時跳過重繪 (簽章比對)。"""
+        if key == 'daily':
+            plot, data = self.plot_daily, self._last_df_daily
+        else:
+            plot, data = self.plot_30m, self._last_plot_30m
+        items = self._force_items[key]
+
+        points = build_force_points(data) if self.force_mode else []
+        signature = (
+            self.force_mode,
+            tuple((idx, ptype, round(price, 2)) for idx, ptype, price in points),
+        )
+        if signature == self._force_sig[key]:
+            return
+        self._force_sig[key] = signature
+
+        for it in items:
+            plot.removeItem(it)
+        items.clear()
+        if not self.force_mode or len(points) < 2:
+            return
+
+        highs = data['high'].astype(float).to_numpy()
+        lows = data['low'].astype(float).to_numpy()
+        if self.force_mode == 1:
+            self._draw_force_markers(plot, items, highs, lows, points)
+        else:
+            self._draw_force_legs(plot, items, data, points)
+
+    def _draw_force_markers(self, plot, items, highs, lows, points):
+        """轉折標記：低點 ▲ 紅 (畫在低點下方)、高點 ▼ 綠 (畫在高點上方)。"""
+        # 偏移拉開到約 0.7 根 K 棒的中位振幅，避免三角形貼著影線與 K 棒混淆
+        med_rng = float(np.median(highs - lows))
+        price_offset = max(med_rng * 0.7, float(np.median(lows)) * 0.006)
+        font = QtGui.QFont('Microsoft JhengHei', 12)
+        for idx, ptype, price in points:
+            if ptype == -1:
+                marker = pg.TextItem(text='▲', color=QtGui.QColor(235, 70, 70, 230), anchor=(0.5, 0.5))
+                marker.setPos(float(idx), price - price_offset)
+            else:
+                marker = pg.TextItem(text='▼', color=QtGui.QColor(55, 205, 95, 230), anchor=(0.5, 0.5))
+                marker.setPos(float(idx), price + price_offset)
+            marker.setFont(font)
+            plot.addItem(marker)
+            items.append(marker)
+
+    def _draw_force_legs(self, plot, items, data, points):
+        """多空腳：轉折點連線 (紅多綠空，線寬依量能)，近 8 腳標註推/回/根數/量/留成。"""
+        closes = data['close'].astype(float).to_numpy()
+        vols = data['volume'].astype(float).to_numpy()
+        legs = []
+        for (x0, _, p0), (x1, _, p1) in zip(points[:-1], points[1:]):
+            if x1 <= x0 or p1 == p0:
+                continue
+            direction = 1 if p1 > p0 else -1
+            volume = float(vols[x0:x1 + 1].sum())
+            stop_price = float(closes[x1])
+            distance = abs(p1 - p0)
+            retained = ((stop_price - p0) / distance if direction == 1
+                        else (p0 - stop_price) / distance)
+            legs.append((x0, p0, x1, p1, stop_price, direction, volume,
+                         max(0.0, min(1.0, retained))))
+        if not legs:
+            return
+
+        median_volume = max(float(np.median([leg[6] for leg in legs])), 1.0)
+        font = QtGui.QFont('Microsoft JhengHei', 7)
+        label_from = max(0, len(legs) - 8)
+        for i, (x0, p0, x1, p1, stop_price, direction, volume, retained) in enumerate(legs):
+            color = (QtGui.QColor(235, 70, 70, 225) if direction == 1
+                     else QtGui.QColor(55, 205, 95, 225))
+            width = 1.2 + min(2.8, volume / median_volume)
+            line = pg.PlotCurveItem(x=[float(x0), float(x1)], y=[p0, p1],
+                                    pen=pg.mkPen(color, width=width))
+            plot.addItem(line)
+            items.append(line)
+
+            if i < label_from:
+                continue
+            side = '多' if direction == 1 else '空'
+            label = (f'{side} 推{abs(p1 - p0):.2f} | 回{abs(p1 - stop_price):.2f} | '
+                     f'{x1 - x0}根 | 量{self._fmt_vol(volume)} | 留{retained * 100:.0f}%')
+            text_item = pg.TextItem(
+                text=label, color=color,
+                anchor=(0.5, 1.0 if direction == 1 else 0.0),
+                fill=pg.mkBrush(0, 0, 0, 145),
+            )
+            text_item.setFont(font)
+            text_item.setPos((x0 + x1) / 2.0, (p0 + stop_price) / 2.0)
+            plot.addItem(text_item)
+            items.append(text_item)
 
     def toggle_volume_profile(self):
         self.profile_visible = not self.profile_visible
@@ -624,7 +816,8 @@ class StockPlotWindow(QtWidgets.QMainWindow):
                 "C       截圖存檔 stock.png\n"
                 "I       檢視游標 (十字線/K棒資訊) + 游標所在K棒VP(日K/30分)\n"
                 "M       均線 (MA)\n"
-                "F       30分 量價力道線\n"
+                "F       多空力道 (關/轉折標記/多空腳 循環，日K+30分)\n"
+                "G       30分 量價力道線\n"
                 "V       Volume Profile (日K / 30分) 顯示/隱藏\n"
                 "P       讀取/補抓歷史 tick，覆蓋日K精確 VP\n"
                 "B       大量點 (成交量高峰黃點)"
@@ -747,13 +940,13 @@ class StockPlotWindow(QtWidgets.QMainWindow):
         return self._render_vp_bars(bar_item, source, base_x=len(anchor_data), max_width=5.0)
 
     def _annotate_vp_label(self, label_item, info, base_x, visible):
-        """在 VP 最大量價位 (POC) 右側標註「價位 / 該價位成交量」。"""
+        """在 VP 最大量價位 (POC) 標註「價位 / 該價位成交量」，右對齊疊於量柱上。"""
         if info is None or not visible:
             label_item.setVisible(False)
             return
         poc_price, poc_vol = info[3], info[2]  # 最大量價位 與 該價位量
         label_item.setText(f"{poc_price:.2f} / {self._fmt_vol(poc_vol)}")
-        label_item.setPos(base_x + 5.3, poc_price)
+        label_item.setPos(base_x + 5.0, poc_price)
         label_item.setVisible(True)
 
     def update_volume_profile(self, anchor_data):
@@ -964,6 +1157,7 @@ class StockPlotWindow(QtWidgets.QMainWindow):
 
             self._last_df_daily = df_daily
             self.update_daily_volume_profile(df_daily)
+            self._draw_force_chart('daily')
 
             if auto_range:
                 self._autorange_with_right_margin(self.plot_daily, len(df_daily))
@@ -991,6 +1185,7 @@ class StockPlotWindow(QtWidgets.QMainWindow):
             self.update_force_line(plot_30m)
             self._last_plot_30m = plot_30m
             self.update_volume_profile(plot_30m)
+            self._draw_force_chart('30m')
                 
             if auto_range:
                 self._autorange_with_right_margin(self.plot_30m, len(plot_30m))
