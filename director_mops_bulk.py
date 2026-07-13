@@ -52,6 +52,7 @@ def make_headers():
         'User-Agent': random.choice(UA_POOL),
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
         'Accept-Language': 'zh-TW,zh;q=0.9,en-US;q=0.8,en;q=0.7',
+        'Origin': 'https://mopsov.twse.com.tw',
         'Referer': 'https://mopsov.twse.com.tw/mops/web/stapap1',
         'Connection': 'keep-alive',
     }
@@ -101,11 +102,16 @@ MOPS_URL = 'https://mopsov.twse.com.tw/mops/web/ajax_stapap1'
 MIN_BYTES = 2000
 
 def fetch_director(stock_id, market):
-    url = (f'{MOPS_URL}?TYPEK={market}&firstin=true'
-           f'&year={roc_year}&month={month:02d}&off=1&co_id={stock_id}&step=0')
+    # 2026-07: MOPS 對此端點的 GET 會直接重置連線 (WAF)，須改用瀏覽器同款表單 POST
+    form = {
+        'encodeURIComponent': '1', 'step': '1', 'firstin': '1', 'off': '1',
+        'queryName': 'co_id', 'inpuType': 'co_id', 'TYPEK': market,
+        'isnew': 'false', 'co_id': stock_id,
+        'year': str(roc_year), 'month': f'{month:02d}',
+    }
     for attempt in range(3):
         try:
-            r = session.get(url, headers=make_headers(), timeout=30)
+            r = session.post(MOPS_URL, headers=make_headers(), data=form, timeout=30)
             if len(r.content) < MIN_BYTES:
                 wait = random.uniform(5, 10) * (attempt + 1)
                 time.sleep(wait)
