@@ -316,6 +316,8 @@ class StockPlotWindow(QtWidgets.QMainWindow):
         self._force_items = {'daily': [], '30m': []}   # 多空力道繪圖物件 (per 圖)
         self._force_sig = {'daily': None, '30m': None} # 轉折點簽章，內容沒變就跳過重繪
         self.profile_visible = False
+        self.vp_precise_mode = False         # 按 P 補抓精確 tick VP 成功後為 True，改疊畫在 K 線左側 2/3
+        self._awaiting_precise_vp = False    # 已送出 P 請求、尚未收到精確 VP 結果
         self.bigvol_visible = True           # 大量點 (成交量高峰黃點)
         self.df_1m_source = pd.DataFrame()       # 30分 VP 分箱來源 (1 分 K，近 7 天)
         self.df_daily_1m_source = pd.DataFrame() # 日K VP 分箱來源 (1 分 K，全區間)
@@ -372,7 +374,27 @@ class StockPlotWindow(QtWidgets.QMainWindow):
             "background-color: #007acc; color: white; border: none; padding: 5px 15px; border-radius: 3px;"
         )
         self.query_button.clicked.connect(self.on_query_click)
-        
+
+        # V 按鈕：切換 Volume Profile 顯示（等同按鍵盤 V）
+        self.vp_button = QtWidgets.QPushButton("V")
+        self.vp_button.setFont(QtGui.QFont("Consolas", 10, QtGui.QFont.Bold))
+        self.vp_button.setFixedWidth(32)
+        self.vp_button.setStyleSheet(
+            "background-color: #444444; color: white; border: none; padding: 5px; border-radius: 3px;"
+        )
+        self.vp_button.setToolTip("切換 Volume Profile 顯示（快捷鍵 V）")
+        self.vp_button.clicked.connect(self.toggle_volume_profile)
+
+        # P 按鈕：補抓精確 tick VP（等同按鍵盤 P）
+        self.vp_precise_button = QtWidgets.QPushButton("P")
+        self.vp_precise_button.setFont(QtGui.QFont("Consolas", 10, QtGui.QFont.Bold))
+        self.vp_precise_button.setFixedWidth(32)
+        self.vp_precise_button.setStyleSheet(
+            "background-color: #444444; color: white; border: none; padding: 5px; border-radius: 3px;"
+        )
+        self.vp_precise_button.setToolTip("補抓精確 tick Volume Profile（快捷鍵 P）")
+        self.vp_precise_button.clicked.connect(self.request_precise_tick_vp)
+
         # 股票名稱資訊標籤
         self.info_label = QtWidgets.QLabel("載入中...")
         self.info_label.setFont(QtGui.QFont("Microsoft JhengHei", 12, QtGui.QFont.Bold))
@@ -386,6 +408,8 @@ class StockPlotWindow(QtWidgets.QMainWindow):
         self.control_layout.addWidget(self.input_label)
         self.control_layout.addWidget(self.symbol_input)
         self.control_layout.addWidget(self.query_button)
+        self.control_layout.addWidget(self.vp_button)
+        self.control_layout.addWidget(self.vp_precise_button)
         self.control_layout.addWidget(self.info_label)
         self.control_layout.addWidget(self.tick_label)
         self.control_layout.addStretch()
@@ -519,6 +543,12 @@ class StockPlotWindow(QtWidgets.QMainWindow):
     @QtCore.pyqtSlot(pd.DataFrame, pd.DataFrame, pd.DataFrame)
     def on_initial_data(self, df_daily, df_30m, df_5m):
         """收到背景歷史資料，首次完整渲染圖表"""
+        # 換股後精確 VP 狀態失效，VP 畫法退回一般模式（右側），直到重新按 P
+        self.vp_precise_mode = False
+        self._awaiting_precise_vp = False
+        self.vp_precise_button.setStyleSheet(
+            "background-color: #444444; color: white; border: none; padding: 5px; border-radius: 3px;"
+        )
         self.update_plots(df_daily, df_30m, df_5m, auto_range=True)
         self.statusBar().showMessage("歷史 K 線載入完成。")
         
@@ -558,6 +588,12 @@ class StockPlotWindow(QtWidgets.QMainWindow):
     def on_daily_profile_data(self, df_daily_1m):
         """收到全區間 1 分 K，作為日K Volume Profile 分箱來源並重繪。"""
         self.df_daily_1m_source = df_daily_1m
+        if self._awaiting_precise_vp:
+            self.vp_precise_mode = True
+            self._awaiting_precise_vp = False
+            self.vp_precise_button.setStyleSheet(
+                "background-color: #cc0000; color: white; border: none; padding: 5px; border-radius: 3px;"
+            )
         if self._last_df_daily is not None:
             self.update_daily_volume_profile(self._last_df_daily)
 
@@ -769,9 +805,15 @@ class StockPlotWindow(QtWidgets.QMainWindow):
         self.vp_label_30m.setVisible(self.profile_visible)
         self.vp_label_daily.setVisible(self.profile_visible)
         state = "顯示" if self.profile_visible else "隱藏"
+        self.vp_button.setStyleSheet(
+            "background-color: #cc0000; color: white; border: none; padding: 5px; border-radius: 3px;"
+            if self.profile_visible else
+            "background-color: #444444; color: white; border: none; padding: 5px; border-radius: 3px;"
+        )
         self.statusBar().showMessage(f"日K/30分 Volume Profile 已{state}。按 V 切換。")
 
     def request_precise_tick_vp(self):
+        self._awaiting_precise_vp = True
         self.request_tick_vp_signal.emit()
         self.statusBar().showMessage("已請求精確 tick VP。Worker 會在背景讀取/補抓快取。")
 
@@ -921,11 +963,14 @@ class StockPlotWindow(QtWidgets.QMainWindow):
             return f"{v / 1e4:.1f}萬"
         return f"{int(round(v))}"
 
-    def _draw_vp_bars(self, bar_item, source, anchor_data):
+    def _draw_vp_bars(self, bar_item, source, anchor_data, precise=False):
         """以 1 分 K 收盤+成交量分箱畫水平量柱 Volume Profile。
 
         source: 1 分 K 分箱來源；會對齊 anchor_data 的起始時間。無 source 時
-        退回用 anchor_data 的 close 近似。量柱錨定於 anchor_data 右緣。
+        退回用 anchor_data 的 close 近似。
+        一般模式：量柱錨定於 anchor_data 右緣，往右延伸（畫在 K 線外側）。
+        precise 模式 (按 P 補抓精確 tick VP 後)：量柱改成從 K 線最左側開始，
+        往右延伸到約 2/3 K 棒寬度，疊畫在 K 線圖上。
         30 分與日K 共用此方法。
         """
         if anchor_data is None or len(anchor_data) == 0:
@@ -937,7 +982,15 @@ class StockPlotWindow(QtWidgets.QMainWindow):
             source = source[pd.to_datetime(source['date']) >= t0]
         if source is None or len(source) == 0:
             source = anchor_data
-        return self._render_vp_bars(bar_item, source, base_x=len(anchor_data), max_width=5.0)
+
+        n = len(anchor_data)
+        if precise:
+            base_x = 0.0
+            max_width = n * (2.0 / 3.0)
+        else:
+            base_x = n
+            max_width = 5.0
+        return self._render_vp_bars(bar_item, source, base_x=base_x, max_width=max_width)
 
     def _annotate_vp_label(self, label_item, info, base_x, visible):
         """在 VP 最大量價位 (POC) 標註「價位 / 該價位成交量」，右對齊疊於量柱上。"""
@@ -957,8 +1010,15 @@ class StockPlotWindow(QtWidgets.QMainWindow):
         self._annotate_vp_label(self.vp_label_30m, self._vp_ref_30m, n, self.profile_visible)
 
     def update_daily_volume_profile(self, anchor_daily):
-        """日K Volume Profile：用全區間 1 分 K 收盤+成交量，錨定於日K。"""
-        self._vp_ref_daily = self._draw_vp_bars(self.profile_vp_daily, self.df_daily_1m_source, anchor_daily)
+        """日K Volume Profile：用全區間 1 分 K 收盤+成交量，錨定於日K。
+
+        按 P 補抓精確 tick VP 後 (self.vp_precise_mode) 改疊畫在 K 線左側 2/3 範圍；
+        否則維持畫在 K 線右緣外側。
+        """
+        self._vp_ref_daily = self._draw_vp_bars(
+            self.profile_vp_daily, self.df_daily_1m_source, anchor_daily,
+            precise=self.vp_precise_mode,
+        )
         n = len(anchor_daily) if anchor_daily is not None else 0
         self._annotate_vp_label(self.vp_label_daily, self._vp_ref_daily, n, self.profile_visible)
 
