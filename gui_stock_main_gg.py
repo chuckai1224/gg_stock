@@ -316,8 +316,9 @@ class StockPlotWindow(QtWidgets.QMainWindow):
         self._force_items = {'daily': [], '30m': []}   # 多空力道繪圖物件 (per 圖)
         self._force_sig = {'daily': None, '30m': None} # 轉折點簽章，內容沒變就跳過重繪
         self.profile_visible = False
-        self.vp_precise_mode = False         # 按 P 補抓精確 tick VP 成功後為 True，改疊畫在 K 線左側 2/3
+        self.vp_precise_mode = False         # 目前是否用精確模式畫法（K 線左側 2/3），True/False 可用 P 來回切換
         self._awaiting_precise_vp = False    # 已送出 P 請求、尚未收到精確 VP 結果
+        self._has_precise_vp_data = False    # 是否已下載過精確 tick VP，有的話再按 P 只切畫法不必重抓
         self.bigvol_visible = True           # 大量點 (成交量高峰黃點)
         self.df_1m_source = pd.DataFrame()       # 30分 VP 分箱來源 (1 分 K，近 7 天)
         self.df_daily_1m_source = pd.DataFrame() # 日K VP 分箱來源 (1 分 K，全區間)
@@ -546,9 +547,8 @@ class StockPlotWindow(QtWidgets.QMainWindow):
         # 換股後精確 VP 狀態失效，VP 畫法退回一般模式（右側），直到重新按 P
         self.vp_precise_mode = False
         self._awaiting_precise_vp = False
-        self.vp_precise_button.setStyleSheet(
-            "background-color: #444444; color: white; border: none; padding: 5px; border-radius: 3px;"
-        )
+        self._has_precise_vp_data = False
+        self._update_vp_precise_button_style()
         self.update_plots(df_daily, df_30m, df_5m, auto_range=True)
         self.statusBar().showMessage("歷史 K 線載入完成。")
         
@@ -590,10 +590,9 @@ class StockPlotWindow(QtWidgets.QMainWindow):
         self.df_daily_1m_source = df_daily_1m
         if self._awaiting_precise_vp:
             self.vp_precise_mode = True
+            self._has_precise_vp_data = True
             self._awaiting_precise_vp = False
-            self.vp_precise_button.setStyleSheet(
-                "background-color: #cc0000; color: white; border: none; padding: 5px; border-radius: 3px;"
-            )
+            self._update_vp_precise_button_style()
         if self._last_df_daily is not None:
             self.update_daily_volume_profile(self._last_df_daily)
 
@@ -812,7 +811,24 @@ class StockPlotWindow(QtWidgets.QMainWindow):
         )
         self.statusBar().showMessage(f"日K/30分 Volume Profile 已{state}。按 V 切換。")
 
+    def _update_vp_precise_button_style(self):
+        self.vp_precise_button.setStyleSheet(
+            "background-color: #cc0000; color: white; border: none; padding: 5px; border-radius: 3px;"
+            if self.vp_precise_mode else
+            "background-color: #444444; color: white; border: none; padding: 5px; border-radius: 3px;"
+        )
+
     def request_precise_tick_vp(self):
+        # 已下載過精確 tick VP：P 只在「精確(左側)／一般(右側)」畫法間切換，不必重抓
+        if self._has_precise_vp_data:
+            self.vp_precise_mode = not self.vp_precise_mode
+            self._update_vp_precise_button_style()
+            if self._last_df_daily is not None:
+                self.update_daily_volume_profile(self._last_df_daily)
+            state = "精確模式（K線左側 2/3）" if self.vp_precise_mode else "一般模式（K線右側）"
+            self.statusBar().showMessage(f"VP 畫法已切回{state}。按 P 切換。")
+            return
+
         self._awaiting_precise_vp = True
         self.request_tick_vp_signal.emit()
         self.statusBar().showMessage("已請求精確 tick VP。Worker 會在背景讀取/補抓快取。")
